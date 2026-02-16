@@ -9,7 +9,8 @@
           <div class="logo-ring logo-ring-2"></div>
           <div class="logo-glow"></div>
           <div class="logo-core">
-            <img src="/logo.png" alt="ArchMind" class="logo-img" />
+            <img src="/logo-auth.png" alt="ArchMind" class="logo-img logo-light" />
+            <img src="/logo.png" alt="ArchMind" class="logo-img logo-dark" />
           </div>
         </div>
 
@@ -262,33 +263,39 @@ const handleSubmit = async (e: Event) => {
 .logo-core {
   position: absolute;
   inset: 20px;
-  background: hsl(var(--foreground));
+  background: hsl(var(--background));
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   box-shadow:
-    0 0 40px hsl(var(--foreground) / 0.2),
-    inset 0 0 20px hsl(var(--background) / 0.1);
-}
-
-.logo-glow {
-  position: absolute;
-  inset: 10px;
-  background: radial-gradient(circle, hsl(var(--foreground) / 0.1) 0%, transparent 70%);
-  border-radius: 50%;
-  animation: logo-glow-pulse 2s ease-in-out infinite;
-}
-
-@keyframes logo-glow-pulse {
-  0%, 100% { transform: scale(1); opacity: 0.5; }
-  50% { transform: scale(1.2); opacity: 1; }
+    0 0 40px hsl(var(--foreground) / 0.1),
+    inset 0 0 20px hsl(var(--foreground) / 0.05);
 }
 
 .logo-img {
-  width: 40px;
-  height: 40px;
+  width: 50px;
+  height: 50px;
   object-fit: contain;
+  border-radius: 50%;
+  position: absolute;
+}
+
+.logo-light {
+  display: block;
+}
+
+.logo-dark {
+  display: none;
+}
+
+.dark .logo-light {
+  display: none;
+}
+
+.dark .logo-dark {
+  display: block;
 }
 
 /* Brand Title */
