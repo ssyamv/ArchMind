@@ -49,7 +49,7 @@ export class OllamaAdapter implements AIModelAdapter {
     return textContent
   }
 
-  async *generateStream (prompt: string, options?: GenerateOptions): AsyncIterator<string> {
+  async *generateStream (prompt: string, options?: GenerateOptions): AsyncGenerator<string> {
     const stream = await this.client.chat.completions.create({
       model: this.modelId,
       max_tokens: options?.maxTokens || 4096,
@@ -79,7 +79,7 @@ export class OllamaAdapter implements AIModelAdapter {
     }
   }
 
-  estimateCost (tokens: number): CostEstimate {
+  estimateCost (_tokens: number): CostEstimate {
     // Ollama 是本地运行的，完全免费
     return {
       inputCost: 0,

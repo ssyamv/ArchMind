@@ -50,7 +50,7 @@ export class GLMAdapter implements AIModelAdapter {
     return textContent
   }
 
-  async *generateStream (prompt: string, options?: GenerateOptions): AsyncIterator<string> {
+  async *generateStream (prompt: string, options?: GenerateOptions): AsyncGenerator<string> {
     const stream = await this.client.chat.completions.create({
       model: this.modelId,
       max_tokens: options?.maxTokens || 8192,

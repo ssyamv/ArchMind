@@ -32,7 +32,7 @@ export interface AIModelAdapter {
   modelId: string;
 
   generateText(prompt: string, options?: GenerateOptions): Promise<string>;
-  generateStream(prompt: string, options?: GenerateOptions): AsyncIterator<string>;
+  generateStream(prompt: string, options?: GenerateOptions): AsyncGenerator<string>;
 
   getCapabilities(): ModelCapabilities;
   estimateCost(tokens: number): CostEstimate;

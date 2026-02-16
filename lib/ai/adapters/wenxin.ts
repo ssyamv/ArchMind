@@ -53,11 +53,15 @@ export class WenxinAdapter implements AIModelAdapter {
       throw new Error(`Failed to get access token: ${data.error_description || data.error}`)
     }
 
+    if (!data.access_token) {
+      throw new Error('Failed to get access token: No access_token in response')
+    }
+
     this.accessToken = data.access_token
     // Token 有效期 30 天，提前 1 小时刷新
     this.tokenExpiresAt = Date.now() + (data.expires_in - 3600) * 1000
 
-    return this.accessToken
+    return data.access_token
   }
 
   /**
@@ -120,7 +124,7 @@ export class WenxinAdapter implements AIModelAdapter {
     return data.result
   }
 
-  async *generateStream (prompt: string, options?: GenerateOptions): AsyncIterator<string> {
+  async *generateStream (prompt: string, options?: GenerateOptions): AsyncGenerator<string> {
     const accessToken = await this.getAccessToken()
     const endpoint = this.getApiEndpoint(this.modelId)
 

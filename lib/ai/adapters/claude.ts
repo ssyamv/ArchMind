@@ -53,7 +53,7 @@ export class ClaudeAdapter implements AIModelAdapter {
     return textContent.text
   }
 
-  async *generateStream (prompt: string, options?: GenerateOptions): AsyncIterator<string> {
+  async *generateStream (prompt: string, options?: GenerateOptions): AsyncGenerator<string> {
     const { systemPrompt, messages } = this.buildClaudeParams(prompt, options)
     const stream = await this.client.messages.stream({
       model: this.modelId,

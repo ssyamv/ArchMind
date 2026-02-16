@@ -62,7 +62,7 @@ export class GeminiAdapter implements AIModelAdapter {
     return result
   }
 
-  async *generateStream (prompt: string, options?: GenerateOptions): AsyncIterator<string> {
+  async *generateStream (prompt: string, options?: GenerateOptions): AsyncGenerator<string> {
     const { systemInstruction, contents } = this.buildGeminiParams(prompt, options)
     const model = this.client.getGenerativeModel({
       model: this.modelId,

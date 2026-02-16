@@ -649,6 +649,19 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
         }
       }
     ]
+  },
+
+  custom: {
+    id: 'custom',
+    name: '自定义 API',
+    description: '配置自定义的第三方 API 中转站或兼容接口。',
+    website: '',
+    authType: 'both',
+    apiKeyPlaceholder: 'API Key（可选）',
+    baseUrlPlaceholder: 'https://your-api-proxy.com/v1',
+    defaultBaseUrl: '',
+    supportsCustomUrl: true,
+    models: []
   }
 }
 
