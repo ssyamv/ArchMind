@@ -10,7 +10,7 @@ import crypto from 'crypto'
 const ALGORITHM = 'aes-256-gcm'
 const KEY_LENGTH = 32
 const IV_LENGTH = 16
-const AUTH_TAG_LENGTH = 16
+// Note: AUTH_TAG_LENGTH is defined by the cipher (16 bytes for AES-GCM)
 const SALT_LENGTH = 32
 
 // 从环境变量获取加密密钥，如果没有则生成一个（仅用于开发环境）

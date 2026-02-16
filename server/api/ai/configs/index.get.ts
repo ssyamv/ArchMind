@@ -3,7 +3,6 @@
  * GET /api/ai/configs
  */
 
-import { defineEventHandler } from 'h3'
 import { UserAPIConfigDAO } from '~/lib/db/dao/user-api-config-dao'
 
 export default defineEventHandler(async () => {

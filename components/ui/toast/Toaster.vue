@@ -7,8 +7,8 @@ import { cn } from '~/lib/utils'
 
 const { toasts } = useToast()
 
-const getIcon = (variant?: string) => {
-  switch (variant) {
+const getIcon = (variant?: string | null) => {
+  switch (variant ?? undefined) {
     case 'success':
       return CircleCheck
     case 'destructive':
@@ -20,8 +20,8 @@ const getIcon = (variant?: string) => {
   }
 }
 
-const getIconClass = (variant?: string) => {
-  switch (variant) {
+const getIconClass = (variant?: string | null) => {
+  switch (variant ?? undefined) {
     case 'success':
       return 'text-green-500'
     case 'destructive':

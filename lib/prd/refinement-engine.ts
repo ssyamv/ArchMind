@@ -5,7 +5,7 @@
 
 import { ModelManager } from '~/lib/ai/manager'
 import { RAGRetriever } from '~/lib/rag/retriever'
-import { buildPRDPrompt, type PRDExample } from '~/lib/ai/prompts/prd-system'
+import { buildPRDPrompt } from '~/lib/ai/prompts/prd-system'
 import { selectRelevantExamples } from '~/lib/ai/prompts/prd-examples'
 import type { IEmbeddingAdapter } from '~/lib/rag/embedding-adapter'
 

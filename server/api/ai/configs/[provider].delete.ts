@@ -3,7 +3,6 @@
  * DELETE /api/ai/configs/:provider
  */
 
-import { defineEventHandler, createError } from 'h3'
 import { UserAPIConfigDAO } from '~/lib/db/dao/user-api-config-dao'
 import type { AIProviderType } from '~/types/settings'
 import { AI_PROVIDERS } from '~/lib/ai/providers'

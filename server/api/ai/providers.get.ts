@@ -3,7 +3,6 @@
  * GET /api/ai/providers
  */
 
-import { defineEventHandler } from 'h3'
 import { getAllProviders } from '~/lib/ai/providers'
 
 export default defineEventHandler(() => {

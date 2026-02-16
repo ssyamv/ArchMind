@@ -3,7 +3,6 @@
  * POST /api/ai/configs/validate
  */
 
-import { defineEventHandler, readBody, createError } from 'h3'
 import type { ValidateAPIRequest } from '~/types/settings'
 import type { AIProviderType } from '~/types/settings'
 import { AI_PROVIDERS } from '~/lib/ai/providers'

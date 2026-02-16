@@ -3,7 +3,6 @@
  * POST /api/ai/configs
  */
 
-import { defineEventHandler, readBody, createError } from 'h3'
 import { UserAPIConfigDAO } from '~/lib/db/dao/user-api-config-dao'
 import type { SaveAPIConfigRequest } from '~/types/settings'
 import type { AIProviderType } from '~/types/settings'
