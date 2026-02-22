@@ -25,7 +25,8 @@
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage",
-		"test:ui": "vitest --ui"
+		"test:ui": "vitest --ui",
+		"docs:api": "tsx scripts/generate-openapi.ts"
 	},
 	"dependencies": {
 		"@aivue/chatbot": "^2.5.5",

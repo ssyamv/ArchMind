@@ -37,6 +37,7 @@
         <TabsTrigger value="content">{{ $t('documents.details.content') }}</TabsTrigger>
         <TabsTrigger value="chunks">{{ $t('documents.details.chunks') }}</TabsTrigger>
         <TabsTrigger value="usage">{{ $t('documents.details.usage') }}</TabsTrigger>
+        <TabsTrigger value="versions">{{ $t('documents.details.versions') }}</TabsTrigger>
       </TabsList>
 
       <TabsContent value="content" class="mt-6">
@@ -95,6 +96,100 @@
           </p>
         </div>
       </TabsContent>
+
+      <!-- 版本历史 Tab -->
+      <TabsContent value="versions" class="mt-6">
+        <div class="space-y-4">
+          <p v-if="versions.length === 0" class="text-center text-muted-foreground py-8">
+            {{ $t('documents.details.noVersions') }}
+          </p>
+
+          <div v-else class="space-y-3">
+            <!-- 版本列表 -->
+            <Card v-for="ver in versions" :key="ver.id">
+              <CardContent class="p-4">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div class="flex flex-col">
+                      <div class="flex items-center gap-2">
+                        <span class="font-medium text-sm">
+                          {{ $t('documents.details.versionNumber', { version: ver.version }) }}
+                        </span>
+                        <Badge v-if="ver.version === document?.currentVersion" variant="default" class="text-xs">
+                          {{ $t('documents.details.currentVersion') }}
+                        </Badge>
+                      </div>
+                      <span class="text-xs text-muted-foreground mt-0.5">
+                        {{ formatDate(ver.createdAt) }} · {{ formatSize(ver.fileSize) }}
+                      </span>
+                      <span v-if="ver.changeSummary" class="text-xs text-muted-foreground mt-0.5">
+                        {{ ver.changeSummary }}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    v-if="versions.length > 1"
+                    variant="outline"
+                    size="sm"
+                    class="gap-1.5 text-xs"
+                    @click="selectVersionForDiff(ver)"
+                  >
+                    <GitCompare class="w-3.5 h-3.5" />
+                    {{ $t('documents.details.compareDiff') }}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <!-- Diff 对比视图 -->
+            <Card v-if="diffResult" class="border-primary/30">
+              <CardHeader class="pb-3">
+                <CardTitle class="text-base flex items-center justify-between">
+                  <span>
+                    {{ $t('documents.details.diffTitle') }}:
+                    {{ $t('documents.details.diffFrom', { from: diffFromVersion }) }}
+                    →
+                    {{ $t('documents.details.diffTo', { to: diffToVersion }) }}
+                  </span>
+                  <Button variant="ghost" size="sm" class="h-7 w-7 p-0" @click="diffResult = null">
+                    <X class="w-3.5 h-3.5" />
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div v-if="diffLoading" class="flex items-center gap-2 text-muted-foreground text-sm py-4">
+                  <Loader2 class="w-4 h-4 animate-spin" />
+                  {{ $t('documents.details.diffLoading') }}
+                </div>
+                <ScrollArea v-else class="h-[400px]">
+                  <div class="font-mono text-xs leading-relaxed">
+                    <div
+                      v-for="(line, idx) in diffResult"
+                      :key="idx"
+                      :class="[
+                        'px-3 py-0.5',
+                        line.type === 'added' ? 'bg-green-500/10 text-green-700 dark:text-green-400' : '',
+                        line.type === 'removed' ? 'bg-red-500/10 text-red-700 dark:text-red-400 line-through' : '',
+                        line.type === 'unchanged' ? 'text-muted-foreground' : ''
+                      ]"
+                    >
+                      <span class="select-none mr-2 text-muted-foreground/50">
+                        {{ line.type === 'added' ? '+' : line.type === 'removed' ? '-' : ' ' }}
+                      </span>{{ line.content }}
+                    </div>
+                  </div>
+                </ScrollArea>
+                <!-- Diff 统计 -->
+                <div class="flex items-center gap-4 mt-3 pt-3 border-t text-xs text-muted-foreground">
+                  <span class="text-green-600">+{{ diffStats.added }} {{ $t('documents.details.diffAdded') }}</span>
+                  <span class="text-red-600">-{{ diffStats.removed }} {{ $t('documents.details.diffRemoved') }}</span>
+                  <span>{{ diffStats.unchanged }} {{ $t('documents.details.diffUnchanged') }}</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </TabsContent>
     </Tabs>
 
     <!-- Delete Confirmation Dialog -->
@@ -140,7 +235,8 @@
 </template>
 
 <script setup lang="ts">
-import { ArrowLeft, Download, RefreshCw, Trash2 } from 'lucide-vue-next'
+import { ref, computed } from 'vue'
+import { ArrowLeft, Download, RefreshCw, Trash2, GitCompare, X, Loader2 } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
@@ -175,9 +271,25 @@ const documentId = route.params.id as string
 const document = ref<any>(null)
 const chunks = ref<any[]>([])
 const usedInPRDs = ref<any[]>([])
+const versions = ref<any[]>([])
 const activeTab = ref('content')
 const deleteDialogOpen = ref(false)
 const reindexDialogOpen = ref(false)
+
+// 版本对比状态
+interface DiffLine { type: 'added' | 'removed' | 'unchanged'; content: string }
+const diffResult = ref<DiffLine[] | null>(null)
+const diffLoading = ref(false)
+const diffFromVersion = ref<number>(0)
+const diffToVersion = ref<number>(0)
+const diffStats = computed(() => {
+  if (!diffResult.value) return { added: 0, removed: 0, unchanged: 0 }
+  return {
+    added: diffResult.value.filter(l => l.type === 'added').length,
+    removed: diffResult.value.filter(l => l.type === 'removed').length,
+    unchanged: diffResult.value.filter(l => l.type === 'unchanged').length
+  }
+})
 
 onMounted(async () => {
   try {
@@ -189,6 +301,9 @@ onMounted(async () => {
 
     const usageResponse = await $fetch<{ data: any[] }>(`/api/documents/${documentId}/usage`)
     usedInPRDs.value = usageResponse.data
+
+    const versionsResponse = await $fetch<{ data: { versions: any[] } }>(`/api/documents/${documentId}/versions`)
+    versions.value = versionsResponse.data.versions || []
   } catch (error) {
     console.error('Failed to load document:', error)
     toast({
@@ -270,5 +385,94 @@ async function confirmDelete() {
       variant: 'destructive',
     })
   }
+}
+
+/**
+ * 选择某个版本与当前版本进行 diff 对比
+ * 使用简单的行级 diff 算法（LCS）
+ */
+async function selectVersionForDiff (ver: any) {
+  const currentVer = versions.value.find(v => v.version === document.value?.currentVersion)
+  if (!currentVer || ver.id === currentVer.id) return
+
+  diffLoading.value = true
+  diffResult.value = []
+  diffFromVersion.value = ver.version
+  diffToVersion.value = currentVer.version
+
+  try {
+    const [fromRes, toRes] = await Promise.all([
+      $fetch<{ data: any }>(`/api/documents/${documentId}/versions/${ver.id}`),
+      $fetch<{ data: any }>(`/api/documents/${documentId}/versions/${currentVer.id}`)
+    ])
+
+    const fromLines = (fromRes.data?.content || '').split('\n')
+    const toLines = (toRes.data?.content || '').split('\n')
+
+    diffResult.value = computeLineDiff(fromLines, toLines)
+  } catch {
+    toast({ title: t('documents.details.diffLoadFailed'), variant: 'destructive' })
+    diffResult.value = null
+  } finally {
+    diffLoading.value = false
+  }
+}
+
+/**
+ * 简单行级 diff：Myers 差分简化版（基于 Map 对比）
+ */
+function computeLineDiff (
+  fromLines: string[],
+  toLines: string[]
+): Array<{ type: 'added' | 'removed' | 'unchanged'; content: string }> {
+  const result: Array<{ type: 'added' | 'removed' | 'unchanged'; content: string }> = []
+  const fromSet = new Map<string, number[]>()
+
+  fromLines.forEach((line, i) => {
+    if (!fromSet.has(line)) fromSet.set(line, [])
+    fromSet.get(line)!.push(i)
+  })
+
+  const usedFrom = new Set<number>()
+  const matchedTo = new Map<number, number>() // toIdx → fromIdx
+
+  toLines.forEach((line, toIdx) => {
+    const candidates = fromSet.get(line)
+    if (candidates) {
+      const fromIdx = candidates.find(i => !usedFrom.has(i))
+      if (fromIdx !== undefined) {
+        usedFrom.add(fromIdx)
+        matchedTo.set(toIdx, fromIdx)
+      }
+    }
+  })
+
+  let fromIdx = 0
+  let toIdx = 0
+
+  while (fromIdx < fromLines.length || toIdx < toLines.length) {
+    if (fromIdx < fromLines.length && toIdx < toLines.length && matchedTo.get(toIdx) === fromIdx) {
+      result.push({ type: 'unchanged', content: fromLines[fromIdx] })
+      fromIdx++
+      toIdx++
+    } else if (toIdx < toLines.length && !matchedTo.has(toIdx)) {
+      result.push({ type: 'added', content: toLines[toIdx] })
+      toIdx++
+    } else if (fromIdx < fromLines.length && !usedFrom.has(fromIdx)) {
+      result.push({ type: 'removed', content: fromLines[fromIdx] })
+      fromIdx++
+    } else {
+      if (fromIdx < fromLines.length) {
+        result.push({ type: 'removed', content: fromLines[fromIdx] })
+        fromIdx++
+      }
+      if (toIdx < toLines.length) {
+        result.push({ type: 'added', content: toLines[toIdx] })
+        toIdx++
+      }
+    }
+  }
+
+  return result
 }
 </script>

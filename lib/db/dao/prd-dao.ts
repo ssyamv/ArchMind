@@ -46,6 +46,22 @@ export class PRDDAO {
     return this.mapRowToPRD(result.rows[0])
   }
 
+  // 批量查询 PRD（避免 N+1）
+  static async findByIds (ids: string[]): Promise<Map<string, PRDDocument>> {
+    if (ids.length === 0) { return new Map() }
+
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(', ')
+    const sql = `SELECT * FROM prd_documents WHERE id IN (${placeholders})`
+    const result = await dbClient.query<any>(sql, ids)
+
+    const map = new Map<string, PRDDocument>()
+    for (const row of result.rows) {
+      const prd = this.mapRowToPRD(row)
+      map.set(prd.id, prd)
+    }
+    return map
+  }
+
   // 查询所有 PRD
   static async findAll (options?: {
     limit?: number;

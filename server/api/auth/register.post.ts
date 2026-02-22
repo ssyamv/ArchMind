@@ -7,7 +7,32 @@ import { z } from 'zod'
 import { UserDAO } from '~/lib/db/dao/user-dao'
 import { hashPassword } from '~/server/utils/password'
 import { generateToken } from '~/server/utils/jwt'
+import { getStorageClient } from '~/lib/storage/storage-factory'
 import type { RegisterRequest, AuthResponse } from '~/types/auth'
+
+// 预设头像背景色
+const AVATAR_COLORS = [
+  '#F44336', '#E91E63', '#9C27B0', '#673AB7',
+  '#3F51B5', '#2196F3', '#03A9F4', '#00BCD4',
+  '#009688', '#4CAF50', '#8BC34A', '#CDDC39',
+  '#FF9800', '#FF5722', '#795548', '#607D8B'
+]
+
+function pickColor(seed: string): string {
+  let hash = 0
+  for (let i = 0; i < seed.length; i++) {
+    hash = seed.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
+}
+
+function generateSvgAvatar(letter: string, color: string): Buffer {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <circle cx="128" cy="128" r="128" fill="${color}"/>
+  <text x="128" y="128" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="120" font-weight="600" fill="rgba(255,255,255,0.95)" text-anchor="middle" dominant-baseline="central">${letter.toUpperCase()}</text>
+</svg>`
+  return Buffer.from(svg, 'utf-8')
+}
 
 // 请求体验证 schema
 const registerSchema = z.object({
@@ -65,6 +90,25 @@ export default defineEventHandler(async (event): Promise<AuthResponse> => {
       passwordHash,
       fullName: validatedData.fullName
     })
+
+    // 生成默认头像（SVG 彩色字母头像）
+    try {
+      const seed = validatedData.fullName || username || validatedData.email
+      const letter = seed.trim().charAt(0) || 'U'
+      const color = pickColor(validatedData.email)
+      const svgBuffer = generateSvgAvatar(letter, color)
+      const objectKey = `avatars/${user.id}.svg`
+      const storage = getStorageClient()
+      await storage.uploadFile(objectKey, svgBuffer, {
+        'Content-Type': 'image/svg+xml',
+        'Cache-Control': 'public, max-age=31536000'
+      })
+      await UserDAO.update(user.id, { avatarUrl: objectKey })
+      user.avatarUrl = `/api/user/avatar/${user.id}`
+    } catch (avatarError) {
+      // 头像生成失败不影响注册流程
+      console.warn('[Register] Failed to generate default avatar:', avatarError)
+    }
 
     // 生成 JWT Token
     const token = generateToken({ userId: user.id })

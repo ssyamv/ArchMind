@@ -226,5 +226,63 @@ export class DocumentProcessingPipeline {
       throw error
     }
   }
+
+  /**
+   * 仅重新向量化（跳过分块步骤，复用已有的 document_chunks 记录）
+   * 适用于更换 embedding 模型后重建向量索引的场景
+   */
+  async reindex (documentId: string, content: string): Promise<ProcessResult> {
+    const startTime = Date.now()
+
+    try {
+      // 检查是否已有 chunks，若有则直接用；若没有则需要重新分块
+      const existingChunks = await DocumentChunkDAO.findByDocumentId(documentId)
+
+      let chunksToEmbed: Array<{ id: string; content: string }>
+
+      if (existingChunks.length > 0) {
+        chunksToEmbed = existingChunks.map(c => ({ id: c.id, content: c.content }))
+      } else {
+        // 重新分块
+        const textChunks = this.splitter.split(content)
+        const documentChunks = textChunks.map((chunk, index) => ({
+          documentId,
+          chunkIndex: index,
+          content: chunk,
+          metadata: { source: 'document_chunk', length: chunk.length }
+        }))
+        const created = await DocumentChunkDAO.createMany(documentChunks)
+        chunksToEmbed = created.map(c => ({ id: c.id, content: c.content }))
+      }
+
+      if (chunksToEmbed.length === 0) {
+        return { documentId, chunksCreated: 0, vectorsAdded: 0, processingTime: Date.now() - startTime }
+      }
+
+      // 重新生成 embedding
+      const embeddings = await this.embeddingAdapter.embedMany(chunksToEmbed.map(c => c.content))
+      const modelInfo = this.embeddingAdapter.getModelInfo()
+
+      const embeddingChunks = chunksToEmbed.map((chunk, index) => ({
+        chunkId: chunk.id,
+        embedding: embeddings[index],
+        modelName: modelInfo.modelId,
+        modelProvider: modelInfo.provider,
+        dimensions: modelInfo.dimensions
+      }))
+
+      const vectorIds = await VectorDAO.addVectors(embeddingChunks)
+
+      return {
+        documentId,
+        chunksCreated: chunksToEmbed.length,
+        vectorsAdded: vectorIds.length,
+        processingTime: Date.now() - startTime
+      }
+    } catch (error) {
+      console.error('Reindex pipeline error:', error)
+      throw error
+    }
+  }
 }
 

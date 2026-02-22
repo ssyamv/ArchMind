@@ -5,6 +5,8 @@
  */
 
 import type { IEmbeddingAdapter } from './embedding-adapter'
+import { rerank, computeAdaptiveWeights } from './reranker'
+import type { RerankOptions } from './reranker'
 import { VectorDAO } from '~/lib/db/dao/vector-dao'
 import { DocumentChunkDAO } from '~/lib/db/dao/document-chunk-dao'
 import { PrdChunkDAO } from '~/lib/db/dao/prd-chunk-dao'
@@ -62,11 +64,15 @@ export class RAGRetriever {
       const retrievedChunks: RetrievedChunk[] = []
 
       if (prdIds && prdIds.length > 0 && (!documentIds || documentIds.length === 0)) {
-        // PRD 检索路径
+        // PRD 检索路径：批量获取所有相关 PRD，避免 N+1
         const chunkIds = results.map(r => r.chunkId)
         const chunks = await PrdChunkDAO.findByIds(chunkIds)
+
+        const prdIdList = [...new Set(chunks.map(c => c.prdId))]
+        const prdMap = await PRDDAO.findByIds(prdIdList)
+
         for (const chunk of chunks) {
-          const prd = await PRDDAO.findById(chunk.prdId)
+          const prd = prdMap.get(chunk.prdId)
           if (prd) {
             retrievedChunks.push({
               id: chunk.id,
@@ -78,12 +84,15 @@ export class RAGRetriever {
           }
         }
       } else {
-        // 文档检索路径
+        // 文档检索路径：批量获取所有相关文档，避免 N+1
         const chunkIds = results.map(r => r.chunkId)
         const chunks = await DocumentChunkDAO.findByIds(chunkIds)
 
+        const docIdList = [...new Set(chunks.map(c => c.documentId))]
+        const docMap = await DocumentDAO.findByIds(docIdList)
+
         for (const chunk of chunks) {
-          const doc = await DocumentDAO.findById(chunk.documentId)
+          const doc = docMap.get(chunk.documentId)
           if (doc) {
             retrievedChunks.push({
               id: chunk.id,
@@ -148,10 +157,11 @@ export class RAGRetriever {
   }
 
   /**
-   * 混合搜索: 结合关键词和向量检索(使用 RRF 算法)
+   * 混合搜索: 结合关键词和向量检索，使用重排序模块融合结果
    *
-   * RRF (Reciprocal Rank Fusion) 倒数排名融合算法
-   * 对每个结果的排名取倒数,然后加权求和
+   * 支持：
+   * - 自动权重（根据查询长度和语言自动调整）
+   * - RRF / Score 两种融合策略
    */
   async hybridSearch (
     query: string,
@@ -160,81 +170,43 @@ export class RAGRetriever {
       threshold?: number;
       keywordWeight?: number;
       vectorWeight?: number;
+      strategy?: 'rrf' | 'score';
     }
   ): Promise<RetrievedChunk[]> {
     const topK = options?.topK ?? this.topK
     const threshold = options?.threshold ?? this.threshold
-    const keywordWeight = options?.keywordWeight ?? 0.3
-    const vectorWeight = options?.vectorWeight ?? 0.7
+
+    // 自动权重：若未指定，根据查询自动计算
+    let { keywordWeight, vectorWeight } = options ?? {}
+    if (keywordWeight === undefined || vectorWeight === undefined) {
+      const adaptive = computeAdaptiveWeights(query)
+      keywordWeight = keywordWeight ?? adaptive.keywordWeight
+      vectorWeight = vectorWeight ?? adaptive.vectorWeight
+    }
 
     try {
-      // 1. 执行关键词搜索
-      const keywordResults = await this.keywordSearch(query, topK * 2)
+      // 1. 并行执行关键词搜索和向量检索
+      const [keywordResults, vectorResults] = await Promise.all([
+        this.keywordSearch(query, topK * 2),
+        this.retrieve(query, { topK: topK * 2, threshold })
+      ])
 
-      // 2. 执行向量检索
-      const vectorResults = await this.retrieve(query, { topK: topK * 2, threshold })
-
-      // 3. 使用 RRF 融合结果
-      const fusedResults = this.reciprocalRankFusion(
-        keywordResults,
-        vectorResults,
+      // 2. 使用 reranker 融合（支持 RRF / Score 策略）
+      const rerankOptions: RerankOptions = {
         keywordWeight,
-        vectorWeight
-      )
+        vectorWeight,
+        strategy: options?.strategy ?? 'rrf',
+        query
+      }
 
-      // 4. 返回 top-K 结果
+      const fusedResults = rerank(keywordResults, vectorResults, rerankOptions)
+
+      // 3. 返回 top-K 结果
       return fusedResults.slice(0, topK)
     } catch (error) {
       console.error('Hybrid search error:', error)
       throw error
     }
   }
-
-  /**
-   * 倒数排名融合算法(Reciprocal Rank Fusion)
-   *
-   * 公式: score(d) = Σ [ w_i / (k + rank_i(d)) ]
-   * 其中:
-   * - w_i 是第 i 个检索器的权重
-   * - k 是常数(通常为 60)
-   * - rank_i(d) 是文档 d 在第 i 个检索器中的排名
-   */
-  private reciprocalRankFusion (
-    keywordResults: RetrievedChunk[],
-    vectorResults: RetrievedChunk[],
-    keywordWeight: number,
-    vectorWeight: number
-  ): RetrievedChunk[] {
-    const k = 60 // RRF 常数
-    const scores = new Map<string, { chunk: RetrievedChunk; score: number }>()
-
-    // 处理关键词结果
-    keywordResults.forEach((chunk, rank) => {
-      const rrfScore = keywordWeight / (k + rank + 1)
-      scores.set(chunk.id, { chunk, score: rrfScore })
-    })
-
-    // 处理向量结果
-    vectorResults.forEach((chunk, rank) => {
-      const rrfScore = vectorWeight / (k + rank + 1)
-      const existing = scores.get(chunk.id)
-
-      if (existing) {
-        // 如果已存在,累加分数
-        existing.score += rrfScore
-        // 更新相似度为融合后的分数
-        existing.chunk.similarity = existing.score
-      } else {
-        scores.set(chunk.id, { chunk, score: rrfScore })
-      }
-    })
-
-    // 按融合分数排序
-    return Array.from(scores.values())
-      .sort((a, b) => b.score - a.score)
-      .map(item => ({
-        ...item.chunk,
-        similarity: item.score // 使用融合分数作为相似度
-      }))
-  }
 }
+

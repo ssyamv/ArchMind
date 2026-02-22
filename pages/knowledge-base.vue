@@ -33,8 +33,30 @@
 
       <!-- Table -->
       <div class="flex-1 overflow-auto p-6">
-        <div v-if="loading" class="flex items-center justify-center py-12">
-          <RefreshCw class="w-8 h-8 animate-spin text-muted-foreground" />
+        <!-- Loading: 骨架屏 -->
+        <div v-if="loading">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{{ t('knowledgeBase.table.name') }}</TableHead>
+                <TableHead>{{ t('knowledgeBase.table.type') }}</TableHead>
+                <TableHead>{{ t('knowledgeBase.table.source') }}</TableHead>
+                <TableHead>{{ t('knowledgeBase.table.lastSync') }}</TableHead>
+                <TableHead>{{ t('knowledgeBase.table.size') }}</TableHead>
+                <TableHead class="w-[50px]"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow v-for="i in 5" :key="i">
+                <TableCell><Skeleton class="h-4 w-40" /></TableCell>
+                <TableCell><Skeleton class="h-5 w-16 rounded-full" /></TableCell>
+                <TableCell><Skeleton class="h-5 w-16 rounded-full" /></TableCell>
+                <TableCell><Skeleton class="h-4 w-24" /></TableCell>
+                <TableCell><Skeleton class="h-4 w-12" /></TableCell>
+                <TableCell><Skeleton class="h-6 w-6 rounded" /></TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
         </div>
 
         <div v-else-if="paginatedResources.length === 0" class="text-center py-12">
@@ -316,6 +338,7 @@ import {
 } from '~/components/ui/dropdown-menu'
 import { ScrollArea } from '~/components/ui/scroll-area'
 import { Separator } from '~/components/ui/separator'
+import { Skeleton } from '~/components/ui/skeleton'
 import {
   Dialog,
   DialogContent,
@@ -546,8 +569,12 @@ function handleOpenInEditor(resource: Resource) {
 }
 
 function handleDownload(resource: Resource) {
-  // TODO: Implement download
-  console.log('Download:', resource.id)
+  if (resource.type !== 'DOCUMENT') {
+    toast({ title: t('knowledgeBase.downloadNotSupported'), variant: 'destructive' })
+    return
+  }
+  // 通过浏览器直接跳转到下载接口，后端会重定向到预签名 URL
+  window.open(`/api/documents/${resource.id}/download`, '_blank')
 }
 
 function handleDeleteResource(resource: Resource) {
@@ -580,12 +607,29 @@ async function confirmDelete() {
 }
 
 function handleClearCache() {
-  // TODO: Implement cache clearing
-  console.log('Clear cache')
+  if (!currentWorkspaceId.value) return
+  $fetch('/api/documents/cache', {
+    method: 'DELETE',
+    query: { workspaceId: currentWorkspaceId.value }
+  }).then(() => {
+    toast({ title: t('knowledgeBase.clearCacheSuccess'), variant: 'success' })
+    loadResources()
+  }).catch((err) => {
+    console.error('Clear cache failed:', err)
+    toast({ title: t('knowledgeBase.clearCacheFailed'), variant: 'destructive' })
+  })
 }
 
 function handleReindexAll() {
-  // TODO: Implement reindexing
-  console.log('Reindex all')
+  if (!currentWorkspaceId.value) return
+  $fetch('/api/documents/reindex', {
+    method: 'POST',
+    body: { workspaceId: currentWorkspaceId.value }
+  }).then(() => {
+    toast({ title: t('knowledgeBase.reindexSuccess'), variant: 'success' })
+  }).catch((err) => {
+    console.error('Reindex failed:', err)
+    toast({ title: t('knowledgeBase.reindexFailed'), variant: 'destructive' })
+  })
 }
 </script>

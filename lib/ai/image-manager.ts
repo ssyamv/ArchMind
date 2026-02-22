@@ -5,6 +5,7 @@
 
 import type { ImageGenerationAdapter, ImageGenerateOptions, ImageEditOptions, ImageTaskResult } from './image-types'
 import { WanxAdapter } from './adapters/wanx-image'
+import { DalleAdapter } from './adapters/dalle-image'
 import { getAllImageProviders, findImageProviderByModelId } from './image-providers'
 
 export interface ImageManagerConfig {
@@ -37,8 +38,11 @@ export class ImageManager {
       }
     }
 
-    // TODO: 初始化 DALL-E 适配器
-    // if (this.config.openaiApiKey) { ... }
+    // 初始化 DALL-E 适配器
+    if (this.config.openaiApiKey) {
+      const dalleAdapter = new DalleAdapter(this.config.openaiApiKey, 'dall-e-3')
+      this.adapters.set('dall-e-3', dalleAdapter)
+    }
   }
 
   /**

@@ -479,6 +479,13 @@
       "cancel": "取消",
       "confirm": "删除"
     },
+    "loadFailed": "加载资源失败",
+    "deleteSuccess": "资源删除成功",
+    "downloadNotSupported": "仅文档类型支持下载",
+    "clearCacheSuccess": "向量缓存已清理",
+    "clearCacheFailed": "清理缓存失败",
+    "reindexSuccess": "重新索引任务已启动",
+    "reindexFailed": "重新索引失败",
     "storage": "存储",
     "resources": "资源",
     "clearCache": "清除缓存",

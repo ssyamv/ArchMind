@@ -4,7 +4,9 @@
  */
 
 import { DocumentDAO } from '~/lib/db/dao/document-dao'
+import { AuditLogDAO } from '~/lib/db/dao/audit-log-dao'
 import { getStorageClient } from '~/lib/storage/storage-factory'
+import { verifyToken } from '~/server/utils/jwt'
 
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
@@ -17,13 +19,18 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  try {
-    // TODO: 添加用户认证检查
-    // const userId = await getUserIdFromSession(event)
-    // if (!userId) {
-    //   throw createError({ statusCode: 401, message: 'Unauthorized' })
-    // }
+  // 认证检查：从 Cookie 获取 JWT Token
+  const token = getCookie(event, 'auth_token')
+  if (!token) {
+    throw createError({ statusCode: 401, message: '未登录，请先登录' })
+  }
+  const payload = verifyToken(token)
+  if (!payload) {
+    throw createError({ statusCode: 401, message: 'Token 无效或已过期' })
+  }
+  const userId = payload.userId
 
+  try {
     // 查询文档
     const document = await DocumentDAO.findById(documentId)
     if (!document) {
@@ -33,10 +40,10 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // TODO: 检查访问权限
-    // if (document.userId !== userId) {
-    //   throw createError({ statusCode: 403, message: 'Forbidden' })
-    // }
+    // 权限检查：文档必须属于当前用户（或归属于用户有权限的 workspace）
+    if (document.userId && document.userId !== userId) {
+      throw createError({ statusCode: 403, message: '无权访问该文档' })
+    }
 
     // 检查文档是否存储在对象存储中
     if (!document.storageKey) {
@@ -53,19 +60,19 @@ export default defineEventHandler(async (event) => {
       3600  // 1 小时有效期
     )
 
-    console.log(`Generated presigned URL for document: ${documentId}`)
+    console.log(`[Download] userId=${userId} documentId=${documentId} fileName=${document.title}`)
 
-    // TODO: 记录下载日志
-    // await AuditLogDAO.log({
-    //   entityType: 'document',
-    //   entityId: documentId,
-    //   action: 'download',
-    //   userId: 'system',
-    //   metadata: {
-    //     fileName: document.title,
-    //     fileSize: document.fileSize
-    //   }
-    // })
+    // 写入审计日志
+    await AuditLogDAO.create({
+      userId,
+      workspaceId: document.workspaceId || null,
+      action: 'document.download',
+      resourceType: 'document',
+      resourceId: documentId,
+      ipAddress: getRequestIP(event, { xForwardedFor: true }),
+      userAgent: getHeader(event, 'user-agent'),
+      metadata: { fileName: document.title, fileType: document.fileType }
+    })
 
     // 重定向到预签名 URL
     return sendRedirect(event, presignedUrl)

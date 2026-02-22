@@ -88,6 +88,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { FileText, MoreVertical, Pencil, Copy, Trash2, Clock } from 'lucide-vue-next'
 import {
   Card,
@@ -105,6 +106,7 @@ import {
   DropdownMenuTrigger
 } from '~/components/ui/dropdown-menu'
 import { Progress } from '~/components/ui/progress'
+import { useToast } from '~/components/ui/toast/use-toast'
 
 interface Project {
   id: string
@@ -117,6 +119,8 @@ interface Project {
 }
 
 const { t } = useI18n()
+const { toast } = useToast()
+const isDuplicating = ref(false)
 
 const props = defineProps<{
   project: Project
@@ -126,6 +130,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   edit: [id: string]
   delete: [id: string]
+  duplicate: [newId: string]
 }>()
 
 function getStatusVariant(status: Project['status']): 'default' | 'secondary' | 'outline' {
@@ -146,8 +151,20 @@ function getStatusLabel(status: Project['status']) {
   return t(statusKeys[status])
 }
 
-function handleDuplicate() {
-  // TODO: Implement duplicate functionality
-  console.log('Duplicate project:', props.project.id)
+async function handleDuplicate() {
+  if (isDuplicating.value) return
+  isDuplicating.value = true
+  try {
+    const result = await $fetch<{ success: boolean; data: { id: string } }>(
+      `/api/prd/${props.project.id}/duplicate`,
+      { method: 'POST' }
+    )
+    toast({ title: t('projects.duplicateSuccess'), variant: 'success' })
+    emit('duplicate', result.data.id)
+  } catch (err: any) {
+    toast({ title: t('projects.duplicateFailed'), variant: 'destructive' })
+  } finally {
+    isDuplicating.value = false
+  }
 }
 </script>

@@ -340,6 +340,53 @@ describe('DocumentDAO', () => {
     })
   })
 
+  describe('findByIds', () => {
+    it('空数组直接返回空 Map', async () => {
+      const result = await DocumentDAO.findByIds([])
+
+      expect(result).toBeInstanceOf(Map)
+      expect(result.size).toBe(0)
+      expect(mockDbClient.query).not.toHaveBeenCalled()
+    })
+
+    it('批量查询并返回 Map', async () => {
+      const rows = [
+        { id: 'doc-1', title: 'Doc 1', file_path: '/1', file_type: 'pdf', file_size: 100, status: 'uploaded', processing_status: 'completed', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: 'doc-2', title: 'Doc 2', file_path: '/2', file_type: 'docx', file_size: 200, status: 'uploaded', processing_status: 'pending', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+      ]
+      mockDbClient.query.mockResolvedValueOnce({ rows, rowCount: 2 })
+
+      const result = await DocumentDAO.findByIds(['doc-1', 'doc-2'])
+
+      expect(result).toBeInstanceOf(Map)
+      expect(result.size).toBe(2)
+      expect(result.get('doc-1')?.title).toBe('Doc 1')
+      expect(result.get('doc-2')?.title).toBe('Doc 2')
+    })
+
+    it('SQL 使用 IN 占位符', async () => {
+      mockDbClient.query.mockResolvedValueOnce({ rows: [] })
+
+      await DocumentDAO.findByIds(['a', 'b', 'c'])
+
+      const [sql, params] = mockDbClient.query.mock.calls[0]
+      expect(sql).toContain('IN ($1, $2, $3)')
+      expect(params).toEqual(['a', 'b', 'c'])
+    })
+
+    it('数据库不返回某些 id 时 Map 中不包含对应键', async () => {
+      const rows = [
+        { id: 'doc-1', title: 'Doc 1', file_path: '/1', file_type: 'pdf', file_size: 100, status: 'uploaded', processing_status: 'completed', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+      ]
+      mockDbClient.query.mockResolvedValueOnce({ rows, rowCount: 1 })
+
+      const result = await DocumentDAO.findByIds(['doc-1', 'doc-missing'])
+
+      expect(result.has('doc-1')).toBe(true)
+      expect(result.has('doc-missing')).toBe(false)
+    })
+  })
+
   describe('updateProcessingStatus', () => {
     it('should update status with all details', async () => {
       const mockUpdatedDoc = {

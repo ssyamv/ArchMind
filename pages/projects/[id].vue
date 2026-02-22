@@ -70,11 +70,37 @@
     <!-- Content Area -->
     <div class="flex-1 overflow-y-auto">
       <div class="max-w-[1400px] mx-auto px-6 py-6">
-        <!-- Loading State -->
-        <div v-if="isLoading" class="flex items-center justify-center py-20">
-          <div class="flex flex-col items-center gap-3 text-muted-foreground">
-            <div class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <span class="text-sm">{{ $t('common.loading') }}...</span>
+        <!-- Loading State: 骨架屏 -->
+        <div v-if="isLoading" class="space-y-6">
+          <!-- 概览卡片骨架 -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card v-for="i in 4" :key="i">
+              <CardContent class="p-4">
+                <div class="flex items-center gap-3">
+                  <Skeleton class="w-9 h-9 rounded-lg" />
+                  <div class="space-y-2 flex-1">
+                    <Skeleton class="h-3 w-20" />
+                    <Skeleton class="h-4 w-16" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          <!-- 主内容骨架 -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 space-y-4">
+              <Skeleton class="h-8 w-48" />
+              <Skeleton class="h-4 w-full" />
+              <Skeleton class="h-4 w-5/6" />
+              <Skeleton class="h-4 w-4/6" />
+              <Skeleton class="h-4 w-full" />
+              <Skeleton class="h-4 w-3/4" />
+            </div>
+            <div class="space-y-4">
+              <Skeleton class="h-8 w-32" />
+              <Skeleton class="h-20 w-full rounded-lg" />
+              <Skeleton class="h-20 w-full rounded-lg" />
+            </div>
           </div>
         </div>
 
@@ -462,6 +488,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Badge } from '~/components/ui/badge'
 import { Separator } from '~/components/ui/separator'
 import { Switch } from '~/components/ui/switch'
+import { Skeleton } from '~/components/ui/skeleton'
 import {
   DropdownMenu,
   DropdownMenuContent,

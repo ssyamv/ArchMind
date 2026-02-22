@@ -290,6 +290,20 @@ export class VectorDAO {
   }
 
   /**
+   * 删除指定文档的所有向量（通过 chunk_id JOIN document_chunks）
+   */
+  static async deleteByDocumentId(documentId: string): Promise<number> {
+    const sql = `
+      DELETE FROM document_embeddings
+      WHERE chunk_id IN (
+        SELECT id FROM document_chunks WHERE document_id = $1
+      )
+    `
+    const result = await dbClient.query(sql, [documentId])
+    return result.rowCount || 0
+  }
+
+  /**
    * 删除文档的所有向量(所有模型)
    */
   static async deleteByChunkIds(chunkIds: string[]): Promise<number> {
