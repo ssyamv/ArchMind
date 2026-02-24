@@ -7,6 +7,7 @@ import type { PrototypeGenerateFromPRDRequest } from '~/types/prototype'
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
   try {
+    const userId = requireAuth(event)
     const body = await readBody<PrototypeGenerateFromPRDRequest>(event)
 
     if (!body.prdId) {
@@ -20,6 +21,9 @@ export default defineEventHandler(async (event) => {
       setResponseStatus(event, 404)
       return { success: false, message: t(ErrorKeys.PRD_NOT_FOUND) }
     }
+
+    // 校验 PRD 归属权
+    requireResourceOwner(prd, userId)
 
     // 设置 SSE 响应头
     setHeader(event, 'Content-Type', 'text/event-stream')
@@ -63,6 +67,7 @@ export default defineEventHandler(async (event) => {
     // 保存到数据库
     const prototype = await PrototypeDAO.create({
       prdId: body.prdId,
+      userId,
       title: prd.title ? `${prd.title} - 原型` : '原型图',
       description: `从 PRD 自动生成`,
       currentVersion: 1,

@@ -19,6 +19,7 @@ export interface RetrievalOptions {
   threshold?: number;
   documentIds?: string[];
   prdIds?: string[];
+  userId?: string;
 }
 
 export interface RetrievedChunk {
@@ -48,6 +49,7 @@ export class RAGRetriever {
     const threshold = options?.threshold ?? this.threshold
     const documentIds = options?.documentIds
     const prdIds = options?.prdIds
+    const userId = options?.userId
 
     try {
       // 获取查询的向量表示
@@ -94,6 +96,10 @@ export class RAGRetriever {
         for (const chunk of chunks) {
           const doc = docMap.get(chunk.documentId)
           if (doc) {
+            // userId 过滤：只返回属于当前用户或无归属（历史数据）的文档
+            if (userId && doc.userId && doc.userId !== userId) {
+              continue
+            }
             retrievedChunks.push({
               id: chunk.id,
               documentId: chunk.documentId,
@@ -127,9 +133,9 @@ export class RAGRetriever {
   /**
    * 关键词搜索(PostgreSQL 全文检索)
    */
-  async keywordSearch (query: string, topK: number = 10): Promise<RetrievedChunk[]> {
+  async keywordSearch (query: string, topK: number = 10, userId?: string): Promise<RetrievedChunk[]> {
     try {
-      const result = await dbClient.query(`
+      let sql = `
         SELECT
           dc.id,
           dc.document_id,
@@ -139,9 +145,18 @@ export class RAGRetriever {
         FROM document_chunks dc
         JOIN documents d ON dc.document_id = d.id
         WHERE d.tsv @@ plainto_tsquery('english', $1)
-        ORDER BY score DESC
-        LIMIT $2
-      `, [query, topK])
+      `
+      const params: any[] = [query]
+
+      if (userId) {
+        sql += ` AND (d.user_id = $${params.length + 1} OR d.user_id IS NULL)`
+        params.push(userId)
+      }
+
+      sql += ` ORDER BY score DESC LIMIT $${params.length + 1}`
+      params.push(topK)
+
+      const result = await dbClient.query(sql, params)
 
       return result.rows.map(row => ({
         id: row.id,
@@ -171,10 +186,12 @@ export class RAGRetriever {
       keywordWeight?: number;
       vectorWeight?: number;
       strategy?: 'rrf' | 'score';
+      userId?: string;
     }
   ): Promise<RetrievedChunk[]> {
     const topK = options?.topK ?? this.topK
     const threshold = options?.threshold ?? this.threshold
+    const userId = options?.userId
 
     // 自动权重：若未指定，根据查询自动计算
     let { keywordWeight, vectorWeight } = options ?? {}
@@ -187,8 +204,8 @@ export class RAGRetriever {
     try {
       // 1. 并行执行关键词搜索和向量检索
       const [keywordResults, vectorResults] = await Promise.all([
-        this.keywordSearch(query, topK * 2),
-        this.retrieve(query, { topK: topK * 2, threshold })
+        this.keywordSearch(query, topK * 2, userId),
+        this.retrieve(query, { topK: topK * 2, threshold, userId })
       ])
 
       // 2. 使用 reranker 融合（支持 RRF / Score 策略）

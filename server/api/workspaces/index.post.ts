@@ -9,6 +9,8 @@ export default defineEventHandler(async (event) => {
   const t = useServerT(event)
 
   try {
+    requireAuth(event)
+
     const body = await readBody<CreateWorkspaceInput>(event)
 
     // 验证必需字段

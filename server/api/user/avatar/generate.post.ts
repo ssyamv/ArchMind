@@ -8,7 +8,6 @@
 
 import { z } from 'zod'
 import { UserDAO } from '~/lib/db/dao/user-dao'
-import { verifyToken } from '~/server/utils/jwt'
 import { getStorageClient } from '~/lib/storage/storage-factory'
 import { getImageManager, resetImageManager } from '~/lib/ai/image-manager'
 
@@ -34,16 +33,7 @@ interface AvatarGenerateResponse {
 
 export default defineEventHandler(async (event): Promise<AvatarGenerateResponse> => {
   try {
-    // 验证用户身份
-    const token = getCookie(event, 'auth_token')
-    if (!token) {
-      return { success: false, message: '未登录' }
-    }
-
-    const payload = verifyToken(token)
-    if (!payload) {
-      return { success: false, message: 'Token 无效或已过期' }
-    }
+    const userId = requireAuth(event)
 
     // 解析请求
     const body = await readBody(event)
@@ -109,7 +99,7 @@ export default defineEventHandler(async (event): Promise<AvatarGenerateResponse>
     const imageBuffer = Buffer.from(await imageResponse.arrayBuffer())
 
     // 上传到对象存储（覆盖同一路径，使头像生效）
-    const objectKey = `avatars/${payload.userId}.png`
+    const objectKey = `avatars/${userId}.png`
     const storage = getStorageClient()
     await storage.uploadFile(objectKey, imageBuffer, {
       'Content-Type': 'image/png',
@@ -117,10 +107,10 @@ export default defineEventHandler(async (event): Promise<AvatarGenerateResponse>
     })
 
     // 更新数据库
-    await UserDAO.update(payload.userId, { avatarUrl: objectKey })
+    await UserDAO.update(userId, { avatarUrl: objectKey })
 
     // 返回代理 URL（带时间戳破缓存）
-    const avatarUrl = `/api/user/avatar/${payload.userId}?v=${Date.now()}`
+    const avatarUrl = `/api/user/avatar/${userId}?v=${Date.now()}`
 
     return { success: true, avatarUrl }
   } catch (error: any) {

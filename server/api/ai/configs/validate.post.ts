@@ -1,6 +1,10 @@
 /**
  * 验证 API 配置是否有效
  * POST /api/ai/configs/validate
+ *
+ * 对于支持动态获取模型列表的提供商（OpenAI、Anthropic、Gemini、DeepSeek、Ollama），
+ * 在验证连接的同时获取可用模型列表返回给前端。
+ * 其他提供商（Qwen、GLM、Wenxin）返回预置的推荐模型列表。
  */
 
 import type { ValidateAPIRequest } from '~/types/settings'
@@ -17,6 +21,7 @@ function isValidProvider(provider: string): provider is AIProviderType {
 
 export default defineEventHandler(async (event) => {
   try {
+    const userId = requireAuth(event)
     const body = await readBody<ValidateAPIRequest>(event)
 
     if (!body.provider) {
@@ -40,7 +45,7 @@ export default defineEventHandler(async (event) => {
     let baseUrl = body.baseUrl
 
     // 从数据库获取已保存的配置
-    const savedConfig = await UserAPIConfigDAO.getFullConfig(body.provider)
+    const savedConfig = await UserAPIConfigDAO.getFullConfig(userId, body.provider)
 
     if (!apiKey && savedConfig?.apiKey) {
       apiKey = savedConfig.apiKey
@@ -51,7 +56,10 @@ export default defineEventHandler(async (event) => {
     }
 
     // 根据提供商类型验证连接
+    // availableModels: 动态获取的真实模型列表（用于让用户选择）
+    // suggestedModels: 预置推荐模型列表（当无法动态获取时使用）
     let availableModels: string[] = []
+    let modelsFetched = false // 是否成功动态获取了模型列表
 
     switch (body.provider) {
       case 'anthropic':
@@ -59,19 +67,38 @@ export default defineEventHandler(async (event) => {
           throw createError({ statusCode: 400, message: 'API Key is required' })
         }
         try {
-          // 支持自定义 Base URL（中转站）
           const clientOptions: any = { apiKey }
           if (baseUrl && baseUrl !== providerConfig.defaultBaseUrl) {
             clientOptions.baseURL = baseUrl
           }
           const client = new Anthropic(clientOptions)
-          // 发送一个最小请求来验证
-          await client.messages.create({
-            model: 'claude-3-5-haiku-20241022',
-            max_tokens: 10,
-            messages: [{ role: 'user', content: 'Hi' }]
-          })
-          availableModels = providerConfig.models.map(m => m.id)
+          // 尝试通过 REST 获取模型列表（需要 API Key）
+          try {
+            const listUrl = (clientOptions.baseURL || 'https://api.anthropic.com') + '/v1/models'
+            const listResponse = await fetch(listUrl, {
+              headers: {
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01'
+              }
+            })
+            if (listResponse.ok) {
+              const listData = await listResponse.json()
+              availableModels = (listData.data || []).map((m: any) => m.id as string)
+              modelsFetched = true
+            }
+          } catch {
+            // 忽略，降级到验证连接
+          }
+
+          if (!modelsFetched) {
+            // 发送最小请求验证连接
+            await client.messages.create({
+              model: 'claude-3-5-haiku-20241022',
+              max_tokens: 10,
+              messages: [{ role: 'user', content: 'Hi' }]
+            })
+            availableModels = providerConfig.models.map(m => m.id)
+          }
         } catch (e: any) {
           throw createError({ statusCode: 400, message: `Anthropic API 验证失败: ${e.message}` })
         }
@@ -82,15 +109,18 @@ export default defineEventHandler(async (event) => {
           throw createError({ statusCode: 400, message: 'API Key is required' })
         }
         try {
-          // 支持自定义 Base URL（中转站）
           const client = new OpenAI({
             apiKey,
             baseURL: baseUrl || 'https://api.openai.com/v1'
           })
           const models = await client.models.list()
-          availableModels = models.data
+          // 过滤出 GPT 系列和推理模型，排除 embedding、tts 等非聊天模型
+          const chatModels = models.data
+            .filter(m => m.id.startsWith('gpt') || m.id.startsWith('o1') || m.id.startsWith('o3') || m.id.startsWith('o4'))
             .map(m => m.id)
-            .slice(0, 20)
+            .sort()
+          availableModels = chatModels.length > 0 ? chatModels : models.data.map(m => m.id).slice(0, 30)
+          modelsFetched = true
         } catch (e: any) {
           throw createError({ statusCode: 400, message: `OpenAI API 验证失败: ${e.message}` })
         }
@@ -101,11 +131,28 @@ export default defineEventHandler(async (event) => {
           throw createError({ statusCode: 400, message: 'API Key is required' })
         }
         try {
-          // Google 暂不支持自定义 Base URL
-          const genAI = new GoogleGenerativeAI(apiKey)
-          const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-          await model.generateContent('Hi')
-          availableModels = providerConfig.models.map(m => m.id)
+          // 尝试通过 REST API 获取模型列表
+          try {
+            const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
+            const listResponse = await fetch(listUrl)
+            if (listResponse.ok) {
+              const listData = await listResponse.json()
+              availableModels = (listData.models || [])
+                .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
+                .map((m: any) => m.name.replace('models/', ''))
+              modelsFetched = true
+            }
+          } catch {
+            // 忽略，降级到验证连接
+          }
+
+          if (!modelsFetched) {
+            // 降级：发送最小请求验证连接
+            const genAI = new GoogleGenerativeAI(apiKey)
+            const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+            await model.generateContent('Hi')
+            availableModels = providerConfig.models.map(m => m.id)
+          }
         } catch (e: any) {
           throw createError({ statusCode: 400, message: `Google API 验证失败: ${e.message}` })
         }
@@ -120,12 +167,19 @@ export default defineEventHandler(async (event) => {
             apiKey,
             baseURL: baseUrl || 'https://api.deepseek.com'
           })
-          await client.chat.completions.create({
-            model: 'deepseek-chat',
-            max_tokens: 10,
-            messages: [{ role: 'user', content: 'Hi' }]
-          })
-          availableModels = providerConfig.models.map(m => m.id)
+          try {
+            const models = await client.models.list()
+            availableModels = models.data.map(m => m.id)
+            modelsFetched = true
+          } catch {
+            // 降级验证
+            await client.chat.completions.create({
+              model: 'deepseek-chat',
+              max_tokens: 10,
+              messages: [{ role: 'user', content: 'Hi' }]
+            })
+            availableModels = providerConfig.models.map(m => m.id)
+          }
         } catch (e: any) {
           throw createError({ statusCode: 400, message: `DeepSeek API 验证失败: ${e.message}` })
         }
@@ -145,6 +199,7 @@ export default defineEventHandler(async (event) => {
             max_tokens: 10,
             messages: [{ role: 'user', content: 'Hi' }]
           })
+          // 通义千问暂无官方模型列表接口，返回预置推荐列表
           availableModels = providerConfig.models.map(m => m.id)
         } catch (e: any) {
           throw createError({ statusCode: 400, message: `通义千问 API 验证失败: ${e.message}` })
@@ -152,8 +207,6 @@ export default defineEventHandler(async (event) => {
         break
 
       case 'wenxin':
-        // 文心一言需要 API Key 和 Secret Key
-        // 暂时简化处理
         if (!apiKey) {
           throw createError({ statusCode: 400, message: 'API Key is required' })
         }
@@ -189,8 +242,29 @@ export default defineEventHandler(async (event) => {
           }
           const data = await response.json()
           availableModels = data.models?.map((m: any) => m.name) || []
+          modelsFetched = true
         } catch (e: any) {
           throw createError({ statusCode: 400, message: `Ollama 连接失败: ${e.message}` })
+        }
+        break
+
+      case 'custom':
+        if (apiKey || baseUrl) {
+          try {
+            const client = new OpenAI({
+              apiKey: apiKey || 'sk-placeholder',
+              baseURL: baseUrl || 'https://api.openai.com/v1'
+            })
+            try {
+              const models = await client.models.list()
+              availableModels = models.data.map(m => m.id).slice(0, 50)
+              modelsFetched = true
+            } catch {
+              availableModels = []
+            }
+          } catch {
+            availableModels = []
+          }
         }
         break
 
@@ -201,7 +275,8 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       message: `${providerConfig.name} 连接成功`,
-      availableModels
+      availableModels,
+      modelsFetched // 告知前端是否为动态获取的真实列表
     }
   } catch (error: any) {
     console.error('API validation failed:', error)

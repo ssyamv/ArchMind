@@ -29,6 +29,7 @@ export default defineEventHandler(async (event) => {
   const t = useServerT(event)
 
   try {
+    const userId = requireAuth(event)
     const formData = await readMultipartFormData(event)
 
     if (!formData || formData.length === 0) {
@@ -86,7 +87,7 @@ export default defineEventHandler(async (event) => {
 
     // 创建资源记录
     const asset: Omit<Asset, 'id' | 'createdAt' | 'updatedAt'> = {
-      userId: undefined,
+      userId,
       title: titleField ? new TextDecoder().decode(titleField.data) : fileName.replace(ext, ''),
       description: descriptionField ? new TextDecoder().decode(descriptionField.data) : undefined,
       fileName,

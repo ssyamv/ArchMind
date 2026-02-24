@@ -13,6 +13,7 @@ const setCategorySchema = z.object({
 
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
+  const userId = requireAuth(event)
   const documentId = getRouterParam(event, 'id')
 
   if (!documentId) {
@@ -42,6 +43,8 @@ export default defineEventHandler(async (event) => {
         message: t(ErrorKeys.DOCUMENT_NOT_FOUND)
       })
     }
+
+    requireResourceOwner(document, userId)
 
     // 如果设置了分类，验证分类存在
     const { categoryId } = validationResult.data

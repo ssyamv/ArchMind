@@ -12,9 +12,11 @@ export class OpenAIAdapter implements AIModelAdapter {
   modelId: string
   private client: OpenAI
 
-  constructor (apiKey: string, modelId: string = 'gpt-4o') {
+  constructor (apiKey: string, modelId: string = 'gpt-4o', baseUrl?: string) {
     this.modelId = modelId
-    this.client = new OpenAI({ apiKey })
+    const options: any = { apiKey }
+    if (baseUrl) options.baseURL = baseUrl
+    this.client = new OpenAI(options)
   }
 
   private buildMessages (prompt: string, options?: GenerateOptions) {

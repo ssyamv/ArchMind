@@ -11,8 +11,10 @@
 import { dbClient } from '~/lib/db/client'
 import { DocumentDAO } from '~/lib/db/dao/document-dao'
 
-export default defineEventHandler(async () => {
+export default defineEventHandler(async (event) => {
   try {
+    const userId = requireAuth(event)
+
     // 1. 查询重复的文档组 (相同 content_hash,数量 > 1)
     const sql = `
       SELECT
@@ -21,6 +23,7 @@ export default defineEventHandler(async () => {
         ARRAY_AGG(id) as document_ids
       FROM documents
       WHERE content_hash IS NOT NULL
+        AND (user_id = $1 OR user_id IS NULL)
       GROUP BY content_hash
       HAVING COUNT(*) > 1
       ORDER BY count DESC
@@ -30,7 +33,7 @@ export default defineEventHandler(async () => {
       content_hash: string
       count: string
       document_ids: string[]
-    }>(sql)
+    }>(sql, [userId])
 
     // 2. 获取每组文档的详细信息
     const duplicateGroups = await Promise.all(

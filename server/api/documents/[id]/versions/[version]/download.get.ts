@@ -9,6 +9,7 @@ import { getStorageClient } from '~/lib/storage/storage-factory'
 
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
+  const userId = requireAuth(event)
   const documentId = getRouterParam(event, 'id')
   const versionStr = getRouterParam(event, 'version')
 
@@ -36,6 +37,8 @@ export default defineEventHandler(async (event) => {
         message: t(ErrorKeys.DOCUMENT_NOT_FOUND)
       })
     }
+
+    requireResourceOwner(document, userId)
 
     // 查询版本
     const versionDoc = await DocumentVersionDAO.findByDocumentIdAndVersion(

@@ -125,11 +125,11 @@ export function useApiConfigs () {
     provider: AIProviderType,
     apiKey?: string,
     baseUrl?: string
-  ): Promise<{ success: boolean; message?: string; availableModels?: string[] }> => {
+  ): Promise<{ success: boolean; message?: string; availableModels?: string[]; modelsFetched?: boolean }> => {
     validating.value = provider
 
     try {
-      const response = await $fetch<{ success: boolean; message?: string; availableModels?: string[] }>(
+      const response = await $fetch<{ success: boolean; message?: string; availableModels?: string[]; modelsFetched?: boolean }>(
         '/api/ai/configs/validate',
         {
           method: 'POST',
@@ -140,7 +140,8 @@ export function useApiConfigs () {
       return {
         success: response.success,
         message: response.message,
-        availableModels: response.availableModels
+        availableModels: response.availableModels,
+        modelsFetched: response.modelsFetched
       }
     } catch (err: any) {
       console.error('Validation failed:', err)

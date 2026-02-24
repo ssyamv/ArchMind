@@ -25,15 +25,7 @@ const RequestSchema = z.object({
 
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
-  const userId = event.context.userId
-
-  // 允许未登录用户生成图片，但 userId 可能为空
-  // if (!userId) {
-  //   throw createError({
-  //     statusCode: 401,
-  //     message: t('errors.unauthorized')
-  //   })
-  // }
+  const userId = requireAuth(event)
 
   try {
     // 解析请求

@@ -14,11 +14,11 @@
 
 | 指标 | 状态 |
 |------|------|
-| 版本 | 0.1.0 |
+| 版本 | 0.1.1 |
 | 框架 | Nuxt 3.21 + Vue 3.5 + TypeScript 5.9 |
 | 数据库 | PostgreSQL 14+ + pgvector |
 | 组件 | 209 个 (30+ shadcn/ui) |
-| API 端点 | 91 个 |
+| API 端点 | 103 个 |
 | 测试覆盖率 | ~15% (目标 80%) |
 
 ---
@@ -99,14 +99,17 @@ ArchMind/
 │   └── profile/             # 用户设置
 │
 ├── server/                   # Nuxt 3 服务端
-│   ├── api/                 # API 路由（91 个文件）
+│   ├── api/                 # API 路由（103 个文件）
 │   │   ├── documents/       # 文档管理 API
 │   │   ├── prd/             # PRD 生成 API
 │   │   ├── chat/            # 对话 API
 │   │   ├── workspace/       # 工作区 API
+│   │   ├── ai/              # AI 配置 API
 │   │   └── auth/            # 认证 API
 │   ├── middleware/          # 服务端中间件
+│   │   └── 01.auth.ts       # 全局 JWT 认证中间件
 │   └── utils/               # 服务端工具
+│       └── auth-helpers.ts  # 认证工具函数
 │
 ├── components/               # Vue 组件（209 个）
 │   ├── ui/                  # shadcn/ui 组件（30+）
@@ -130,8 +133,8 @@ ArchMind/
 │
 ├── lib/                      # 核心业务逻辑
 │   ├── ai/                  # AI 服务层
-│   │   ├── adapters/        # 模型适配器（8 个）
-│   │   ├── manager.ts       # 模型管理器
+│   │   ├── adapters/        # 模型适配器（8 个，均支持自定义 baseUrl）
+│   │   ├── manager.ts       # 模型管理器（支持用户配置动态初始化）
 │   │   └── config.ts        # 配置解析
 │   ├── rag/                 # RAG 检索引擎
 │   │   ├── document-processor.ts
@@ -143,7 +146,7 @@ ArchMind/
 │   ├── logic-map/           # 逻辑图
 │   ├── db/                  # 数据库层
 │   │   ├── schema.ts        # 表结构定义
-│   │   └── dao/             # 数据访问层（15 个）
+│   │   └── dao/             # 数据访问层（15 个，均支持 userId 隔离）
 │   ├── storage/             # 对象存储
 │   ├── auth/                # 认证逻辑
 │   ├── chat/                # 对话引擎
@@ -243,7 +246,7 @@ User Input → RAG Retrieval → Context Building → Model Selection
 | `conversation_messages` | 对话消息 |
 | `prototypes` | 原型 |
 | `prototype_pages` | 原型页面 |
-| `user_api_configs` | 用户 API 配置 |
+| `user_api_configs` | 用户 API 配置（含 user_id 隔离、models 字段） |
 | `tags` | 标签 |
 | `categories` | 分类 |
 
@@ -345,6 +348,7 @@ ENCRYPTION_KEY=your-32-char-key
 // server/api/documents/index.get.ts
 import { z } from 'zod'
 import { documentDAO } from '~/lib/db/dao/document-dao'
+import { requireAuth } from '~/server/utils/auth-helpers'
 
 const QuerySchema = z.object({
   workspaceId: z.string().uuid(),
@@ -357,11 +361,8 @@ export default defineEventHandler(async (event) => {
   // 1. 验证输入
   const query = await getValidatedQuery(event, QuerySchema.parse)
 
-  // 2. 检查权限
-  const userId = event.context.userId
-  if (!userId) {
-    throw createError({ statusCode: 401, message: '未授权' })
-  }
+  // 2. 检查权限（由全局中间件注入 userId，requireAuth 提取并抛出 401）
+  const userId = requireAuth(event)
 
   // 3. 执行业务逻辑
   const result = await documentDAO.findByWorkspace(
@@ -532,7 +533,7 @@ async function handleSubmit() {
 
 ---
 
-## 已知问题与改进计划
+### 已知问题与改进计划
 
 ### 当前问题
 
@@ -541,10 +542,17 @@ async function handleSubmit() {
 3. **安全措施不足** - 缺少 CSRF、Rate Limiting
 4. **性能优化欠缺** - 缺少缓存层、查询优化
 
+### 已完成的改进（v0.1.1）
+
+1. **认证安全** - 全局 JWT 认证中间件，所有 API 强制认证
+2. **数据隔离** - 用户级 AI 配置隔离（`user_api_configs.user_id`）
+3. **模型灵活性** - 用户可自选模型列表，支持 API 中转站（自定义 baseUrl）
+4. **动态模型发现** - 验证 API 连接时自动获取真实可用模型
+
 ### 改进计划
 
 详见 [CHANGELOG.md](./CHANGELOG.md) 的版本规划。
 
 ---
 
-*最后更新: 2026-02-16*
+*最后更新: 2026-02-24*

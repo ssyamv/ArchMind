@@ -8,6 +8,7 @@ export default defineEventHandler(async (event) => {
   const t = useServerT(event)
 
   try {
+    const userId = requireAuth(event)
     const prdId = getRouterParam(event, 'prdId')
     if (!prdId) {
       setResponseStatus(event, 400)
@@ -41,6 +42,10 @@ export default defineEventHandler(async (event) => {
     }
 
     const prd = existingPrd[0]
+
+    // PRD 归属校验
+    requireResourceOwner({ userId: prd.userId }, userId)
+
     const conversationDbId = (prd.metadata as any)?.conversationDbId
 
     // 提取用户输入

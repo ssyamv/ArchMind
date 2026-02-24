@@ -3,11 +3,20 @@ import { PRDDAO } from '~/lib/db/dao/prd-dao'
 import { ErrorMessages } from '~/server/utils/errors'
 export default defineEventHandler(async (event) => {
   try {
+    const userId = requireAuth(event)
     const prdId = getRouterParam(event, 'id')
     if (!prdId) {
       setResponseStatus(event, 400)
       return { success: false, error: 'prdId is required' }
     }
+
+    // 查找 PRD 并校验归属权
+    const prd = await PRDDAO.findById(prdId)
+    if (!prd) {
+      setResponseStatus(event, 404)
+      return { success: false, error: ErrorMessages.PRD_NOT_FOUND }
+    }
+    requireResourceOwner(prd, userId)
 
     // 解析请求体
     const body = await readBody(event)

@@ -7,6 +7,7 @@ export default defineEventHandler(async (event) => {
   const t = useServerT(event)
 
   try {
+    const userId = requireAuth(event)
     const prdId = getRouterParam(event, 'prdId')
 
     if (!prdId) {
@@ -34,6 +35,9 @@ export default defineEventHandler(async (event) => {
         message: t('errors.prdDoesNotExist')
       }
     }
+
+    // PRD 归属校验
+    requireResourceOwner({ userId: prd.userId }, userId)
 
     // 从 metadata 中获取 conversationDbId
     const conversationDbId = (prd.metadata as any)?.conversationDbId

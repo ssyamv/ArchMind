@@ -3,6 +3,7 @@ import { PrdChunkDAO } from '~/lib/db/dao/prd-chunk-dao'
 
 export default defineEventHandler(async (event) => {
   try {
+    const userId = requireAuth(event)
     const prdId = getRouterParam(event, 'id')
     if (!prdId) {
       setResponseStatus(event, 400)
@@ -14,6 +15,8 @@ export default defineEventHandler(async (event) => {
       setResponseStatus(event, 404)
       return { success: false, message: 'PRD 不存在' }
     }
+
+    requireResourceOwner(prd, userId)
 
     // 删除所有向量数据
     await PrdChunkDAO.deleteByPrdId(prdId)

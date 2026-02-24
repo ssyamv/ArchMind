@@ -8,6 +8,8 @@ export default defineEventHandler(async (event) => {
   const t = useServerT(event)
 
   try {
+    requireAuth(event)
+
     // 获取运行时配置
     const runtimeConfig = useRuntimeConfig()
     const dashscopeApiKey = runtimeConfig.dashscopeApiKey

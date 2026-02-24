@@ -12,9 +12,11 @@ export class ClaudeAdapter implements AIModelAdapter {
   modelId: string
   private client: Anthropic
 
-  constructor (apiKey: string, modelId: string = 'claude-3-5-sonnet-20241022') {
+  constructor (apiKey: string, modelId: string = 'claude-3-5-sonnet-20241022', baseUrl?: string) {
     this.modelId = modelId
-    this.client = new Anthropic({ apiKey })
+    const options: any = { apiKey }
+    if (baseUrl) options.baseURL = baseUrl
+    this.client = new Anthropic(options)
   }
 
   private buildClaudeParams (prompt: string, options?: GenerateOptions) {

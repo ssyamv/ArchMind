@@ -4,6 +4,7 @@ import { ErrorMessages } from '~/server/utils/errors'
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
   try {
+    const userId = requireAuth(event)
     const id = getRouterParam(event, 'id')
     if (!id) {
       setResponseStatus(event, 400)
@@ -19,6 +20,8 @@ export default defineEventHandler(async (event) => {
       setResponseStatus(event, 404)
       return { success: false, message: t(ErrorKeys.PROTOTYPE_NOT_FOUND) }
     }
+
+    requireResourceOwner(prototype, userId)
 
     return {
       success: true,

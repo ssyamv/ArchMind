@@ -138,16 +138,20 @@ export const prdDocumentReferences = pgTable('prd_document_references', {
 // ============================================
 export const userApiConfigs = pgTable('user_api_configs', {
   id: uuid('id').primaryKey().defaultRandom(),
-  provider: varchar('provider', { length: 50 }).notNull().unique(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  provider: varchar('provider', { length: 50 }).notNull(),
   apiKeyEncrypted: text('api_key_encrypted'),
   baseUrl: varchar('base_url', { length: 500 }),
+  models: jsonb('models').default(sql`'[]'::jsonb`), // 用户自定义的模型 ID 列表
   enabled: boolean('enabled').default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow()
 }, (table) => {
   return {
+    userIdIdx: index('idx_user_api_configs_user_id').on(table.userId),
     providerIdx: index('idx_user_api_configs_provider').on(table.provider),
-    enabledIdx: index('idx_user_api_configs_enabled').on(table.enabled)
+    enabledIdx: index('idx_user_api_configs_enabled').on(table.enabled),
+    uniqueUserProvider: uniqueIndex('unique_user_provider').on(table.userId, table.provider)
   }
 })
 

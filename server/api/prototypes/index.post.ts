@@ -4,6 +4,7 @@ import type { PrototypeCreateRequest } from '~/types/prototype'
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
   try {
+    const userId = requireAuth(event)
     const body = await readBody<PrototypeCreateRequest>(event)
 
     if (!body.title || !body.pages?.length) {
@@ -13,6 +14,7 @@ export default defineEventHandler(async (event) => {
 
     const prototype = await PrototypeDAO.create({
       prdId: body.prdId,
+      userId,
       title: body.title,
       description: body.description,
       currentVersion: 1,

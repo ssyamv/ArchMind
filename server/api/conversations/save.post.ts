@@ -7,6 +7,7 @@ export default defineEventHandler(async (event) => {
   const t = useServerT(event)
 
   try {
+    const userId = requireAuth(event)
     const body = await readBody<ConversationSaveRequest>(event)
 
     // 验证必需字段 (finalPrdContent 允许为空字符串)
@@ -44,6 +45,7 @@ export default defineEventHandler(async (event) => {
     // 保存为 PRD 文档 (即使内容为空也保存对话记录)
     await db.insert(prdDocuments).values({
       id: prdId,
+      userId,
       title: body.title,
       content: body.finalPrdContent || '', // 空内容时使用空字符串
       userInput: userInputs,
@@ -64,6 +66,7 @@ export default defineEventHandler(async (event) => {
     // 保存对话记录到 conversations 表
     await db.insert(conversations).values({
       id: conversationDbId,
+      userId,
       title: body.title,
       summary,
       messageCount: body.messages.length,

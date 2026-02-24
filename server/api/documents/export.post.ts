@@ -34,6 +34,7 @@ export default defineEventHandler(async (event) => {
   const t = useServerT(event)
 
   try {
+    const userId = requireAuth(event)
     const body = await readBody(event)
 
     // 验证输入
@@ -63,9 +64,13 @@ export default defineEventHandler(async (event) => {
         documentIds.map(id => DocumentDAO.findById(id))
       )
       documents = documents.filter(d => d !== null)
+      // 验证每个文档的归属权
+      for (const doc of documents) {
+        requireResourceOwner(doc, userId)
+      }
     } else {
-      // 查询全部,然后筛选
-      documents = await DocumentDAO.findAll({ limit: 1000 })
+      // 查询当前用户的文档,然后筛选
+      documents = await DocumentDAO.findAll({ limit: 1000, userId })
 
       if (fileTypes && fileTypes.length > 0) {
         documents = documents.filter(d => fileTypes.includes(d.fileType))

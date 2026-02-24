@@ -8,6 +8,8 @@ import { CategoryDAO } from '~/lib/db/dao/category-dao'
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
   try {
+    requireAuth(event)
+
     const query = getQuery(event)
     const tree = query.tree === 'true'
     const parentId = query.parentId as string | undefined

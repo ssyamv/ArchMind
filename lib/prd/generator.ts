@@ -20,6 +20,8 @@ export interface PRDGenerationOptions {
   topK?: number;
   enableRefinement?: boolean; // 是否启用迭代优化
   maxRefinementIterations?: number; // 最大迭代次数
+  userId?: string;
+  workspaceId?: string;
 }
 
 export interface PRDGenerationResult {
@@ -188,6 +190,8 @@ export class PRDGenerator {
 
     // 保存到数据库
     const prd: Omit<PRDDocument, 'id' | 'createdAt' | 'updatedAt'> = {
+      userId: options?.userId,
+      workspaceId: options?.workspaceId,
       title: `PRD - ${new Date().toISOString().split('T')[0]}`,
       content,
       userInput,
@@ -299,6 +303,8 @@ export class PRDGenerator {
     const costEstimate = this.modelManager.estimateCost(modelId, estimatedTokens)
 
     const prd: Omit<PRDDocument, 'id' | 'createdAt' | 'updatedAt'> = {
+      userId: options?.userId,
+      workspaceId: options?.workspaceId,
       title: `PRD - ${new Date().toISOString().split('T')[0]}`,
       content,
       userInput,

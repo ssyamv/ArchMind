@@ -6,7 +6,6 @@
 import { DocumentDAO } from '~/lib/db/dao/document-dao'
 import { AuditLogDAO } from '~/lib/db/dao/audit-log-dao'
 import { getStorageClient } from '~/lib/storage/storage-factory'
-import { verifyToken } from '~/server/utils/jwt'
 
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
@@ -19,16 +18,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // 认证检查：从 Cookie 获取 JWT Token
-  const token = getCookie(event, 'auth_token')
-  if (!token) {
-    throw createError({ statusCode: 401, message: '未登录，请先登录' })
-  }
-  const payload = verifyToken(token)
-  if (!payload) {
-    throw createError({ statusCode: 401, message: 'Token 无效或已过期' })
-  }
-  const userId = payload.userId
+  const userId = requireAuth(event)
 
   try {
     // 查询文档
@@ -40,10 +30,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 权限检查：文档必须属于当前用户（或归属于用户有权限的 workspace）
-    if (document.userId && document.userId !== userId) {
-      throw createError({ statusCode: 403, message: '无权访问该文档' })
-    }
+    requireResourceOwner(document, userId)
 
     // 检查文档是否存储在对象存储中
     if (!document.storageKey) {

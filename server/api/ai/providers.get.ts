@@ -5,7 +5,9 @@
 
 import { getAllProviders } from '~/lib/ai/providers'
 
-export default defineEventHandler(() => {
+export default defineEventHandler((event) => {
+  requireAuth(event)
+
   const providers = getAllProviders()
 
   return {

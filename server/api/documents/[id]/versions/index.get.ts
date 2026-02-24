@@ -8,6 +8,7 @@ import { DocumentVersionDAO } from '~/lib/db/dao/document-version-dao'
 
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
+  const userId = requireAuth(event)
   const documentId = getRouterParam(event, 'id')
 
   if (!documentId) {
@@ -26,6 +27,8 @@ export default defineEventHandler(async (event) => {
         message: t(ErrorKeys.DOCUMENT_NOT_FOUND)
       })
     }
+
+    requireResourceOwner(document, userId)
 
     // 查询所有版本
     const versions = await DocumentVersionDAO.findByDocumentId(documentId)

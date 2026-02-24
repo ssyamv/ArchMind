@@ -4,17 +4,22 @@ import { ErrorMessages } from '~/server/utils/errors'
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
   try {
+    const userId = requireAuth(event)
     const id = getRouterParam(event, 'id')
     if (!id) {
       setResponseStatus(event, 400)
       return { success: false, message: t('errors.idRequired') }
     }
 
-    const deleted = await PrototypeDAO.delete(id)
-    if (!deleted) {
+    // 先查询资源并校验归属权
+    const existing = await PrototypeDAO.findById(id)
+    if (!existing) {
       setResponseStatus(event, 404)
       return { success: false, message: t(ErrorKeys.PROTOTYPE_NOT_FOUND) }
     }
+    requireResourceOwner(existing, userId)
+
+    await PrototypeDAO.delete(id)
 
     return { success: true }
   } catch (error) {

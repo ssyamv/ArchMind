@@ -82,12 +82,19 @@ export class DocumentDAO {
     orderBy?: 'created_at' | 'updated_at' | 'title';
     order?: 'ASC' | 'DESC';
     workspaceId?: string;
+    userId?: string;
   }): Promise<Document[]> {
-    const { limit = 50, offset = 0, orderBy = 'created_at', order = 'DESC', workspaceId } = options || {}
+    const { limit = 50, offset = 0, orderBy = 'created_at', order = 'DESC', workspaceId, userId } = options || {}
 
     const whereConditions: string[] = []
     const params: any[] = []
     let paramIndex = 1
+
+    if (userId) {
+      whereConditions.push(`(user_id = $${paramIndex} OR user_id IS NULL)`)
+      params.push(userId)
+      paramIndex++
+    }
 
     if (workspaceId) {
       whereConditions.push(`workspace_id = $${paramIndex}`)
@@ -208,12 +215,18 @@ export class DocumentDAO {
   }
 
   // 统计文档数量
-  static async count (options?: { workspaceId?: string }): Promise<number> {
-    const { workspaceId } = options || {}
+  static async count (options?: { workspaceId?: string; userId?: string }): Promise<number> {
+    const { workspaceId, userId } = options || {}
 
     const whereConditions: string[] = []
     const params: any[] = []
     let paramIndex = 1
+
+    if (userId) {
+      whereConditions.push(`(user_id = $${paramIndex} OR user_id IS NULL)`)
+      params.push(userId)
+      paramIndex++
+    }
 
     if (workspaceId) {
       whereConditions.push(`workspace_id = $${paramIndex}`)

@@ -5,7 +5,6 @@
 
 import { z } from 'zod'
 import { UserDAO } from '~/lib/db/dao/user-dao'
-import { verifyToken } from '~/server/utils/jwt'
 
 // 请求体验证 schema
 const updateUserSchema = z.object({
@@ -32,24 +31,7 @@ interface UpdateUserResponse {
 
 export default defineEventHandler(async (event): Promise<UpdateUserResponse> => {
   try {
-    // 从 Cookie 中获取 Token
-    const token = getCookie(event, 'auth_token')
-
-    if (!token) {
-      return {
-        success: false,
-        message: '未登录'
-      }
-    }
-
-    // 验证 Token
-    const payload = verifyToken(token)
-    if (!payload) {
-      return {
-        success: false,
-        message: 'Token 无效或已过期'
-      }
-    }
+    const userId = requireAuth(event)
 
     // 获取并验证请求体
     const body = await readBody<UpdateUserRequest>(event)
@@ -73,7 +55,7 @@ export default defineEventHandler(async (event): Promise<UpdateUserResponse> => 
       updateData.avatarUrl = validated.data.avatarUrl ?? undefined
     }
 
-    const user = await UserDAO.update(payload.userId, updateData)
+    const user = await UserDAO.update(userId, updateData)
 
     if (!user) {
       return {
@@ -97,6 +79,11 @@ export default defineEventHandler(async (event): Promise<UpdateUserResponse> => 
     }
   } catch (error: any) {
     console.error('更新用户信息失败:', error)
+
+    if (error.statusCode) {
+      throw error
+    }
+
     return {
       success: false,
       message: '更新用户信息失败'

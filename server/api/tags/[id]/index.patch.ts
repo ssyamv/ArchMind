@@ -14,6 +14,7 @@ const updateTagSchema = z.object({
 
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
+  requireAuth(event)
   const tagId = getRouterParam(event, 'id')
 
   if (!tagId) {

@@ -5,9 +5,10 @@
 
 import { UserAPIConfigDAO } from '~/lib/db/dao/user-api-config-dao'
 
-export default defineEventHandler(async () => {
+export default defineEventHandler(async (event) => {
   try {
-    const configs = await UserAPIConfigDAO.getAll()
+    const userId = requireAuth(event)
+    const configs = await UserAPIConfigDAO.getAll(userId)
 
     return {
       success: true,
@@ -15,6 +16,11 @@ export default defineEventHandler(async () => {
     }
   } catch (error: any) {
     console.error('Failed to fetch API configs:', error)
+
+    if (error.statusCode) {
+      throw error
+    }
+
     return {
       success: false,
       message: error.message || 'Failed to fetch API configurations'

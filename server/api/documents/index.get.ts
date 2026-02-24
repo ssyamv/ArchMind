@@ -3,6 +3,7 @@ import { DocumentDAO } from '~/lib/db/dao/document-dao'
 import { ErrorMessages } from '~/server/utils/errors'
 export default defineEventHandler(async (event) => {
   try {
+    const userId = requireAuth(event)
     const query = getQuery(event)
     const page = parseInt((query.page as string) || '1', 10)
     const limit = parseInt((query.limit as string) || '50', 10)
@@ -10,8 +11,8 @@ export default defineEventHandler(async (event) => {
     const workspaceId = query.workspace_id as string | undefined
 
     const [documents, total] = await Promise.all([
-      DocumentDAO.findAll({ limit, offset, order: 'DESC', orderBy: 'created_at', workspaceId }),
-      DocumentDAO.count({ workspaceId })
+      DocumentDAO.findAll({ limit, offset, order: 'DESC', orderBy: 'created_at', workspaceId, userId }),
+      DocumentDAO.count({ workspaceId, userId })
     ])
 
     return {

@@ -4,32 +4,14 @@
  */
 
 import { UserDAO } from '~/lib/db/dao/user-dao'
-import { verifyToken } from '~/server/utils/jwt'
 import type { AuthResponse } from '~/types/auth'
 
 export default defineEventHandler(async (event): Promise<AuthResponse> => {
   try {
-    // 从 Cookie 中获取 Token
-    const token = getCookie(event, 'auth_token')
-
-    if (!token) {
-      return {
-        success: false,
-        message: '未登录'
-      }
-    }
-
-    // 验证 Token
-    const payload = verifyToken(token)
-    if (!payload) {
-      return {
-        success: false,
-        message: 'Token 无效或已过期'
-      }
-    }
+    const userId = requireAuth(event)
 
     // 获取用户信息
-    const user = await UserDAO.getById(payload.userId)
+    const user = await UserDAO.getById(userId)
     if (!user) {
       return {
         success: false,
@@ -64,6 +46,11 @@ export default defineEventHandler(async (event): Promise<AuthResponse> => {
     }
   } catch (error: any) {
     console.error('获取用户信息失败:', error)
+
+    if (error.statusCode) {
+      throw error
+    }
+
     return {
       success: false,
       message: '获取用户信息失败'

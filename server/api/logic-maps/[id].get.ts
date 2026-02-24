@@ -1,13 +1,21 @@
 import { LogicMapDAO } from '~/lib/db/dao/logic-map-dao'
+import { PRDDAO } from '~/lib/db/dao/prd-dao'
 
 import { ErrorMessages } from '~/server/utils/errors'
 export default defineEventHandler(async (event) => {
   try {
+    const userId = requireAuth(event)
     const prdId = getRouterParam(event, 'id')
 
     if (!prdId) {
       setResponseStatus(event, 400)
       return { success: false, error: 'prdId is required' }
+    }
+
+    // 通过 PRD 归属间接校验
+    const prd = await PRDDAO.findById(prdId)
+    if (prd) {
+      requireResourceOwner({ userId: prd.userId }, userId)
     }
 
     const logicMapRecord = await LogicMapDAO.findByPrdId(prdId)

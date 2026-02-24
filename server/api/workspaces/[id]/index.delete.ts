@@ -9,6 +9,8 @@ export default defineEventHandler(async (event) => {
   const t = useServerT(event)
 
   try {
+    requireAuth(event)
+
     const id = getRouterParam(event, 'id')
 
     if (!id) {

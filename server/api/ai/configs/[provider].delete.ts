@@ -13,6 +13,7 @@ function isValidProvider(provider: string): provider is AIProviderType {
 
 export default defineEventHandler(async (event) => {
   try {
+    const userId = requireAuth(event)
     const provider = getRouterParam(event, 'provider')
 
     if (!provider) {
@@ -29,7 +30,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const deleted = await UserAPIConfigDAO.delete(provider)
+    const deleted = await UserAPIConfigDAO.delete(userId, provider)
 
     if (!deleted) {
       return {

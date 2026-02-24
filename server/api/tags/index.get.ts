@@ -9,6 +9,8 @@ export default defineEventHandler(async (event) => {
   const t = useServerT(event)
 
   try {
+    requireAuth(event)
+
     const query = getQuery(event)
     const search = query.search as string | undefined
     const popular = query.popular === 'true'

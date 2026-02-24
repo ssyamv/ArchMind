@@ -38,14 +38,7 @@ const RequestSchema = z.object({
 
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
-  const userId = event.context.userId
-
-  if (!userId) {
-    throw createError({
-      statusCode: 401,
-      message: t('errors.unauthorized')
-    })
-  }
+  const userId = requireAuth(event)
 
   try {
     // 解析请求
@@ -61,6 +54,9 @@ export default defineEventHandler(async (event) => {
         code: 'ASSET_NOT_FOUND'
       }
     }
+
+    // 校验原资源归属权
+    requireResourceOwner(originalAsset, userId)
 
     // 获取运行时配置
     const runtimeConfig = useRuntimeConfig()

@@ -9,6 +9,8 @@ export default defineEventHandler(async (event) => {
   const t = useServerT(event)
 
   try {
+    requireAuth(event)
+
     const workspaces = await WorkspaceDAO.getAll()
 
     // 为每个工作区添加统计信息

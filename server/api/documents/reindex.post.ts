@@ -11,7 +11,6 @@ import { DocumentDAO } from '~/lib/db/dao/document-dao'
 import { VectorDAO } from '~/lib/db/dao/vector-dao'
 import { DocumentProcessingPipeline } from '~/lib/rag/pipeline'
 import { EmbeddingServiceFactory } from '~/lib/rag/embedding-adapter'
-import { verifyToken } from '~/server/utils/jwt'
 
 const BodySchema = z.object({
   workspaceId: z.string().uuid().optional(),
@@ -19,11 +18,7 @@ const BodySchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-  // 认证
-  const token = getCookie(event, 'auth_token')
-  if (!token) throw createError({ statusCode: 401, message: '未登录' })
-  const payload = verifyToken(token)
-  if (!payload) throw createError({ statusCode: 401, message: 'Token 无效或已过期' })
+  const userId = requireAuth(event)
 
   const body = await readBody(event)
   const parsed = BodySchema.safeParse(body)
@@ -40,7 +35,7 @@ export default defineEventHandler(async (event) => {
   let targetDocIds: string[] = inputDocumentIds || []
 
   if (workspaceId && targetDocIds.length === 0) {
-    const docs = await DocumentDAO.findAll({ workspaceId, limit: 1000 })
+    const docs = await DocumentDAO.findAll({ workspaceId, userId, limit: 1000 })
     targetDocIds = docs.map(d => d.id)
   }
 
@@ -72,7 +67,10 @@ export default defineEventHandler(async (event) => {
         continue
       }
 
-      // 清理旧向量（保留 chunks）
+      // 验证文档归属
+      requireResourceOwner(doc, userId)
+
+      // 清理旧向量（保留 chunks��
       await VectorDAO.deleteByDocumentId(docId)
 
       // 重新用 pipeline 处理（仅向量化阶段）

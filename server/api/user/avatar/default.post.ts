@@ -7,7 +7,6 @@
  */
 
 import { UserDAO } from '~/lib/db/dao/user-dao'
-import { verifyToken } from '~/server/utils/jwt'
 import { getStorageClient } from '~/lib/storage/storage-factory'
 
 // 预设的头像背景色（Material Design 调色板）
@@ -59,19 +58,10 @@ interface DefaultAvatarResponse {
 
 export default defineEventHandler(async (event): Promise<DefaultAvatarResponse> => {
   try {
-    // 验证用户身份
-    const token = getCookie(event, 'auth_token')
-    if (!token) {
-      return { success: false, message: '未登录' }
-    }
-
-    const payload = verifyToken(token)
-    if (!payload) {
-      return { success: false, message: 'Token 无效或已过期' }
-    }
+    const userId = requireAuth(event)
 
     // 获取用户信息
-    const user = await UserDAO.getById(payload.userId)
+    const user = await UserDAO.getById(userId)
     if (!user) {
       return { success: false, message: '用户不存在' }
     }
@@ -85,7 +75,7 @@ export default defineEventHandler(async (event): Promise<DefaultAvatarResponse> 
     const svgBuffer = generateSvgAvatar(letter, color)
 
     // 上传到对象存储
-    const objectKey = `avatars/${payload.userId}.svg`
+    const objectKey = `avatars/${userId}.svg`
     const storage = getStorageClient()
     await storage.uploadFile(objectKey, svgBuffer, {
       'Content-Type': 'image/svg+xml',
@@ -93,10 +83,10 @@ export default defineEventHandler(async (event): Promise<DefaultAvatarResponse> 
     })
 
     // 更新数据库
-    await UserDAO.update(payload.userId, { avatarUrl: objectKey })
+    await UserDAO.update(userId, { avatarUrl: objectKey })
 
     // 返回代理 URL
-    const avatarUrl = `/api/user/avatar/${payload.userId}?v=${Date.now()}`
+    const avatarUrl = `/api/user/avatar/${userId}?v=${Date.now()}`
 
     return { success: true, avatarUrl }
   } catch (error: any) {

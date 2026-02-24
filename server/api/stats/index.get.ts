@@ -5,9 +5,11 @@ import { VectorDAO } from '~/lib/db/dao/vector-dao'
 import { ErrorMessages } from '~/server/utils/errors'
 export default defineEventHandler(async (event) => {
   try {
+    const userId = requireAuth(event)
+
     const [docCount, prdCount, vectorCount] = await Promise.all([
-      DocumentDAO.count(),
-      PRDDAO.count(),
+      DocumentDAO.count({ userId }),
+      PRDDAO.count({ userId }),
       VectorDAO.count()
     ])
 

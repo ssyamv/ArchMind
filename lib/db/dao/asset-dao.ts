@@ -61,19 +61,30 @@ export class AssetDAO {
     source?: 'upload' | 'ai-generated'
     orderBy?: 'created_at' | 'updated_at'
     order?: 'ASC' | 'DESC'
+    userId?: string
   }): Promise<Asset[]> {
-    const { limit = 50, offset = 0, source, orderBy = 'created_at', order = 'DESC' } = options || {}
+    const { limit = 50, offset = 0, source, orderBy = 'created_at', order = 'DESC', userId } = options || {}
 
-    let sql = 'SELECT * FROM assets'
+    const whereConditions: string[] = []
     const params: any[] = []
+    let paramIndex = 1
 
-    if (source) {
-      sql += ' WHERE source = $1'
-      params.push(source)
+    if (userId) {
+      whereConditions.push(`(user_id = $${paramIndex} OR user_id IS NULL)`)
+      params.push(userId)
+      paramIndex++
     }
 
-    sql += ` ORDER BY ${orderBy} ${order} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`
+    if (source) {
+      whereConditions.push(`source = $${paramIndex}`)
+      params.push(source)
+      paramIndex++
+    }
+
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''
+
     params.push(limit, offset)
+    const sql = `SELECT * FROM assets ${whereClause} ORDER BY ${orderBy} ${order} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`
 
     const result = await dbClient.query<any>(sql, params)
     return result.rows.map(row => this.mapRow(row))
@@ -85,15 +96,27 @@ export class AssetDAO {
     return result.rowCount! > 0
   }
 
-  static async count (source?: 'upload' | 'ai-generated'): Promise<number> {
-    let sql = 'SELECT COUNT(*) as count FROM assets'
-    const params: any[] = []
+  static async count (options?: { source?: 'upload' | 'ai-generated'; userId?: string }): Promise<number> {
+    const { source, userId } = options || {}
 
-    if (source) {
-      sql += ' WHERE source = $1'
-      params.push(source)
+    const whereConditions: string[] = []
+    const params: any[] = []
+    let paramIndex = 1
+
+    if (userId) {
+      whereConditions.push(`(user_id = $${paramIndex} OR user_id IS NULL)`)
+      params.push(userId)
+      paramIndex++
     }
 
+    if (source) {
+      whereConditions.push(`source = $${paramIndex}`)
+      params.push(source)
+      paramIndex++
+    }
+
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''
+    const sql = `SELECT COUNT(*) as count FROM assets ${whereClause}`
     const result = await dbClient.query<{ count: string }>(sql, params)
     return parseInt(result.rows[0].count, 10)
   }

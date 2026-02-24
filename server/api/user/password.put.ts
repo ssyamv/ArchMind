@@ -5,7 +5,6 @@
 
 import { z } from 'zod'
 import { UserDAO } from '~/lib/db/dao/user-dao'
-import { verifyToken } from '~/server/utils/jwt'
 import { verifyPassword, hashPassword } from '~/server/utils/password'
 import { dbClient } from '~/lib/db/client'
 
@@ -24,24 +23,7 @@ interface ChangePasswordResponse {
 
 export default defineEventHandler(async (event): Promise<ChangePasswordResponse> => {
   try {
-    // 从 Cookie 中获取 Token
-    const token = getCookie(event, 'auth_token')
-
-    if (!token) {
-      return {
-        success: false,
-        message: '未登录'
-      }
-    }
-
-    // 验证 Token
-    const payload = verifyToken(token)
-    if (!payload) {
-      return {
-        success: false,
-        message: 'Token 无效或已过期'
-      }
-    }
+    const userId = requireAuth(event)
 
     // 获取并验证请求体
     const body = await readBody<ChangePasswordRequest>(event)
@@ -57,7 +39,7 @@ export default defineEventHandler(async (event): Promise<ChangePasswordResponse>
     const { currentPassword, newPassword } = validated.data
 
     // 获取用户当前的密码哈希
-    const passwordHash = await UserDAO.getPasswordHashById(payload.userId)
+    const passwordHash = await UserDAO.getPasswordHashById(userId)
     if (!passwordHash) {
       return {
         success: false,
@@ -80,7 +62,7 @@ export default defineEventHandler(async (event): Promise<ChangePasswordResponse>
     // 更新密码（通过更新用户表）
     await dbClient.query(
       'UPDATE users SET password_hash = $1, updated_at = $2 WHERE id = $3',
-      [newPasswordHash, new Date().toISOString(), payload.userId]
+      [newPasswordHash, new Date().toISOString(), userId]
     )
 
     return {
@@ -89,6 +71,11 @@ export default defineEventHandler(async (event): Promise<ChangePasswordResponse>
     }
   } catch (error: any) {
     console.error('修改密码失败:', error)
+
+    if (error.statusCode) {
+      throw error
+    }
+
     return {
       success: false,
       message: '修改密码失败'

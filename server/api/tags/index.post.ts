@@ -16,6 +16,8 @@ export default defineEventHandler(async (event) => {
   const t = useServerT(event)
 
   try {
+    requireAuth(event)
+
     const body = await readBody(event)
 
     // 验证输入

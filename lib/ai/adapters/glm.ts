@@ -13,13 +13,13 @@ export class GLMAdapter implements AIModelAdapter {
   modelId: string
   private client: OpenAI
 
-  constructor (apiKey: string, modelId: string = 'glm-4.7') {
+  constructor (apiKey: string, modelId: string = 'glm-4.7', baseUrl?: string) {
     this.modelId = modelId
     // GLM 使用 OpenAI 兼容的 API
     // 官方文档：https://docs.bigmodel.cn/cn/guide/develop/openai/introduction
     this.client = new OpenAI({
       apiKey,
-      baseURL: 'https://open.bigmodel.cn/api/paas/v4'
+      baseURL: baseUrl || 'https://open.bigmodel.cn/api/paas/v4'
     })
   }
 

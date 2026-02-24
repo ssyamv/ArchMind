@@ -8,6 +8,7 @@ import { DocumentDAO } from '~/lib/db/dao/document-dao'
 
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
+  const userId = requireAuth(event)
   const documentId = getRouterParam(event, 'id')
   const tagId = getRouterParam(event, 'tagId')
 
@@ -27,6 +28,8 @@ export default defineEventHandler(async (event) => {
         message: t(ErrorKeys.DOCUMENT_NOT_FOUND)
       })
     }
+
+    requireResourceOwner(document, userId)
 
     // 验证标签存在
     const tag = await TagDAO.findById(tagId)

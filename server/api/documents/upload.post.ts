@@ -85,6 +85,7 @@ export default defineEventHandler(async (event) => {
   let tempFilePath: string | null = null
 
   try {
+    const userId = requireAuth(event)
     const formData = await readMultipartFormData(event)
 
     if (!formData || formData.length === 0) {
@@ -175,7 +176,7 @@ export default defineEventHandler(async (event) => {
 
     // 创建文档记录
     const doc: Omit<Document, 'id' | 'createdAt' | 'updatedAt'> = {
-      userId: undefined,
+      userId,
       workspaceId: workspaceId || undefined,
       title: fileName.replace(ext, ''),
       filePath: objectKey, // 保存对象键作为路径

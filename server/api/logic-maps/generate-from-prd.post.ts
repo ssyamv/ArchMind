@@ -7,6 +7,7 @@ import type { LogicMapGenerateRequest } from '~/types/logic-map'
 import { ErrorMessages } from '~/server/utils/errors'
 export default defineEventHandler(async (event) => {
   try {
+    const userId = requireAuth(event)
     const body = await readBody<LogicMapGenerateRequest>(event)
 
     if (!body.prdId) {
@@ -20,6 +21,9 @@ export default defineEventHandler(async (event) => {
       setResponseStatus(event, 404)
       return { success: false, error: ErrorMessages.PRD_NOT_FOUND }
     }
+
+    // PRD 归属校验
+    requireResourceOwner({ userId: prd.userId }, userId)
 
     const runtimeConfig = useRuntimeConfig()
     const config = {

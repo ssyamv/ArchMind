@@ -163,8 +163,8 @@
             <!-- Configured Providers -->
             <Card v-if="configuredProviders.length > 0">
               <CardHeader>
-                <CardTitle class="text-lg">已配置的模型</CardTitle>
-                <CardDescription>以下是您已配置的 AI 模型提供商</CardDescription>
+                <CardTitle class="text-lg">{{ $t('profile.models.configuredTitle') }}</CardTitle>
+                <CardDescription>{{ $t('profile.models.configuredDescription') }}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div class="space-y-4">
@@ -181,8 +181,8 @@
                     </div>
                     <div class="flex items-center gap-2">
                       <Switch
-                        :checked="isEnabled(provider.id)"
-                        @update:checked="handleToggle(provider.id, $event)"
+                        :model-value="isEnabled(provider.id)"
+                        @update:model-value="handleToggle(provider.id, $event)"
                       />
                       <Button variant="ghost" size="sm" @click="openEditDialog(provider)">
                         <Settings class="w-4 h-4" />
@@ -204,8 +204,8 @@
             <!-- Available Providers -->
             <Card>
               <CardHeader>
-                <CardTitle class="text-lg">添加新的模型</CardTitle>
-                <CardDescription>选择一个 AI 模型提供商进行配置</CardDescription>
+                <CardTitle class="text-lg">{{ $t('profile.models.addTitle') }}</CardTitle>
+                <CardDescription>{{ $t('profile.models.addDescription') }}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -218,7 +218,7 @@
                     <div class="flex-1">
                       <div class="flex items-center gap-2">
                         <span class="font-medium">{{ provider.name }}</span>
-                        <Badge v-if="provider.authType === 'base_url'" variant="secondary">本地</Badge>
+                        <Badge v-if="provider.authType === 'base_url'" variant="secondary">{{ $t('profile.models.local') }}</Badge>
                       </div>
                       <p class="text-sm text-muted-foreground mt-1 line-clamp-2">{{ provider.description }}</p>
                       <div class="flex items-center gap-2 mt-2">
@@ -237,21 +237,21 @@
               <CardHeader>
                 <CardTitle class="text-lg flex items-center gap-2">
                   <HelpCircle class="w-5 h-5" />
-                  帮助说明
+                  {{ $t('profile.models.helpTitle') }}
                 </CardTitle>
               </CardHeader>
               <CardContent class="space-y-4 text-sm text-muted-foreground">
                 <p>
-                  <strong>API Key 安全：</strong>您的 API Key 会使用 AES-256 加密后存储在本地数据库中，不会传输到任何第三方服务。
+                  <strong>{{ $t('profile.models.helpApiKeySecurity') }}</strong>{{ $t('profile.models.helpApiKeySecurityDesc') }}
                 </p>
                 <p>
-                  <strong>第三方中转站：</strong>如果您使用的是第三方 API 中转站（如 OpenRouter、各种代理服务），点击"使用中转站"按钮，输入中转站提供的 API 地址即可。
+                  <strong>{{ $t('profile.models.helpProxy') }}</strong>{{ $t('profile.models.helpProxyDesc') }}
                 </p>
                 <p>
-                  <strong>使用方式：</strong>配置完成后，您可以在对话和 PRD 生成时选择使用已启用的模型。
+                  <strong>{{ $t('profile.models.helpUsage') }}</strong>{{ $t('profile.models.helpUsageDesc') }}
                 </p>
                 <p>
-                  <strong>Ollama 本地模型：</strong>如果您安装了 Ollama，可以配置本地地址 (默认 http://localhost:11434) 使用完全离线��本地模型。
+                  <strong>{{ $t('profile.models.helpOllama') }}</strong>{{ $t('profile.models.helpOllamaDesc') }}
                 </p>
               </CardContent>
             </Card>
@@ -270,7 +270,7 @@
 
     <!-- Model Config Dialog -->
     <Dialog v-model:open="dialogOpen">
-      <DialogContent class="sm:max-w-lg">
+      <DialogContent class="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{{ editingProvider?.name }}</DialogTitle>
           <DialogDescription>{{ editingProvider?.description }}</DialogDescription>
@@ -279,7 +279,7 @@
         <form @submit.prevent="handleSave" class="space-y-4" autocomplete="off">
           <!-- API Key Field -->
           <div v-if="needsApiKey" class="space-y-2">
-            <Label for="apiKey">API Key</Label>
+            <Label for="apiKey">{{ $t('profile.models.apiKeyLabel') }}</Label>
             <div class="relative">
               <Input
                 id="apiKey"
@@ -307,7 +307,7 @@
               </button>
             </div>
             <p class="text-xs text-muted-foreground">
-              获取 API Key:
+              {{ $t('profile.models.getApiKey') }}
               <a
                 :href="editingProvider?.website"
                 target="_blank"
@@ -322,7 +322,7 @@
           <!-- Base URL Field -->
           <div v-if="showBaseUrlField" class="space-y-2">
             <div class="flex items-center justify-between">
-              <Label for="baseUrl">API 地址</Label>
+              <Label for="baseUrl">{{ $t('profile.models.baseUrlLabel') }}</Label>
               <Button
                 v-if="!showCustomUrl && editingProvider?.supportsCustomUrl"
                 type="button"
@@ -331,13 +331,13 @@
                 class="h-6 text-xs"
                 @click="showCustomUrl = true"
               >
-                使用中转站
+                {{ $t('profile.models.useProxy') }}
               </Button>
             </div>
             <Input
               id="baseUrl"
               v-model="modelForm.baseUrl"
-              :placeholder="editingProvider?.baseUrlPlaceholder || '输入 API 地址'"
+              :placeholder="editingProvider?.baseUrlPlaceholder || $t('profile.models.baseUrlPlaceholder')"
               autocomplete="off"
               autocorrect="off"
               autocapitalize="off"
@@ -348,32 +348,74 @@
             />
             <p class="text-xs text-muted-foreground">
               <template v-if="editingProvider?.supportsCustomUrl">
-                使用官方 API 请留空或输入默认地址。如使用第三方中转站，请填写中转站提供的 API 地址。
+                {{ $t('profile.models.baseUrlHintProxy') }}
               </template>
               <template v-else>
-                本地模型的服务地址
+                {{ $t('profile.models.baseUrlHintLocal') }}
               </template>
             </p>
           </div>
 
-          <!-- Available Models -->
-          <div v-if="editingProvider?.models.length" class="space-y-2">
-            <Label>可用模型</Label>
-            <div class="flex flex-wrap gap-2">
-              <Badge
-                v-for="model in editingProvider.models"
-                :key="model.id"
-                variant="outline"
-                class="cursor-default"
-              >
-                {{ model.name }}
-              </Badge>
+          <!-- Model Selection -->
+          <div v-if="fetchedModels.length > 0" class="space-y-3">
+            <div class="flex items-center justify-between">
+              <Label>{{ $t('profile.models.selectModelsTitle') }}</Label>
+              <span v-if="modelsFetched" class="text-xs text-green-600 dark:text-green-400">
+                {{ $t('profile.models.modelsFetchedHint') }}
+              </span>
             </div>
+            <p class="text-xs text-muted-foreground">{{ $t('profile.models.selectModelsDesc') }}</p>
+
+            <!-- Model checkboxes - 上限 50 个 -->
+            <div class="max-h-48 overflow-y-auto border rounded-md p-2 space-y-1">
+              <label
+                v-for="modelId in fetchedModels"
+                :key="modelId"
+                class="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent cursor-pointer text-sm"
+              >
+                <input
+                  type="checkbox"
+                  :checked="modelForm.selectedModels.includes(modelId)"
+                  class="rounded border"
+                  @change="toggleModel(modelId)"
+                />
+                <span class="font-mono flex-1">{{ modelId }}</span>
+                <button
+                  v-if="!editingProvider?.models.some(m => m.id === modelId)"
+                  type="button"
+                  class="text-muted-foreground hover:text-destructive p-0.5"
+                  @click.prevent="removeModel(modelId)"
+                >
+                  <X class="w-3 h-3" />
+                </button>
+              </label>
+            </div>
+
+            <!-- 手动添加自定义模型 -->
+            <div class="flex gap-2">
+              <Input
+                v-model="customModelInput"
+                :placeholder="$t('profile.models.customModelPlaceholder')"
+                class="flex-1 text-sm font-mono"
+                @keydown.enter.prevent="addCustomModel"
+              />
+              <Button type="button" variant="outline" size="sm" @click="addCustomModel">
+                {{ $t('profile.models.addModel') }}
+              </Button>
+            </div>
+
+            <!-- 已选模型摘要 -->
+            <p class="text-xs text-muted-foreground">
+              <span v-if="modelForm.selectedModels.length > 0">
+                {{ $t('profile.models.selectedModels') }}: {{ modelForm.selectedModels.length }} 个
+              </span>
+              <span v-else>{{ $t('profile.models.noModelsSelected') }}</span>
+            </p>
           </div>
 
           <DialogFooter class="gap-2">
             <Button type="button" variant="outline" @click="dialogOpen = false">
-              取消
+              {{ $t('common.cancel') }}
             </Button>
             <Button
               type="button"
@@ -382,11 +424,11 @@
               @click="handleValidate"
             >
               <Loader2 v-if="validating === editingProvider?.id" class="w-4 h-4 mr-2 animate-spin" />
-              {{ validating ? '验证中...' : '验证连接' }}
+              {{ validating ? $t('profile.models.validating') : $t('profile.models.validateConnection') }}
             </Button>
             <Button type="submit" :disabled="validating !== null">
               <Loader2 v-if="saving" class="w-4 h-4 mr-2 animate-spin" />
-              保存
+              {{ $t('common.save') }}
             </Button>
           </DialogFooter>
         </form>
@@ -407,7 +449,8 @@ import {
   ExternalLink,
   HelpCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  X
 } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
@@ -561,9 +604,15 @@ const showCustomUrl = ref(false)
 const saving = ref(false)
 const apiKeyInput = ref<HTMLInputElement | null>(null)
 
+// 模型选择相关状态
+const fetchedModels = ref<string[]>([])  // 验证后从服务端获取的模型列表
+const modelsFetched = ref(false)         // 是否动态获取了列表
+const customModelInput = ref('')         // 用户手动输入的模型 ID
+
 const modelForm = reactive({
   apiKey: '',
-  baseUrl: ''
+  baseUrl: '',
+  selectedModels: [] as string[]  // 用户选中的模型 ID 列表
 })
 
 const configuredProviders = computed(() => providers.value.filter(p => isConfigured(p.id)))
@@ -596,6 +645,38 @@ const canValidate = computed(() => {
   return true
 })
 
+// 切换模型选中状态
+function toggleModel(modelId: string) {
+  const idx = modelForm.selectedModels.indexOf(modelId)
+  if (idx >= 0) {
+    modelForm.selectedModels.splice(idx, 1)
+  } else {
+    modelForm.selectedModels.push(modelId)
+  }
+}
+
+// 添加自定义模型 ID
+function addCustomModel() {
+  const id = customModelInput.value.trim()
+  if (!id) return
+  if (!modelForm.selectedModels.includes(id)) {
+    modelForm.selectedModels.push(id)
+    // 同时加入 fetchedModels 方便 UI 显示勾选
+    if (!fetchedModels.value.includes(id)) {
+      fetchedModels.value.push(id)
+    }
+  }
+  customModelInput.value = ''
+}
+
+// 移除选中的模型
+function removeModel(modelId: string) {
+  const idx = modelForm.selectedModels.indexOf(modelId)
+  if (idx >= 0) modelForm.selectedModels.splice(idx, 1)
+  const fetchedIdx = fetchedModels.value.indexOf(modelId)
+  if (fetchedIdx >= 0) fetchedModels.value.splice(fetchedIdx, 1)
+}
+
 function toggleApiKeyVisibility() {
   showApiKey.value = !showApiKey.value
 }
@@ -604,6 +685,10 @@ function openConfigDialog(provider: AIProviderConfig) {
   editingProvider.value = provider
   modelForm.apiKey = ''
   modelForm.baseUrl = provider.defaultBaseUrl || ''
+  modelForm.selectedModels = []
+  fetchedModels.value = provider.models.map(m => m.id)
+  modelsFetched.value = false
+  customModelInput.value = ''
   showApiKey.value = false
   showCustomUrl.value = false
   dialogOpen.value = true
@@ -614,6 +699,13 @@ function openEditDialog(provider: AIProviderConfig) {
   modelForm.apiKey = ''
   const savedConfig = configs.value.find(c => c.provider === provider.id)
   modelForm.baseUrl = savedConfig?.baseUrl || provider.defaultBaseUrl || ''
+  modelForm.selectedModels = savedConfig?.models ? [...savedConfig.models] : []
+  // 显示已保存的模型 + 提供商预置模型的并集
+  const providerModelIds = provider.models.map(m => m.id)
+  const savedModelIds = savedConfig?.models || []
+  fetchedModels.value = [...new Set([...providerModelIds, ...savedModelIds])]
+  modelsFetched.value = false
+  customModelInput.value = ''
   showApiKey.value = false
   showCustomUrl.value = !!savedConfig?.baseUrl
   dialogOpen.value = true
@@ -629,9 +721,29 @@ async function handleValidate() {
   )
 
   if (result.success) {
-    toast({ title: '验证成功', description: result.message || 'API 连接正常', variant: 'success' })
+    // 更新可用模型列表
+    if (result.availableModels && result.availableModels.length > 0) {
+      fetchedModels.value = result.availableModels
+      modelsFetched.value = result.modelsFetched ?? false
+      // 如果用户尚未选择任何模型，默认全选前5个（避免选太多）
+      if (modelForm.selectedModels.length === 0) {
+        modelForm.selectedModels = result.availableModels.slice(0, 5)
+      } else {
+        // 保留用户已选的，同时过滤掉不在新列表中的（保留自定义添加的）
+        const newSet = new Set(result.availableModels)
+        const kept = modelForm.selectedModels.filter(id => newSet.has(id))
+        const custom = modelForm.selectedModels.filter(id => !newSet.has(id))
+        modelForm.selectedModels = [...kept, ...custom]
+        // 自定义模型也加入展示列表
+        for (const id of custom) {
+          if (!fetchedModels.value.includes(id)) fetchedModels.value.push(id)
+        }
+      }
+    }
+    const hint = modelsFetched.value ? t('profile.models.modelsFetchedHint') : t('profile.models.modelsPresetHint')
+    toast({ title: t('profile.models.validateSuccess'), description: `${result.message || t('profile.models.apiConnectionOk')}${hint ? ' · ' + hint : ''}`, variant: 'success' })
   } else {
-    toast({ title: '验证失败', description: result.message || 'API 连接失败', variant: 'destructive' })
+    toast({ title: t('profile.models.validateFailed'), description: result.message || t('profile.models.apiConnectionFailed'), variant: 'destructive' })
   }
 }
 
@@ -639,7 +751,7 @@ async function handleSave() {
   if (!editingProvider.value) return
 
   if (needsApiKey.value && !modelForm.apiKey && !isConfigured(editingProvider.value.id)) {
-    toast({ title: '请输入 API Key', variant: 'destructive' })
+    toast({ title: t('profile.models.apiKeyRequired'), variant: 'destructive' })
     return
   }
 
@@ -649,25 +761,26 @@ async function handleSave() {
     provider: editingProvider.value.id,
     apiKey: modelForm.apiKey || undefined,
     baseUrl: modelForm.baseUrl || undefined,
+    models: modelForm.selectedModels.length > 0 ? modelForm.selectedModels : undefined,
     enabled: true
   })
 
   saving.value = false
 
   if (result.success) {
-    toast({ title: '保存成功', description: result.message || 'API 配置已保存', variant: 'success' })
+    toast({ title: t('profile.models.saveSuccess'), description: result.message || t('profile.models.apiConfigSaved'), variant: 'success' })
     dialogOpen.value = false
   } else {
-    toast({ title: '保存失败', description: result.message || '保存配置失败', variant: 'destructive' })
+    toast({ title: t('profile.models.saveFailed'), description: result.message || t('profile.models.saveConfigFailed'), variant: 'destructive' })
   }
 }
 
 async function handleToggle(providerId: AIProviderType, enabled: boolean) {
   const result = await toggleEnabled(providerId, enabled)
   if (result.success) {
-    toast({ title: enabled ? '已启用' : '已禁用', description: result.message, variant: 'success' })
+    toast({ title: enabled ? t('profile.models.enabled') : t('profile.models.disabled'), description: result.message, variant: 'success' })
   } else {
-    toast({ title: '操作失败', description: result.message, variant: 'destructive' })
+    toast({ title: t('profile.models.operationFailed'), description: result.message, variant: 'destructive' })
   }
 }
 
@@ -675,13 +788,13 @@ async function handleDelete(providerId: AIProviderType) {
   const provider = providers.value.find(p => p.id === providerId)
   if (!provider) return
 
-  if (!confirm(`确定要删除 ${provider.name} 的配置吗？`)) return
+  if (!confirm(t('profile.models.deleteConfirm', { name: provider.name }))) return
 
   const result = await deleteConfig(providerId)
   if (result.success) {
-    toast({ title: '删除成功', description: result.message || '配置已删除', variant: 'success' })
+    toast({ title: t('profile.models.deleteSuccess'), description: result.message || t('profile.models.configDeleted'), variant: 'success' })
   } else {
-    toast({ title: '删除失败', description: result.message, variant: 'destructive' })
+    toast({ title: t('profile.models.deleteFailed'), description: result.message, variant: 'destructive' })
   }
 }
 

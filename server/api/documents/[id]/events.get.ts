@@ -32,11 +32,15 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Document ID is required' })
   }
 
+  const userId = requireAuth(event)
+
   // 验证文档存在
   const document = await DocumentDAO.findById(documentId)
   if (!document) {
     throw createError({ statusCode: 404, message: 'Document not found' })
   }
+
+  requireResourceOwner(document, userId)
 
   const eventStream = createEventStream(event)
   const startTime = Date.now()

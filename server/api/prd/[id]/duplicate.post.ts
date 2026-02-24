@@ -7,14 +7,9 @@
  */
 
 import { PRDDAO } from '~/lib/db/dao/prd-dao'
-import { verifyToken } from '~/server/utils/jwt'
 
 export default defineEventHandler(async (event) => {
-  // 认证
-  const token = getCookie(event, 'auth_token')
-  if (!token) throw createError({ statusCode: 401, message: '未登录' })
-  const payload = verifyToken(token)
-  if (!payload) throw createError({ statusCode: 401, message: 'Token 无效或已过期' })
+  const userId = requireAuth(event)
 
   const prdId = getRouterParam(event, 'id')
   if (!prdId) throw createError({ statusCode: 400, message: '缺少 PRD ID' })
@@ -23,14 +18,12 @@ export default defineEventHandler(async (event) => {
   const original = await PRDDAO.findById(prdId)
   if (!original) throw createError({ statusCode: 404, message: 'PRD 不存在' })
 
-  // 权限检查（仅允许拥有者复制）
-  if (original.userId && original.userId !== payload.userId) {
-    throw createError({ statusCode: 403, message: '无权操作此 PRD' })
-  }
+  // 权限检查
+  requireResourceOwner(original, userId)
 
   // 创建副本
   const duplicated = await PRDDAO.create({
-    userId: payload.userId,
+    userId,
     workspaceId: original.workspaceId,
     title: `${original.title} - 副本`,
     content: original.content,

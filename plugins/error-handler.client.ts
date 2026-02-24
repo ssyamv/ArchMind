@@ -26,7 +26,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         title: '应用发生错误',
         description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
-        duration: 5000
+        duration: 3000
       })
     } catch {
       // Toast 本身出错时静默处理
@@ -51,7 +51,7 @@ export default defineNuxtPlugin((nuxtApp) => {
           title: '请求失败',
           description: message,
           variant: 'destructive',
-          duration: 4000
+          duration: 3000
         })
       } catch {
         // 静默处理

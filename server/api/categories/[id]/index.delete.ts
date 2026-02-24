@@ -7,6 +7,7 @@ import { CategoryDAO } from '~/lib/db/dao/category-dao'
 
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
+  requireAuth(event)
   const categoryId = getRouterParam(event, 'id')
 
   if (!categoryId) {

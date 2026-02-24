@@ -34,6 +34,7 @@ export interface PRDGenerateRequest {
   maxTokens?: number;
   useRAG?: boolean;
   documentIds?: string[];
+  workspaceId?: string;
 }
 
 export interface PRDGenerateResponse {

@@ -5,6 +5,7 @@ export default defineEventHandler(async (event) => {
   const t = useServerT(event)
 
   try {
+    const userId = requireAuth(event)
     const id = getRouterParam(event, 'id')
     const body = await readBody(event)
 
@@ -25,6 +26,8 @@ export default defineEventHandler(async (event) => {
         message: t(ErrorKeys.DOCUMENT_NOT_FOUND)
       }
     }
+
+    requireResourceOwner(document, userId)
 
     // 构建更新对象
     const updates: Partial<Document> = {}

@@ -9,17 +9,21 @@ export default defineEventHandler(async (event) => {
   const t = useServerT(event)
 
   try {
+    const userId = requireAuth(event)
     const id = getRouterParam(event, 'id')
 
     if (!id) {
       throw new Error(t('errors.idRequired'))
     }
 
-    // 获取资源信息
+    // 获取资��信息
     const asset = await AssetDAO.findById(id)
     if (!asset) {
       throw new Error(t('errors.prototypeNotFound'))
     }
+
+    // 校验资源归属权
+    requireResourceOwner(asset, userId)
 
     // 从对象存储删除
     const storage = getStorageClient()

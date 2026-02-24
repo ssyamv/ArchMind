@@ -19,6 +19,7 @@ const createVersionSchema = z.object({
 
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
+  const userId = requireAuth(event)
   const documentId = getRouterParam(event, 'id')
 
   if (!documentId) {
@@ -51,6 +52,8 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    requireResourceOwner(document, userId)
+
     // 2. 计算新版本号
     const currentVersion = document.currentVersion || 1
     const newVersion = currentVersion + 1
@@ -76,8 +79,8 @@ export default defineEventHandler(async (event) => {
       fileSize: document.fileSize,
       content: document.content,
       contentHash: document.contentHash,
-      changeSummary
-      // TODO: createdBy - 添加用户认证后填充
+      changeSummary,
+      createdBy: userId
     })
 
     // 5. 更新文档的当前版本号

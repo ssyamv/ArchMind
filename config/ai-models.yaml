@@ -18,19 +18,18 @@ ai_models:
       - glm-4.7
       - glm-4.5-air
       - qwen-max
-      - wenxin-4.0
+      - ernie-4.0-8k
     large_document:
       - gemini-1.5-pro
       - claude-3.5-sonnet
     cost_sensitive:
       - glm-4.5-air
-      - deepseek-v2
-      - qwen-max
+      - deepseek-chat
+      - qwen-turbo
     privacy_mode:
       - ollama-llama3
       - ollama-qwen
 
-  # 模型列表配置
   # 模型列表配置
   models:
     # 智谱 GLM 4.7 (推理最强)
@@ -163,12 +162,12 @@ ai_models:
       enabled: false
       name: "通义千问 Qwen Max"
       provider: "Alibaba"
-      description: "中文理解能力强，适合中文内容生成"
+      description: "旗舰模型，中文理解能力最强，适合复杂中文内容生成"
       api_key_env: "DASHSCOPE_API_KEY"
       capabilities:
-        maxContextLength: 30000
+        maxContextLength: 32000
         supportsStreaming: true
-        supportsStructuredOutput: false
+        supportsStructuredOutput: true
         supportsVision: true
         supportedLanguages: ["zh", "en"]
       costEstimate:
@@ -177,31 +176,85 @@ ai_models:
       embedding:
         supported: false
 
-    # 百度文心一言
-    wenxin-4.0:
+    qwen-plus:
       enabled: false
-      name: "文心一言 4.0"
+      name: "通义千问 Qwen Plus"
+      provider: "Alibaba"
+      description: "性能均衡模型，兼顾效果与成本"
+      api_key_env: "DASHSCOPE_API_KEY"
+      capabilities:
+        maxContextLength: 131072
+        supportsStreaming: true
+        supportsStructuredOutput: true
+        supportsVision: false
+        supportedLanguages: ["zh", "en"]
+      costEstimate:
+        input: "¥0.004/1K tokens"
+        output: "¥0.012/1K tokens"
+      embedding:
+        supported: false
+
+    qwen-turbo:
+      enabled: false
+      name: "通义千问 Qwen Turbo"
+      provider: "Alibaba"
+      description: "快速响应模型，最低成本，适合简单任务"
+      api_key_env: "DASHSCOPE_API_KEY"
+      capabilities:
+        maxContextLength: 131072
+        supportsStreaming: true
+        supportsStructuredOutput: true
+        supportsVision: false
+        supportedLanguages: ["zh", "en"]
+      costEstimate:
+        input: "¥0.002/1K tokens"
+        output: "¥0.006/1K tokens"
+      embedding:
+        supported: false
+
+    # 百度文心一言
+    ernie-4.0-8k:
+      enabled: false
+      name: "文心一言 ERNIE 4.0"
       provider: "Baidu"
-      description: "百度自研大模型，中文理解深度强"
+      description: "百度旗舰大模型，中文理解深度最强"
       api_key_env: "BAIDU_API_KEY"
       capabilities:
-        maxContextLength: 30000
+        maxContextLength: 8192
         supportsStreaming: true
         supportsStructuredOutput: false
         supportsVision: false
         supportedLanguages: ["zh", "en"]
       costEstimate:
-        input: "¥0.01/1K tokens"
-        output: "¥0.03/1K tokens"
+        input: "¥0.03/1K tokens"
+        output: "¥0.09/1K tokens"
+      embedding:
+        supported: false
+
+    ernie-3.5-8k:
+      enabled: false
+      name: "文心一言 ERNIE 3.5"
+      provider: "Baidu"
+      description: "百度经济版模型，性价比高"
+      api_key_env: "BAIDU_API_KEY"
+      capabilities:
+        maxContextLength: 8192
+        supportsStreaming: true
+        supportsStructuredOutput: false
+        supportsVision: false
+        supportedLanguages: ["zh", "en"]
+      costEstimate:
+        input: "¥0.008/1K tokens"
+        output: "¥0.008/1K tokens"
       embedding:
         supported: false
 
     # DeepSeek
-    deepseek-v2:
+    deepseek-chat:
       enabled: false
-      name: "DeepSeek V2"
+      name: "DeepSeek Chat"
       provider: "DeepSeek"
-      description: "高性价比模型，适合成本敏感的场景"
+      description: "高性价比通用对话模型，代码能力强"
       api_key_env: "DEEPSEEK_API_KEY"
       capabilities:
         maxContextLength: 128000
@@ -210,8 +263,26 @@ ai_models:
         supportsVision: false
         supportedLanguages: ["zh", "en"]
       costEstimate:
-        input: "¥0.0005/1K tokens"
+        input: "¥0.001/1K tokens"
         output: "¥0.002/1K tokens"
+      embedding:
+        supported: false
+
+    deepseek-reasoner:
+      enabled: false
+      name: "DeepSeek Reasoner"
+      provider: "DeepSeek"
+      description: "深度推理模型，适合复杂逻辑分析"
+      api_key_env: "DEEPSEEK_API_KEY"
+      capabilities:
+        maxContextLength: 128000
+        supportsStreaming: true
+        supportsStructuredOutput: true
+        supportsVision: false
+        supportedLanguages: ["zh", "en"]
+      costEstimate:
+        input: "¥0.004/1K tokens"
+        output: "¥0.016/1K tokens"
       embedding:
         supported: false
 

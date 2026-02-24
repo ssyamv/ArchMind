@@ -82,6 +82,8 @@ export class ModelManager {
 
   /**
    * 初始化所有适配器
+   * config 中的 xxxModels 字段为用户自定义的模型 ID 列表（来自数据库）
+   * 如果为空，则使用各提供商的默认模型列表
    */
   initializeAdapters (config?: Record<string, any>) {
     // 如果没有提供配置，则跳过初始化
@@ -89,56 +91,85 @@ export class ModelManager {
       return
     }
 
+    // 清空现有适配器，确保每次重新初始化时只包含当前配置中有 API Key 的模型
+    this.adapters.clear()
+
     // Claude 适配器
     if (config.anthropicApiKey) {
-      const claude = new ClaudeAdapter(config.anthropicApiKey as string)
-      this.adapters.set('claude-3.5-sonnet', claude)
+      const baseUrl = config.anthropicBaseUrl as string | undefined
+      const userModels: string[] = config.anthropicModels?.length
+        ? config.anthropicModels
+        : ['claude-opus-4-20250514', 'claude-sonnet-4-20250514', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022']
+      for (const modelId of userModels) {
+        const claude = new ClaudeAdapter(config.anthropicApiKey as string, modelId, baseUrl)
+        this.adapters.set(modelId, claude)
+      }
     }
 
     // OpenAI 适配器
     if (config.openaiApiKey) {
-      const openai = new OpenAIAdapter(config.openaiApiKey as string, 'gpt-4o')
-      this.adapters.set('gpt-4o', openai)
+      const baseUrl = config.openaiBaseUrl as string | undefined
+      const userModels: string[] = config.openaiModels?.length
+        ? config.openaiModels
+        : ['gpt-4o', 'gpt-4o-mini', 'o3-mini']
+      for (const modelId of userModels) {
+        const openai = new OpenAIAdapter(config.openaiApiKey as string, modelId, baseUrl)
+        this.adapters.set(modelId, openai)
+      }
     }
 
     // Gemini 适配器
     if (config.googleApiKey) {
-      const gemini = new GeminiAdapter(config.googleApiKey as string)
-      this.adapters.set('gemini-1.5-pro', gemini)
+      const userModels: string[] = config.googleModels?.length
+        ? config.googleModels
+        : ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash']
+      for (const modelId of userModels) {
+        const gemini = new GeminiAdapter(config.googleApiKey as string, modelId)
+        this.adapters.set(modelId, gemini)
+      }
     }
 
-    // GLM 适配器 - 为每个 GLM 模型创建实例
+    // GLM 适配器
     if (config.glmApiKey) {
-      const glmModels = ['glm-4.7', 'glm-4.6v', 'glm-4.5-air', 'glm-4-flash']
-      for (const modelId of glmModels) {
-        const glm = new GLMAdapter(config.glmApiKey as string, modelId)
+      const baseUrl = config.glmBaseUrl as string | undefined
+      const userModels: string[] = config.glmModels?.length
+        ? config.glmModels
+        : ['glm-4-plus', 'glm-4-air', 'glm-4-flash']
+      for (const modelId of userModels) {
+        const glm = new GLMAdapter(config.glmApiKey as string, modelId, baseUrl)
         this.adapters.set(modelId, glm)
       }
     }
 
     // DeepSeek 适配器
     if (config.deepseekApiKey) {
-      const deepseekModels = ['deepseek-chat', 'deepseek-reasoner']
-      for (const modelId of deepseekModels) {
-        const deepseek = new DeepSeekAdapter(config.deepseekApiKey as string, modelId)
+      const baseUrl = config.deepseekBaseUrl as string | undefined
+      const userModels: string[] = config.deepseekModels?.length
+        ? config.deepseekModels
+        : ['deepseek-chat', 'deepseek-reasoner']
+      for (const modelId of userModels) {
+        const deepseek = new DeepSeekAdapter(config.deepseekApiKey as string, modelId, baseUrl)
         this.adapters.set(modelId, deepseek)
       }
     }
 
     // 通义千问 (Qwen) 适配器
     if (config.dashscopeApiKey) {
-      const qwenModels = ['qwen-max', 'qwen-plus', 'qwen-turbo']
-      for (const modelId of qwenModels) {
+      const userModels: string[] = config.qwenModels?.length
+        ? config.qwenModels
+        : ['qwen-max', 'qwen-plus', 'qwen-turbo']
+      for (const modelId of userModels) {
         const qwen = new QwenAdapter(config.dashscopeApiKey as string, modelId)
         this.adapters.set(modelId, qwen)
       }
     }
 
     // 文心一言 (Wenxin) 适配器
-    // 注意：文心一言需要 API Key 和 Secret Key，格式为 "apiKey|secretKey"
     if (config.baiduApiKey) {
-      const wenxinModels = ['ernie-4.0-8k', 'ernie-3.5-8k']
-      for (const modelId of wenxinModels) {
+      const userModels: string[] = config.wenxinModels?.length
+        ? config.wenxinModels
+        : ['ernie-4.0-8k', 'ernie-3.5-8k']
+      for (const modelId of userModels) {
         const wenxin = new WenxinAdapter(config.baiduApiKey as string, modelId)
         this.adapters.set(modelId, wenxin)
       }
@@ -146,10 +177,24 @@ export class ModelManager {
 
     // Ollama 本地模型适配器
     if (config.ollamaBaseUrl) {
-      const ollamaModels = ['llama3.2', 'qwen2.5', 'deepseek-r1']
-      for (const modelId of ollamaModels) {
+      const userModels: string[] = config.ollamaModels?.length
+        ? config.ollamaModels
+        : ['llama3.2', 'qwen2.5', 'deepseek-r1']
+      for (const modelId of userModels) {
         const ollama = new OllamaAdapter(config.ollamaBaseUrl as string, modelId)
         this.adapters.set(`ollama-${modelId}`, ollama)
+      }
+    }
+
+    // Custom API 适配器（OpenAI 兼容接口）
+    if (config.customModels?.length && (config.customApiKey || config.customBaseUrl)) {
+      for (const modelId of config.customModels as string[]) {
+        const custom = new OpenAIAdapter(
+          config.customApiKey as string || 'sk-placeholder',
+          modelId,
+          config.customBaseUrl as string
+        )
+        this.adapters.set(`custom-${modelId}`, custom)
       }
     }
   }
@@ -214,26 +259,41 @@ export class ModelManager {
   }
 
   /**
-   * 获取所有启用的模型及其元数据（用于前端展示）
-   * 只返回已实际初始化的模型（即后端有对应的 API Key）
+   * 获取所有可用模型及其元数据（用于前端展示）
+   * 优先从 YAML 配置获取模型信息，对于用户自定义的模型则从适配器读取基本信息
+   * @param idPrefix 可选前缀，用于区分系统模型和用户模型（如 "user-"）
    */
-  getAvailableModelsWithMetadata (): AvailableModelInfo[] {
-    if (!this.modelConfig) {
-      return []
+  getAvailableModelsWithMetadata (idPrefix?: string): AvailableModelInfo[] {
+    const result: AvailableModelInfo[] = []
+    const coveredIds = new Set<string>()
+
+    // 优先返回 YAML 中已知的模型
+    if (this.modelConfig) {
+      for (const [modelId, config] of Object.entries(this.modelConfig.models)) {
+        if (this.adapters.has(modelId)) {
+          result.push({
+            id: idPrefix ? `${idPrefix}${modelId}` : modelId,
+            name: config.name,
+            provider: config.provider,
+            description: config.description,
+            capabilities: config.capabilities,
+            costEstimate: config.costEstimate
+          })
+          coveredIds.add(modelId)
+        }
+      }
     }
 
-    const result: AvailableModelInfo[] = []
-
-    for (const [modelId, config] of Object.entries(this.modelConfig.models)) {
-      // 只包括启用且已初始化的模型
-      if (config.enabled && this.adapters.has(modelId)) {
+    // 对于 YAML 中没有的用户自定义模型（如 Ollama、custom 等），从适配器直接生成信息
+    for (const [adapterId, adapter] of this.adapters.entries()) {
+      if (!coveredIds.has(adapterId)) {
         result.push({
-          id: modelId,
-          name: config.name,
-          provider: config.provider,
-          description: config.description,
-          capabilities: config.capabilities,
-          costEstimate: config.costEstimate
+          id: idPrefix ? `${idPrefix}${adapterId}` : adapterId,
+          name: adapter.modelId,
+          provider: adapter.provider,
+          description: `${adapter.provider} 自定义模型`,
+          capabilities: adapter.getCapabilities(),
+          costEstimate: { input: '未知', output: '未知' }
         })
       }
     }

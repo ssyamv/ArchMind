@@ -10,7 +10,6 @@ import { z } from 'zod'
 import { DocumentDAO } from '~/lib/db/dao/document-dao'
 import { DocumentChunkDAO } from '~/lib/db/dao/document-chunk-dao'
 import { VectorDAO } from '~/lib/db/dao/vector-dao'
-import { verifyToken } from '~/server/utils/jwt'
 
 const QuerySchema = z.object({
   workspaceId: z.string().uuid().optional(),
@@ -18,22 +17,23 @@ const QuerySchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-  // 认证
-  const token = getCookie(event, 'auth_token')
-  if (!token) throw createError({ statusCode: 401, message: '未登录' })
-  const payload = verifyToken(token)
-  if (!payload) throw createError({ statusCode: 401, message: 'Token 无效或已过期' })
+  const userId = requireAuth(event)
 
   const query = await getValidatedQuery(event, QuerySchema.parse)
 
   let documentIds: string[] = []
 
   if (query.documentId) {
-    // 清理单个文档的缓存
+    // 清理单个文档的缓存 - 先验证归属
+    const doc = await DocumentDAO.findById(query.documentId)
+    if (!doc) {
+      throw createError({ statusCode: 404, message: '文档不存在' })
+    }
+    requireResourceOwner(doc, userId)
     documentIds = [query.documentId]
   } else if (query.workspaceId) {
-    // 清理整个 workspace 的缓存
-    const docs = await DocumentDAO.findAll({ workspaceId: query.workspaceId, limit: 1000 })
+    // 清理整个 workspace 的缓存 - 只清理属于自己的文档
+    const docs = await DocumentDAO.findAll({ workspaceId: query.workspaceId, userId, limit: 1000 })
     documentIds = docs.map(d => d.id)
   } else {
     throw createError({ statusCode: 400, message: '请提供 workspaceId 或 documentId' })

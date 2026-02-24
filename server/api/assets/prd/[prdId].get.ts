@@ -4,15 +4,24 @@ import { ErrorMessages } from '~/server/utils/errors'
  */
 
 import { PrdAssetDAO } from '~/lib/db/dao/asset-dao'
+import { PRDDAO } from '~/lib/db/dao/prd-dao'
 import { getStorageClient } from '~/lib/storage/storage-factory'
 
 export default defineEventHandler(async (event) => {
   try {
+    const userId = requireAuth(event)
     const prdId = getRouterParam(event, 'prdId')
 
     if (!prdId) {
       throw new Error('PRD ID is required')
     }
+
+    // 校验 PRD 归属权
+    const prd = await PRDDAO.findById(prdId)
+    if (!prd) {
+      throw new Error('PRD not found')
+    }
+    requireResourceOwner(prd, userId)
 
     const prdAssets = await PrdAssetDAO.findByPrdId(prdId)
 

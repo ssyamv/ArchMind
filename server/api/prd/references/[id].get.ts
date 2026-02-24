@@ -5,6 +5,7 @@ import { ErrorMessages } from '~/server/utils/errors'
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
   try {
+    const userId = requireAuth(event)
     const id = getRouterParam(event, 'id')
 
     if (!id) {
@@ -14,6 +15,17 @@ export default defineEventHandler(async (event) => {
         message: t('errors.prdIdRequired')
       }
     }
+
+    // 校验 PRD 归属权
+    const prd = await PRDDAO.findById(id)
+    if (!prd) {
+      setResponseStatus(event, 404)
+      return {
+        success: false,
+        message: t(ErrorKeys.PRD_NOT_FOUND)
+      }
+    }
+    requireResourceOwner(prd, userId)
 
     // 获取引用关系
     const references = await PRDDAO.getReferences(id)

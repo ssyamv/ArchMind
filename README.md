@@ -7,7 +7,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-4169E1?logo=postgresql)](https://www.postgresql.org/)
 [![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js)](https://vuejs.org/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-0.1.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-0.1.1-blue)](CHANGELOG.md)
 
 ---
 
@@ -248,7 +248,7 @@ preferences:
   privacy_mode:    [ollama-llama3]
 ```
 
-用户也可以在 **设置 → AI 模型** 页面配置自己的 API Key，系统会优先使用用户配置的密钥。
+用户也可以在 **设置 → Profile → Models Tab** 配置自己的 API Key，并自选每个提供商的可用模型。系统支持 API 中转站（自定义 Base URL），用户配置的密钥会优先于系统环境变量使用。
 
 ---
 
@@ -493,7 +493,10 @@ pnpm storage:health
 
 ## 路线图
 
-### v0.1.0（当前）
+### v0.1.1（当前）
+用户级 AI 配置数据隔离、全局 JWT 认证中间件、自定义 API Base URL 支持、动态模型列表获取、模型配置 UI 整合至 Profile 页面
+
+### v0.1.0
 文档管理、RAG 搜索、PRD 生成、原型系统、逻辑图、图像生成、多工作区、用户系统
 
 ### v0.2.0（计划中）
@@ -564,9 +567,10 @@ git push origin feat/your-feature
 
 ## 安全说明
 
-- **JWT 认证**：所有 API 接口受保护，令牌 7 天有效
+- **JWT 认证**：全局中间件统一拦截，所有 API 接口强制认证，令牌 7 天有效
 - **密码安全**：bcrypt 哈希（cost 12），密码不可逆
-- **API Key 加密**：用户配置的 AI API Key 使用 AES-256 加密存储
+- **API Key 加密**：用户配置的 AI API Key 使用 AES-256 加密存储，按用户隔离
+- **用户数据隔离**：AI 配置按用户独立存储，不同用户的配置完全隔离
 - **文件访问**：使用预签名 URL，限时有效（默认 1 小时）
 - **本地优先**：所有文档存储在私有数据库，不上传至第三方
 - **隐私模式**：使用 Ollama 本地模型可实现 AI 调用完全离线

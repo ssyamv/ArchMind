@@ -15,6 +15,7 @@ function isValidProvider(provider: string): provider is AIProviderType {
 
 export default defineEventHandler(async (event) => {
   try {
+    const userId = requireAuth(event)
     const body = await readBody<SaveAPIConfigRequest>(event)
 
     if (!body.provider) {
@@ -36,7 +37,7 @@ export default defineEventHandler(async (event) => {
     // 验证必填字段
     if (providerConfig.authType === 'api_key' || providerConfig.authType === 'both') {
       // 如果是首次配置或要更新 API Key，则必须提供
-      const existingConfig = await UserAPIConfigDAO.get(body.provider)
+      const existingConfig = await UserAPIConfigDAO.get(userId, body.provider)
       if (!existingConfig && !body.apiKey) {
         throw createError({
           statusCode: 400,
@@ -46,17 +47,18 @@ export default defineEventHandler(async (event) => {
     }
 
     if (providerConfig.authType === 'base_url' || providerConfig.authType === 'both') {
-      const existingConfig = await UserAPIConfigDAO.get(body.provider)
+      const existingConfig = await UserAPIConfigDAO.get(userId, body.provider)
       if (!existingConfig && !body.baseUrl && providerConfig.authType === 'base_url') {
         // 对于 Ollama，使用默认 URL
         body.baseUrl = body.baseUrl || providerConfig.defaultBaseUrl
       }
     }
 
-    const config = await UserAPIConfigDAO.upsert({
+    const config = await UserAPIConfigDAO.upsert(userId, {
       provider: body.provider,
       apiKey: body.apiKey,
       baseUrl: body.baseUrl,
+      models: body.models,
       enabled: body.enabled ?? true
     })
 

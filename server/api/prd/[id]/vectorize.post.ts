@@ -10,6 +10,7 @@ import { TextSplitter } from '~/lib/rag/text-splitter'
 
 export default defineEventHandler(async (event) => {
   try {
+    const userId = requireAuth(event)
     const prdId = getRouterParam(event, 'id')
     if (!prdId) {
       setResponseStatus(event, 400)
@@ -21,6 +22,8 @@ export default defineEventHandler(async (event) => {
       setResponseStatus(event, 404)
       return { success: false, message: 'PRD 不存在' }
     }
+
+    requireResourceOwner(prd, userId)
 
     // 立即更新状态为 processing，返回响应
     const currentMetadata = prd.metadata || {}

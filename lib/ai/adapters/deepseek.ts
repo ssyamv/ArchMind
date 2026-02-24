@@ -12,11 +12,11 @@ export class DeepSeekAdapter implements AIModelAdapter {
   modelId: string
   private client: OpenAI
 
-  constructor (apiKey: string, modelId: string = 'deepseek-chat') {
+  constructor (apiKey: string, modelId: string = 'deepseek-chat', baseUrl?: string) {
     this.modelId = modelId
     this.client = new OpenAI({
       apiKey,
-      baseURL: 'https://api.deepseek.com'
+      baseURL: baseUrl || 'https://api.deepseek.com'
     })
   }
 

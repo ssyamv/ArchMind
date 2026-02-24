@@ -6,6 +6,7 @@ export default defineEventHandler(async (event) => {
   const t = useServerT(event)
 
   try {
+    const userId = requireAuth(event)
     const id = getRouterParam(event, 'id')
 
     if (!id) {
@@ -25,6 +26,8 @@ export default defineEventHandler(async (event) => {
         message: t(ErrorKeys.DOCUMENT_NOT_FOUND)
       }
     }
+
+    requireResourceOwner(document, userId)
 
     // 获取所有文档块
     const chunks = await DocumentChunkDAO.findByDocumentId(id)

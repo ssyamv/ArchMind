@@ -16,6 +16,8 @@ const createCategorySchema = z.object({
 
 export default defineEventHandler(async (event) => {
   try {
+    requireAuth(event)
+
     const body = await readBody(event)
 
     // 验证输入

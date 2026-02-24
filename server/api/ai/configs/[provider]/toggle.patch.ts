@@ -13,6 +13,7 @@ function isValidProvider(provider: string): provider is AIProviderType {
 
 export default defineEventHandler(async (event) => {
   try {
+    const userId = requireAuth(event)
     const provider = getRouterParam(event, 'provider')
     const body = await readBody<{ enabled: boolean }>(event)
 
@@ -30,7 +31,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const updated = await UserAPIConfigDAO.setEnabled(provider, body.enabled)
+    const updated = await UserAPIConfigDAO.setEnabled(userId, provider, body.enabled)
 
     if (!updated) {
       return {

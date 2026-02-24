@@ -9,6 +9,7 @@ import { DocumentDAO } from '~/lib/db/dao/document-dao'
 
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
+  const userId = requireAuth(event)
   const documentId = getRouterParam(event, 'id')
   const body = await readBody(event)
 
@@ -28,6 +29,8 @@ export default defineEventHandler(async (event) => {
         message: t(ErrorKeys.DOCUMENT_NOT_FOUND)
       })
     }
+
+    requireResourceOwner(document, userId)
 
     // 解析分享参数
     const expiryHours = body.expiryHours || 24  // 默认 24 小时

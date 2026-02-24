@@ -29,6 +29,7 @@ export default defineEventHandler(async (event) => {
   const t = useServerT(event)
 
   try {
+    const userId = requireAuth(event)
     const config = useRuntimeConfig()
     const body = await readBody(event)
 
@@ -110,12 +111,12 @@ export default defineEventHandler(async (event) => {
     switch (mode) {
       case 'keyword':
         // 仅关键词搜索
-        results = await retriever.keywordSearch(query, topK)
+        results = await retriever.keywordSearch(query, topK, userId)
         break
 
       case 'vector':
         // 仅向量检索
-        results = await retriever.retrieve(query, { topK, threshold })
+        results = await retriever.retrieve(query, { topK, threshold, userId })
         break
 
       case 'hybrid':
@@ -125,7 +126,8 @@ export default defineEventHandler(async (event) => {
           topK,
           threshold,
           keywordWeight,
-          vectorWeight
+          vectorWeight,
+          userId
         })
         break
     }

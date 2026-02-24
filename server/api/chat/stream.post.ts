@@ -22,6 +22,7 @@ interface ChatStreamRequest {
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
   try {
+    requireAuth(event)
     const body = await readBody<ChatStreamRequest>(event)
 
     if (!body.message) {

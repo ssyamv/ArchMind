@@ -52,27 +52,46 @@ export class PrototypeDAO {
     orderBy?: 'created_at' | 'updated_at'
     order?: 'ASC' | 'DESC'
     workspaceId?: string
+    userId?: string
   }): Promise<Prototype[]> {
-    const { limit = 50, offset = 0, orderBy = 'created_at', order = 'DESC', workspaceId } = options || {}
+    const { limit = 50, offset = 0, orderBy = 'created_at', order = 'DESC', workspaceId, userId } = options || {}
+
+    const whereConditions: string[] = []
+    const params: any[] = []
+    let paramIndex = 1
+
+    if (userId) {
+      whereConditions.push(`(p.user_id = $${paramIndex} OR p.user_id IS NULL)`)
+      params.push(userId)
+      paramIndex++
+    }
 
     if (workspaceId) {
+      // 通过 JOIN prd_documents 间接过滤工作区
+      const whereClause = whereConditions.length > 0 ? `AND ${whereConditions.join(' AND ')}` : ''
+      params.push(workspaceId, limit, offset)
       const sql = `
         SELECT p.* FROM prototypes p
         LEFT JOIN prd_documents prd ON p.prd_id = prd.id
-        WHERE prd.workspace_id = $3 OR (p.prd_id IS NULL AND $3 = 'default')
+        WHERE (prd.workspace_id = $${paramIndex} OR (p.prd_id IS NULL AND $${paramIndex} = 'default'))
+        ${whereClause}
         ORDER BY p.${orderBy} ${order}
-        LIMIT $1 OFFSET $2
+        LIMIT $${paramIndex + 1} OFFSET $${paramIndex + 2}
       `
-      const result = await dbClient.query<any>(sql, [limit, offset, workspaceId])
+      const result = await dbClient.query<any>(sql, params)
       return result.rows.map(row => this.mapRow(row))
     }
 
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''
+    params.push(limit, offset)
+
     const sql = `
-      SELECT * FROM prototypes
-      ORDER BY ${orderBy} ${order}
-      LIMIT $1 OFFSET $2
+      SELECT * FROM prototypes p
+      ${whereClause}
+      ORDER BY p.${orderBy} ${order}
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `
-    const result = await dbClient.query<any>(sql, [limit, offset])
+    const result = await dbClient.query<any>(sql, params)
     return result.rows.map(row => this.mapRow(row))
   }
 
@@ -103,21 +122,35 @@ export class PrototypeDAO {
     return result.rowCount! > 0
   }
 
-  static async count (options?: { workspaceId?: string }): Promise<number> {
-    const { workspaceId } = options || {}
+  static async count (options?: { workspaceId?: string; userId?: string }): Promise<number> {
+    const { workspaceId, userId } = options || {}
+
+    const whereConditions: string[] = []
+    const params: any[] = []
+    let paramIndex = 1
+
+    if (userId) {
+      whereConditions.push(`(p.user_id = $${paramIndex} OR p.user_id IS NULL)`)
+      params.push(userId)
+      paramIndex++
+    }
 
     if (workspaceId) {
+      const whereClause = whereConditions.length > 0 ? `AND ${whereConditions.join(' AND ')}` : ''
+      params.push(workspaceId)
       const sql = `
         SELECT COUNT(*) as count FROM prototypes p
         LEFT JOIN prd_documents prd ON p.prd_id = prd.id
-        WHERE prd.workspace_id = $1 OR (p.prd_id IS NULL AND $1 = 'default')
+        WHERE (prd.workspace_id = $${paramIndex} OR (p.prd_id IS NULL AND $${paramIndex} = 'default'))
+        ${whereClause}
       `
-      const result = await dbClient.query<{ count: string }>(sql, [workspaceId])
+      const result = await dbClient.query<{ count: string }>(sql, params)
       return parseInt(result.rows[0].count, 10)
     }
 
-    const sql = 'SELECT COUNT(*) as count FROM prototypes'
-    const result = await dbClient.query<{ count: string }>(sql)
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''
+    const sql = `SELECT COUNT(*) as count FROM prototypes p ${whereClause}`
+    const result = await dbClient.query<{ count: string }>(sql, params)
     return parseInt(result.rows[0].count, 10)
   }
 

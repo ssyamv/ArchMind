@@ -8,9 +8,11 @@
  */
 
 import { PRDDAO } from '~/lib/db/dao/prd-dao'
+import { DocumentDAO } from '~/lib/db/dao/document-dao'
 
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
+  const userId = requireAuth(event)
   const documentId = getRouterParam(event, 'id')
 
   if (!documentId) {
@@ -21,6 +23,16 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
+    // 验证父资源归属
+    const document = await DocumentDAO.findById(documentId)
+    if (!document) {
+      throw createError({
+        statusCode: 404,
+        message: t(ErrorKeys.DOCUMENT_NOT_FOUND)
+      })
+    }
+    requireResourceOwner(document, userId)
+
     // 查找引用了此文档的所有 PRD
     const references = await PRDDAO.findPRDsByDocumentId(documentId)
 

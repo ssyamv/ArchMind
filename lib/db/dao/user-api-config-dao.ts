@@ -1,6 +1,7 @@
 /**
  * 用户 API 配置 DAO
  * 管理用户配置的第三方模型 API Key（加密存储）
+ * 所有操作按 userId 隔离
  */
 
 import { dbClient } from '../client'
@@ -26,9 +27,11 @@ function getEncryptionKey(): Buffer {
 
 export interface UserAPIConfigRecord {
   id: string
+  userId: string
   provider: string
   apiKeyEncrypted: string | null
   baseUrl: string | null
+  models: string[]
   enabled: boolean
   createdAt: string
   updatedAt: string
@@ -38,6 +41,7 @@ export interface UserAPIConfigData {
   provider: string
   apiKey?: string
   baseUrl?: string
+  models?: string[]
   enabled?: boolean
 }
 
@@ -103,11 +107,11 @@ export class UserAPIConfigDAO {
   }
 
   /**
-   * 获取指定提供商的配置
+   * 获取指定用户指定提供商的配置
    */
-  static async get(provider: string): Promise<UserAPIConfigRecord | null> {
-    const sql = 'SELECT * FROM user_api_configs WHERE provider = $1'
-    const result = await dbClient.query<any>(sql, [provider])
+  static async get(userId: string, provider: string): Promise<UserAPIConfigRecord | null> {
+    const sql = 'SELECT * FROM user_api_configs WHERE user_id = $1 AND provider = $2'
+    const result = await dbClient.query<any>(sql, [userId, provider])
 
     if (result.rows.length === 0) {
       return null
@@ -117,52 +121,57 @@ export class UserAPIConfigDAO {
   }
 
   /**
-   * 获取所有配置
+   * 获取指定用户的所有配置
    */
-  static async getAll(): Promise<UserAPIConfigRecord[]> {
-    const sql = 'SELECT * FROM user_api_configs ORDER BY provider'
-    const result = await dbClient.query<any>(sql)
+  static async getAll(userId: string): Promise<UserAPIConfigRecord[]> {
+    const sql = 'SELECT * FROM user_api_configs WHERE user_id = $1 ORDER BY provider'
+    const result = await dbClient.query<any>(sql, [userId])
 
     return result.rows.map(row => this.mapRowToRecord(row))
   }
 
   /**
-   * 获取所有已启用的配置（包含解密后的 API Key）
+   * 获取指定用户所有已启用的配置（包含解密后的 API Key）
    * 仅在服务端使用！
    */
-  static async getAllEnabledWithKeys(): Promise<Array<{ provider: string; apiKey: string | null; baseUrl: string | null }>> {
-    const sql = 'SELECT * FROM user_api_configs WHERE enabled = true'
-    const result = await dbClient.query<any>(sql)
+  static async getAllEnabledWithKeys(userId: string): Promise<Array<{ provider: string; apiKey: string | null; baseUrl: string | null; models: string[] }>> {
+    const sql = 'SELECT * FROM user_api_configs WHERE user_id = $1 AND enabled = true'
+    const result = await dbClient.query<any>(sql, [userId])
 
     return result.rows.map(row => ({
       provider: row.provider,
       apiKey: row.api_key_encrypted ? this.decrypt(row.api_key_encrypted) : null,
-      baseUrl: row.base_url
+      baseUrl: row.base_url,
+      models: Array.isArray(row.models) ? row.models : []
     }))
   }
 
   /**
-   * 保存或更新配置
+   * 保存或更新指定用户的配置
    */
-  static async upsert(data: UserAPIConfigData): Promise<UserAPIConfigRecord> {
+  static async upsert(userId: string, data: UserAPIConfigData): Promise<UserAPIConfigRecord> {
     const now = new Date().toISOString()
     const encryptedKey = data.apiKey ? this.encrypt(data.apiKey) : null
+    const modelsJson = data.models ? JSON.stringify(data.models) : null
 
     const sql = `
-      INSERT INTO user_api_configs (provider, api_key_encrypted, base_url, enabled, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $5)
-      ON CONFLICT (provider) DO UPDATE SET
-        api_key_encrypted = COALESCE($2, user_api_configs.api_key_encrypted),
-        base_url = COALESCE($3, user_api_configs.base_url),
-        enabled = COALESCE($4, user_api_configs.enabled),
-        updated_at = $5
+      INSERT INTO user_api_configs (user_id, provider, api_key_encrypted, base_url, models, enabled, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
+      ON CONFLICT (user_id, provider) DO UPDATE SET
+        api_key_encrypted = COALESCE($3, user_api_configs.api_key_encrypted),
+        base_url = COALESCE($4, user_api_configs.base_url),
+        models = COALESCE($5::jsonb, user_api_configs.models),
+        enabled = COALESCE($6, user_api_configs.enabled),
+        updated_at = $7
       RETURNING *
     `
 
     const result = await dbClient.query<any>(sql, [
+      userId,
       data.provider,
       encryptedKey,
       data.baseUrl || null,
+      modelsJson,
       data.enabled ?? true,
       now
     ])
@@ -171,29 +180,29 @@ export class UserAPIConfigDAO {
   }
 
   /**
-   * 删除配置
+   * 删除指定用户的配置
    */
-  static async delete(provider: string): Promise<boolean> {
-    const sql = 'DELETE FROM user_api_configs WHERE provider = $1'
-    const result = await dbClient.query(sql, [provider])
+  static async delete(userId: string, provider: string): Promise<boolean> {
+    const sql = 'DELETE FROM user_api_configs WHERE user_id = $1 AND provider = $2'
+    const result = await dbClient.query(sql, [userId, provider])
     return (result.rowCount ?? 0) > 0
   }
 
   /**
-   * 启用/禁用配置
+   * 启用/禁用指定用户的配置
    */
-  static async setEnabled(provider: string, enabled: boolean): Promise<boolean> {
-    const sql = 'UPDATE user_api_configs SET enabled = $1, updated_at = NOW() WHERE provider = $2'
-    const result = await dbClient.query(sql, [enabled, provider])
+  static async setEnabled(userId: string, provider: string, enabled: boolean): Promise<boolean> {
+    const sql = 'UPDATE user_api_configs SET enabled = $1, updated_at = NOW() WHERE user_id = $2 AND provider = $3'
+    const result = await dbClient.query(sql, [enabled, userId, provider])
     return (result.rowCount ?? 0) > 0
   }
 
   /**
-   * 检查配置是否存在且已启用
+   * 检查指定用户的配置是否存在且已启用
    */
-  static async isEnabled(provider: string): Promise<boolean> {
-    const sql = 'SELECT enabled FROM user_api_configs WHERE provider = $1'
-    const result = await dbClient.query<any>(sql, [provider])
+  static async isEnabled(userId: string, provider: string): Promise<boolean> {
+    const sql = 'SELECT enabled FROM user_api_configs WHERE user_id = $1 AND provider = $2'
+    const result = await dbClient.query<any>(sql, [userId, provider])
 
     if (result.rows.length === 0) {
       return false
@@ -205,9 +214,9 @@ export class UserAPIConfigDAO {
   /**
    * 获取解密后的 API Key（仅在服务端使用！）
    */
-  static async getDecryptedKey(provider: string): Promise<string | null> {
-    const sql = 'SELECT api_key_encrypted FROM user_api_configs WHERE provider = $1 AND enabled = true'
-    const result = await dbClient.query<any>(sql, [provider])
+  static async getDecryptedKey(userId: string, provider: string): Promise<string | null> {
+    const sql = 'SELECT api_key_encrypted FROM user_api_configs WHERE user_id = $1 AND provider = $2 AND enabled = true'
+    const result = await dbClient.query<any>(sql, [userId, provider])
 
     if (result.rows.length === 0 || !result.rows[0].api_key_encrypted) {
       return null
@@ -220,9 +229,9 @@ export class UserAPIConfigDAO {
    * 获取完整配置（包含解密后的 API Key）
    * 仅在服务端使用！
    */
-  static async getFullConfig(provider: string): Promise<{ provider: string; apiKey: string | null; baseUrl: string | null; enabled: boolean } | null> {
-    const sql = 'SELECT * FROM user_api_configs WHERE provider = $1'
-    const result = await dbClient.query<any>(sql, [provider])
+  static async getFullConfig(userId: string, provider: string): Promise<{ provider: string; apiKey: string | null; baseUrl: string | null; models: string[]; enabled: boolean } | null> {
+    const sql = 'SELECT * FROM user_api_configs WHERE user_id = $1 AND provider = $2'
+    const result = await dbClient.query<any>(sql, [userId, provider])
 
     if (result.rows.length === 0) {
       return null
@@ -233,6 +242,7 @@ export class UserAPIConfigDAO {
       provider: row.provider,
       apiKey: row.api_key_encrypted ? this.decrypt(row.api_key_encrypted) : null,
       baseUrl: row.base_url,
+      models: Array.isArray(row.models) ? row.models : [],
       enabled: row.enabled
     }
   }
@@ -240,9 +250,11 @@ export class UserAPIConfigDAO {
   private static mapRowToRecord(row: any): UserAPIConfigRecord {
     return {
       id: row.id,
+      userId: row.user_id,
       provider: row.provider,
       apiKeyEncrypted: row.api_key_encrypted ? '********' : null, // 不暴露加密数据
       baseUrl: row.base_url,
+      models: Array.isArray(row.models) ? row.models : [],
       enabled: row.enabled,
       createdAt: row.created_at,
       updatedAt: row.updated_at

@@ -157,6 +157,7 @@ export interface UserAPIConfig {
   provider: AIProviderType
   apiKey?: string  // 加密存储
   baseUrl?: string
+  models?: string[]  // 用户自定义的模型 ID 列表
   enabled: boolean
   createdAt: string
   updatedAt: string
@@ -167,6 +168,7 @@ export interface SaveAPIConfigRequest {
   provider: AIProviderType
   apiKey?: string
   baseUrl?: string
+  models?: string[]  // 用户选择的模型 ID 列表
   enabled?: boolean
 }
 
@@ -193,5 +195,6 @@ export interface ValidateAPIResponse {
   success: boolean
   message?: string
   availableModels?: string[]
+  modelsFetched?: boolean  // 是否为动态获取的真实列表
 }
 

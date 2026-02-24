@@ -4,9 +4,11 @@
  */
 
 import { ProcessingLogDAO } from '~/lib/db/dao/processing-log-dao'
+import { DocumentDAO } from '~/lib/db/dao/document-dao'
 
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
+  const userId = requireAuth(event)
   const documentId = getRouterParam(event, 'id')
 
   if (!documentId) {
@@ -17,6 +19,16 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
+    // 验证父资源归属
+    const document = await DocumentDAO.findById(documentId)
+    if (!document) {
+      throw createError({
+        statusCode: 404,
+        message: t(ErrorKeys.DOCUMENT_NOT_FOUND)
+      })
+    }
+    requireResourceOwner(document, userId)
+
     // 查询文档的所有处理日志
     const logs = await ProcessingLogDAO.findByDocumentId(documentId)
 

@@ -21,6 +21,7 @@ const cleanupSchema = z.object({
 
 export default defineEventHandler(async (event) => {
   try {
+    const userId = requireAuth(event)
     const body = await readBody(event)
 
     // 验证输入
@@ -41,12 +42,13 @@ export default defineEventHandler(async (event) => {
         ARRAY_AGG(id ORDER BY created_at ${keepOldest ? 'ASC' : 'DESC'}) as document_ids
       FROM documents
       WHERE content_hash IS NOT NULL
+        AND (user_id = $1 OR user_id IS NULL)
     `
 
-    const params: any[] = []
+    const params: any[] = [userId]
 
     if (contentHashes && contentHashes.length > 0) {
-      sql += ` AND content_hash = ANY($1)`
+      sql += ` AND content_hash = ANY($2)`
       params.push(contentHashes)
     }
 

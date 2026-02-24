@@ -3,6 +3,7 @@ import { PrototypeDAO } from '~/lib/db/dao/prototype-dao'
 import { ErrorMessages } from '~/server/utils/errors'
 export default defineEventHandler(async (event) => {
   try {
+    const userId = requireAuth(event)
     const query = getQuery(event)
     const prdId = query.prdId as string | undefined
     const workspaceId = query.workspace_id as string | undefined
@@ -21,8 +22,8 @@ export default defineEventHandler(async (event) => {
     const offset = (page - 1) * limit
 
     const [prototypes, total] = await Promise.all([
-      PrototypeDAO.findAll({ limit, offset, order: 'DESC', orderBy: 'created_at', workspaceId }),
-      PrototypeDAO.count({ workspaceId })
+      PrototypeDAO.findAll({ limit, offset, order: 'DESC', orderBy: 'created_at', workspaceId, userId }),
+      PrototypeDAO.count({ workspaceId, userId })
     ])
 
     return {

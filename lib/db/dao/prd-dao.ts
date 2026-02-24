@@ -10,16 +10,17 @@ export class PRDDAO {
 
     const sql = `
       INSERT INTO prd_documents (
-        id, user_id, title, content, user_input, model_used,
+        id, user_id, workspace_id, title, content, user_input, model_used,
         generation_time, token_count, estimated_cost, status, metadata, created_at, updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *
     `
 
     const result = await dbClient.query<any>(sql, [
       id,
       prd.userId || null,
+      prd.workspaceId || null,
       prd.title,
       prd.content,
       prd.userInput,
@@ -70,13 +71,20 @@ export class PRDDAO {
     order?: 'ASC' | 'DESC';
     onlyWithContent?: boolean;
     workspaceId?: string;
+    userId?: string;
   }): Promise<PRDDocument[]> {
-    const { limit = 50, offset = 0, orderBy = 'created_at', order = 'DESC', onlyWithContent = false, workspaceId } = options || {}
+    const { limit = 50, offset = 0, orderBy = 'created_at', order = 'DESC', onlyWithContent = false, workspaceId, userId } = options || {}
 
     // 构建 WHERE 条件
     const whereConditions: string[] = []
     const params: any[] = []
     let paramIndex = 1
+
+    if (userId) {
+      whereConditions.push(`(user_id = $${paramIndex} OR user_id IS NULL)`)
+      params.push(userId)
+      paramIndex++
+    }
 
     if (onlyWithContent) {
       whereConditions.push("content IS NOT NULL AND content != '' AND (metadata->>'hasPrdContent')::boolean = true")
@@ -235,13 +243,19 @@ export class PRDDAO {
   }
 
   // 统计 PRD 数量
-  static async count (options?: { onlyWithContent?: boolean; workspaceId?: string }): Promise<number> {
-    const { onlyWithContent = false, workspaceId } = options || {}
+  static async count (options?: { onlyWithContent?: boolean; workspaceId?: string; userId?: string }): Promise<number> {
+    const { onlyWithContent = false, workspaceId, userId } = options || {}
 
     // 构建 WHERE 条件
     const whereConditions: string[] = []
     const params: any[] = []
     let paramIndex = 1
+
+    if (userId) {
+      whereConditions.push(`(user_id = $${paramIndex} OR user_id IS NULL)`)
+      params.push(userId)
+      paramIndex++
+    }
 
     if (onlyWithContent) {
       whereConditions.push("content IS NOT NULL AND content != '' AND (metadata->>'hasPrdContent')::boolean = true")
@@ -264,6 +278,7 @@ export class PRDDAO {
     return {
       id: row.id,
       userId: row.user_id,
+      workspaceId: row.workspace_id,
       title: row.title,
       content: row.content,
       userInput: row.user_input,

@@ -4,7 +4,6 @@
  */
 
 import { UserDAO } from '~/lib/db/dao/user-dao'
-import { verifyToken } from '~/server/utils/jwt'
 import { getStorageClient } from '~/lib/storage/storage-factory'
 
 // 支持的图片类型
@@ -19,24 +18,7 @@ interface AvatarResponse {
 
 export default defineEventHandler(async (event): Promise<AvatarResponse> => {
   try {
-    // 从 Cookie 中获取 Token
-    const token = getCookie(event, 'auth_token')
-
-    if (!token) {
-      return {
-        success: false,
-        message: '未登录'
-      }
-    }
-
-    // 验证 Token
-    const payload = verifyToken(token)
-    if (!payload) {
-      return {
-        success: false,
-        message: 'Token 无效或已过期'
-      }
-    }
+    const userId = requireAuth(event)
 
     // 获取上传的文件
     const formData = await readMultipartFormData(event)
@@ -75,7 +57,7 @@ export default defineEventHandler(async (event): Promise<AvatarResponse> => {
 
     // 生成对象存储键
     const ext = file.filename?.split('.').pop() || 'png'
-    const objectKey = `avatars/${payload.userId}.${ext}`
+    const objectKey = `avatars/${userId}.${ext}`
 
     // 上传到对象存储
     const storage = getStorageClient()
@@ -85,10 +67,10 @@ export default defineEventHandler(async (event): Promise<AvatarResponse> => {
     })
 
     // 更新用户头像（数据库存储对象键，而不是 URL）
-    await UserDAO.update(payload.userId, { avatarUrl: objectKey })
+    await UserDAO.update(userId, { avatarUrl: objectKey })
 
     // 返回固定代理 URL（带时间戳使浏览器刷新缓存）
-    const avatarUrl = `/api/user/avatar/${payload.userId}?v=${Date.now()}`
+    const avatarUrl = `/api/user/avatar/${userId}?v=${Date.now()}`
 
     return {
       success: true,

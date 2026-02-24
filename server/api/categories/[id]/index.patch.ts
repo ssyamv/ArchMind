@@ -15,6 +15,7 @@ const updateCategorySchema = z.object({
 
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
+  requireAuth(event)
   const categoryId = getRouterParam(event, 'id')
 
   if (!categoryId) {

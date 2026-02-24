@@ -79,6 +79,9 @@
 | | 工作区成员管理 | ✅ 已实现 |
 | **AI 配置** | 用户自定义 API Key | ✅ 已实现 |
 | | 多提供商配置 | ✅ 已实现 |
+| | 用户自选模型列表 | ✅ 已实现 |
+| | 自定义 API Base URL（中转站）| ✅ 已实现 |
+| | 动态获取提供商模型列表 | ✅ 已实现 |
 
 ### 1.4 产品指标
 
@@ -88,7 +91,7 @@
 | 混合搜索响应时间 | < 2 秒 (1000 文档) | < 1 秒 |
 | 搜索准确率提升 | +20% (vs 单一模式) | +30% |
 | 测试覆盖率 | ~15% | 80% |
-| API 端点数 | 95 个 | - |
+| API 端点数 | 103 个 | - |
 | Vue 组件数 | 180+ | - |
 
 ---
@@ -639,16 +642,22 @@ CREATE TABLE conversation_messages (
 #### user_api_configs 表
 
 ```sql
--- 存储用户自定义的 AI 提供商 API Key (AES 加密)
+-- 存储用户自定义的 AI 提供商 API Key (AES 加密)，按用户隔离
 CREATE TABLE user_api_configs (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  provider          VARCHAR(50) NOT NULL UNIQUE,  -- openai/anthropic/google/glm 等
-  api_key_encrypted TEXT,                          -- AES-256 加密存储
-  base_url          VARCHAR(500),                  -- 自定义 base URL (Ollama等)
+  user_id           UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,  -- 用户隔离
+  provider          VARCHAR(50) NOT NULL,                -- openai/anthropic/google/glm 等
+  api_key_encrypted TEXT,                               -- AES-256 加密存储
+  base_url          VARCHAR(500),                        -- 自定义 base URL (中转站/Ollama等)
+  models            JSONB DEFAULT '[]',                  -- 用户自选的模型 ID 列表
   enabled           BOOLEAN DEFAULT true,
   created_at        TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at        TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  updated_at        TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, provider)                             -- 每个用户每个提供商唯一
 );
+
+-- 索引
+CREATE INDEX idx_user_api_configs_user_id ON user_api_configs(user_id);
 ```
 
 #### assets 表 (图像资产)
@@ -689,6 +698,8 @@ CREATE TABLE assets (
 | `migrations/add-prototype-device-type.sql` | 原型设备类型 |
 | `migrations/add-workspaces-support.sql` | 多工作区支持 |
 | `migrations/add_reset_token_fields.sql` | 密码重置令牌 |
+| `migrations/add-user-data-isolation.sql` | 用户级 API 配置隔离（user_id 字段） |
+| `migrations/add-user-model-selection.sql` | 用户自选模型列表（models 字段） |
 | `lib/db/migrate-logic-maps.ts` | 逻辑图表 |
 
 ---
@@ -726,15 +737,17 @@ interface GenerateOptions {
 
 ### 6.2 已实现的模型适配器
 
+所有适配器均支持 `baseUrl` 参数，可配置 API 中转站或自建代理：
+
 | 适配器 | 文件 | 支持模型 | 上下文长度 | 特点 |
 |--------|------|----------|------------|------|
-| ClaudeAdapter | `adapters/claude.ts` | claude-3.5-sonnet, claude-3-haiku | 200K tokens | 最优 PRD 生成 |
-| OpenAIAdapter | `adapters/openai.ts` | gpt-4o, gpt-4-turbo | 128K tokens | 通用任务 |
+| ClaudeAdapter | `adapters/claude.ts` | claude-opus-4, claude-sonnet-4, 等 | 200K tokens | 最优 PRD 生成，支持自定义 baseUrl |
+| OpenAIAdapter | `adapters/openai.ts` | gpt-4o, gpt-4-turbo | 128K tokens | 通用任务，支持 API 中转站 |
 | GeminiAdapter | `adapters/gemini.ts` | gemini-1.5-pro, gemini-1.5-flash | 1M tokens | 超大上下文 |
-| GLMAdapter | `adapters/glm.ts` | glm-4, glm-4-air, glm-4.7 | 128K tokens | 中文优化 |
+| GLMAdapter | `adapters/glm.ts` | glm-4, glm-4-air, glm-4.7 | 128K tokens | 中文优化，支持自定义 baseUrl |
 | QwenAdapter | `adapters/qwen.ts` | qwen-max, qwen-plus, qwen-turbo | 30K tokens | 中文优化 |
 | WenxinAdapter | `adapters/wenxin.ts` | ernie-4.0, ernie-speed | 8K tokens | 中文优化 |
-| DeepSeekAdapter | `adapters/deepseek.ts` | deepseek-chat, deepseek-coder | 64K tokens | 代码任务 |
+| DeepSeekAdapter | `adapters/deepseek.ts` | deepseek-chat, deepseek-coder | 64K tokens | 代码任务，支持自定义 baseUrl |
 | OllamaAdapter | `adapters/ollama.ts` | llama3, qwen2, 等本地模型 | 可配置 | 完全离线 |
 
 ### 6.3 模型管理器 (ModelManager)
@@ -744,7 +757,8 @@ interface GenerateOptions {
 1. **模型注册与缓存**：运行时注册并缓存所有可用适配器
 2. **智能路由**：根据任务类型自动选择最佳模型
 3. **降级策略**：首选模型不可用时自动切换到备用模型
-4. **用户配置集成**：读取用户在 UI 配置的 API Key
+4. **用户配置集成**：读取用户在 UI 配置的 API Key 和自选模型列表，动态重新初始化适配器
+5. **三层模型来源**：系统环境变量 → 用户配置 → 动态获取（验证时）
 
 **任务类型与模型偏好**（来自 `config/ai-models.yaml`）：
 
@@ -1163,8 +1177,7 @@ data: {"type":"done","prdId":"uuid","metadata":{...}}
 | `/projects/:id` | `pages/projects/[id].vue` | dashboard | PRD 项目详情 |
 | `/documents/:id` | `pages/documents/[id].vue` | dashboard | 文档详情 |
 | `/prototype/:id` | `pages/prototype/[id].vue` | dashboard | 原型编辑器 |
-| `/settings/profile` | `pages/settings/profile.vue` | dashboard | 用户资料设置 |
-| `/settings/models` | `pages/settings/models.vue` | dashboard | AI 模型配置 |
+| `/settings/profile` | `pages/settings/profile.vue` | dashboard | 用户资料 & AI 模型配置（Profile/Security/Models 三个 Tab） |
 | `/app` | `pages/app.vue` | - | App 路由入口 |
 
 ### 10.2 布局系统
@@ -1318,35 +1331,58 @@ bucket/
 
 ### 12.1 认证流程
 
+全局认证中间件 (`server/middleware/01.auth.ts`) 拦截所有 `/api/` 请求：
+
 ```
 1. 用户登录 → POST /api/auth/login
 2. 服务端验证密码 (bcrypt.compare)
 3. 生成 JWT Token (jsonwebtoken, 7天有效期)
-4. 客户端存储 Token (localStorage/sessionStorage)
-5. 后续请求携带 Authorization: Bearer {token}
-6. 服务端中间件验证 Token → 提取 userId
+4. 客户端存储 Token (Cookie: auth_token)
+5. 后续请求中间件自动验证 Token → 提取 userId 注入 event.context
+6. 各端点调用 requireAuth(event) 获取 userId，权限不足自动抛出 401
+
+白名单路径（无需认证）:
+- /api/auth/login
+- /api/auth/register
+- /api/auth/forgot-password
+- /api/auth/reset-password
+- /api/health
+- /api/share/
 ```
 
-### 12.2 密码安全
+### 12.2 认证工具函数
+
+```typescript
+// server/utils/auth-helpers.ts
+
+// 获取当前登录用户 ID（未认证时抛出 401）
+const userId = requireAuth(event)
+
+// 验证资源归属权（非所有者抛出 403，null userId 兼容历史数据）
+requireResourceOwner(resource, currentUserId)
+```
+
+### 12.3 密码安全
 
 - 存储：bcrypt 哈希（cost factor 12）
 - 重置：基于 Token 的邮件重置流程
 - Token：随机 UUID，1小时过期
 
-### 12.3 API Key 加密
+### 12.4 API Key 加密与用户隔离
 
-用户配置的第三方 AI API Key 使用 AES-256 加密存储：
+用户配置的第三方 AI API Key 使用 AES-256 加密存储，并按用户完全隔离：
 
 ```typescript
-// 加密存储
+// 加密存储（绑定用户 ID）
 const encrypted = encrypt(apiKey, process.env.ENCRYPTION_KEY)
-await userApiConfigDAO.upsert({ provider, apiKeyEncrypted: encrypted })
+await userApiConfigDAO.upsert(userId, { provider, apiKeyEncrypted: encrypted, models })
 
-// 使用时解密
+// 使用时按用户查询并解密
+const config = await userApiConfigDAO.getFullConfig(userId, provider)
 const apiKey = decrypt(config.apiKeyEncrypted, process.env.ENCRYPTION_KEY)
 ```
 
-### 12.4 已知安全限制
+### 12.5 已知安全限制
 
 - 缺少 CSRF 保护
 - 缺少 Rate Limiting
@@ -1933,6 +1969,6 @@ DATABASE_POOL_MAX=10  # 最大连接数（生产环境建议 20）
 
 ---
 
-*最后更新：2026-02-18 | 版本：0.1.0*
+*最后更新：2026-02-24 | 版本：0.1.1*
 
 *ArchMind AI - 让每一份历史文档都成为新功能的基础*

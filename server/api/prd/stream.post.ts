@@ -10,6 +10,7 @@ import type { PRDGenerateRequest } from '~/types/prd'
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
   try {
+    const userId = requireAuth(event)
     const body = await readBody<PRDGenerateRequest>(event)
 
     if (!body.userInput) {
@@ -103,7 +104,9 @@ export default defineEventHandler(async (event) => {
       temperature: body.temperature,
       maxTokens: body.maxTokens,
       useRAG: enableRAG,
-      documentIds: body.documentIds
+      documentIds: body.documentIds,
+      userId,
+      workspaceId: body.workspaceId
     })
 
     const readable = Readable.from(asyncIterable as unknown as AsyncIterable<string>)

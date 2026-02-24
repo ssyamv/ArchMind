@@ -5,6 +5,8 @@ import { LogicCoverageCalculator } from '~/lib/logic-map/coverage-calculator'
 import { ErrorMessages } from '~/server/utils/errors'
 export default defineEventHandler(async (event) => {
   try {
+    requireAuth(event)
+
     const query = getQuery(event)
     const prdIds = query.prdIds as string | string[] | undefined
 

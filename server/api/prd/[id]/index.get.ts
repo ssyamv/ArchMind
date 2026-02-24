@@ -3,6 +3,7 @@ import { PRDDAO } from '~/lib/db/dao/prd-dao'
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
   try {
+    const userId = requireAuth(event)
     const id = getRouterParam(event, 'id')
 
     if (!id) {
@@ -22,6 +23,8 @@ export default defineEventHandler(async (event) => {
         message: t(ErrorKeys.PRD_NOT_FOUND)
       }
     }
+
+    requireResourceOwner(prd, userId)
 
     // 获取引用的文档
     const references = await PRDDAO.getReferences(id)

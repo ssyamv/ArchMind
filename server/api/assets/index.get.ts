@@ -8,13 +8,14 @@ import { getStorageClient } from '~/lib/storage/storage-factory'
 
 export default defineEventHandler(async (event) => {
   try {
+    const userId = requireAuth(event)
     const query = getQuery(event)
     const limit = parseInt(query.limit as string) || 50
     const offset = parseInt(query.offset as string) || 0
     const source = query.source as 'upload' | 'ai-generated' | undefined
 
-    const assets = await AssetDAO.findAll({ limit, offset, source })
-    const total = await AssetDAO.count(source)
+    const assets = await AssetDAO.findAll({ limit, offset, source, userId })
+    const total = await AssetDAO.count({ source, userId })
 
     // 为每个资源生成预览 URL
     const storage = getStorageClient()

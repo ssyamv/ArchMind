@@ -5,6 +5,7 @@ export default defineEventHandler(async (event) => {
   const t = useServerT(event)
 
   try {
+    const userId = requireAuth(event)
     const body = await readBody(event)
 
     if (!body.title || !body.filePath || !body.fileType || body.fileSize === undefined) {
@@ -25,7 +26,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const doc: Omit<Document, 'id' | 'createdAt' | 'updatedAt'> = {
-      userId: body.userId,
+      userId,
       workspaceId: body.workspaceId,
       title: body.title,
       filePath: body.filePath,

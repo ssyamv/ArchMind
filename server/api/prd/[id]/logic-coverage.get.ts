@@ -5,6 +5,7 @@ import { LogicCoverageCalculator } from '~/lib/logic-map/coverage-calculator'
 import { ErrorMessages } from '~/server/utils/errors'
 export default defineEventHandler(async (event) => {
   try {
+    const userId = requireAuth(event)
     const prdId = getRouterParam(event, 'id')
 
     if (!prdId) {
@@ -18,6 +19,8 @@ export default defineEventHandler(async (event) => {
       setResponseStatus(event, 404)
       return { success: false, error: ErrorMessages.PRD_NOT_FOUND }
     }
+
+    requireResourceOwner(prd, userId)
 
     // 获取 Logic Map
     const logicMapRecord = await LogicMapDAO.findByPrdId(prdId)

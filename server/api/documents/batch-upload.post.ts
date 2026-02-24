@@ -29,6 +29,8 @@ export default defineEventHandler(async (event) => {
   const t = useServerT(event)
 
   try {
+    const userId = requireAuth(event)
+
     // 1. 接收文件
     const formData = await readMultipartFormData(event)
     if (!formData || formData.length === 0) {
@@ -42,7 +44,7 @@ export default defineEventHandler(async (event) => {
 
     // 2. 并行处理所有文件
     const results: UploadResult[] = await Promise.all(
-      formData.map(file => processFile(file))
+      formData.map(file => processFile(file, userId))
     )
 
     // 3. 统计结果
@@ -75,7 +77,7 @@ export default defineEventHandler(async (event) => {
 /**
  * 处理单个文件上传
  */
-async function processFile(file: any): Promise<UploadResult> {
+async function processFile(file: any, userId: string): Promise<UploadResult> {
   const fileName = file.filename || 'unnamed'
   let tempFilePath: string | null = null
 
@@ -143,6 +145,7 @@ async function processFile(file: any): Promise<UploadResult> {
 
     // 7. 创建数据库记录
     const document = await DocumentDAO.create({
+      userId,
       title: fileName,
       filePath: `/uploads/${fileName}`, // 保留兼容性
       fileType: fileType as 'pdf' | 'docx' | 'markdown',
