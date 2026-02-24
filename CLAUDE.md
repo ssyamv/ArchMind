@@ -25,6 +25,89 @@
 
 ## 关键规则
 
+### 0. Git 工作流规范（最高优先级）
+
+#### 0.1 提交确认流程
+
+**在执行任何 `git push` 或提交操作之前，必须先向用户展示将要提交的内容并获得明确确认。**
+
+| 步骤 | 说明 |
+|------|------|
+| 1. 展示变更 | 运行 `git status` 和 `git diff --stat`，向用户展示将要提交的文件列表 |
+| 2. 草拟提交信息 | 写出 commit message 供用户审阅 |
+| 3. 等待确认 | **停止操作**，等待用户明确说"可以"、"提交"、"确认"等指令 |
+| 4. 执行提交 | 用户确认后，才执行 `git add` + `git commit` + `git push` |
+
+**禁止**在用户未确认的情况下直接 push 代码到任何远程分支。
+
+#### 0.2 分支策略（Git Flow）
+
+```
+main          ← 生产分支，永远保持可发布状态，只接受 PR 合并
+develop       ← 集成分支，功能开发完毕后合并至此
+feature/*     ← 功能分支，从 develop 切出，完成后 PR 到 develop
+fix/*         ← 修复分支，从 develop 切出（hotfix 从 main 切出）
+release/*     ← 发布分支，从 develop 切出，测试通过后合并到 main + develop
+```
+
+**禁止**直接向 `main` 分支提交代码（GitHub Branch Protection 已强制执行）。
+
+#### 0.3 标准开发流程
+
+```bash
+# 1. 从 develop 切出功能分支
+git checkout develop && git pull origin develop
+git checkout -b feature/xxx-description
+
+# 2. 开发、提交（遵循 Conventional Commits 规范）
+git add <具体文件>
+git commit -m "feat: add xxx"
+
+# 3. push 功能分支（非 main，无需本地 CI 验证）
+git push origin feature/xxx-description
+
+# 4. 在 GitHub 创建 PR: feature/xxx → develop
+# 5. 合并到 develop 后，由 release 流程合并到 main
+```
+
+#### 0.4 Commit Message 规范（Conventional Commits）
+
+| 类型 | 场景 |
+|------|------|
+| `feat:` | 新功能 |
+| `fix:` | Bug 修复 |
+| `docs:` | 文档变更 |
+| `refactor:` | 重构（不含新功能/修复） |
+| `test:` | 测试相关 |
+| `chore:` | 构建/工具链/依赖变更 |
+| `ci:` | CI/CD 配置变更 |
+| `perf:` | 性能优化 |
+
+**示例**: `feat: add AlertDialog for delete confirmation in profile page`
+
+#### 0.5 版本发布流程
+
+```bash
+# 1. 从 develop 切出 release 分支
+git checkout -b release/vX.Y.Z develop
+
+# 2. 更新 package.json 版本号、CHANGELOG.md
+
+# 3. 合并到 main 并打 tag
+git checkout main && git merge --no-ff release/vX.Y.Z
+git tag -a vX.Y.Z -m "Release vX.Y.Z"
+git push origin main --tags
+
+# 4. 同步回 develop
+git checkout develop && git merge --no-ff release/vX.Y.Z
+git push origin develop
+
+# 5. 删除 release 分支
+git branch -d release/vX.Y.Z
+```
+
+---
+
 ### 1. 自动使用 Context7 MCP
 
 **编写涉及任何库/框架的代码时，必须主动使用 Context7 MCP**：
@@ -45,8 +128,17 @@
 | ✅ 使用 | shadcn/ui 组件 |
 | ❌ 禁止 | Nuxt UI, PrimeVue, Element Plus 等 |
 | ❌ 禁止 | 当 shadcn/ui 有等效组件时自定义实现 |
+| ❌ 禁止 | `window.alert()`、`window.confirm()`、`window.prompt()` 等浏览器原生弹窗 |
 | ✅ 样式 | 仅使用 Tailwind CSS |
 | ✅ 条件类 | 使用 `cn()` 工具函数 |
+
+**浏览器原生弹窗替代方案**:
+
+| 原生 API | shadcn/ui 替代 |
+|----------|---------------|
+| `alert()` / 错误提示 | `useToast()` from `~/components/ui/toast/use-toast` |
+| `confirm()` / 危险操作二次确认 | `AlertDialog` from `~/components/ui/alert-dialog` |
+| `prompt()` / 输入弹窗 | `Dialog` + `Input` from `~/components/ui/dialog` |
 
 **实现前检查清单**:
 - [ ] 查看 [shadcn-vue 文档](https://www.shadcn-vue.com)

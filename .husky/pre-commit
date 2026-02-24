@@ -1,0 +1,2 @@
+#!/usr/bin/env sh
+# pre-commit hook - 当前无需验证（CI 和 pre-push 会做检查）

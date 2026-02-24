@@ -1,0 +1,51 @@
+#!/usr/bin/env sh
+
+# 读取 push 目标分支
+remote="$1"
+url="$2"
+
+# 从标准输入读取 push 信息（格式: <local ref> <local sha1> <remote ref> <remote sha1>）
+while IFS=' ' read -r local_ref local_sha remote_ref remote_sha; do
+  # 只对 main 分支做本地验证
+  if echo "$remote_ref" | grep -qE '^refs/heads/main$'; then
+    echo ""
+    echo "⚡ 检测到直接 push 到 main 分支，开始本地验证..."
+    echo "   建议通过 PR 提交代码。直接 push 需通过所有检查。"
+    echo ""
+
+    echo "► 运行 ESLint 检查..."
+    pnpm lint || {
+      echo ""
+      echo "✗ ESLint 检查失败，push 被拒绝。"
+      echo "  请修复 lint 错误后再提交，或通过 PR 走 CI 流程。"
+      exit 1
+    }
+    echo "✓ ESLint 通过"
+
+    echo ""
+    echo "► 运行 TypeScript 类型检查..."
+    pnpm typecheck || {
+      echo ""
+      echo "✗ TypeScript 检查失败，push 被拒绝。"
+      echo "  请修复类型错误后再提交，或通过 PR 走 CI 流程。"
+      exit 1
+    }
+    echo "✓ TypeScript 检查通过"
+
+    echo ""
+    echo "► 运行单元测试..."
+    NODE_ENV=test JWT_SECRET=test-jwt-secret-for-ci pnpm test || {
+      echo ""
+      echo "✗ 单元测试失败，push 被拒绝。"
+      echo "  请修复测试后再提交，或通过 PR 走 CI 流程。"
+      exit 1
+    }
+    echo "✓ 单元测试通过"
+
+    echo ""
+    echo "✓ 所有本地验证通过，允许 push 到 main。"
+    echo ""
+  fi
+done
+
+exit 0
