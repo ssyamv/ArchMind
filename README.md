@@ -177,13 +177,13 @@ STORAGE_PROVIDER=minio
 ```
 ┌─────────────────────────────────────────────────────────┐
 │              Frontend (Nuxt 3 + Vue 3.5)                 │
-│  Pages(15) · Components(180+) · Pinia Stores · i18n     │
+│  Pages(15) · Components(181+) · Pinia Stores · i18n     │
 │         shadcn/ui + Tailwind CSS + vue-bits             │
 └─────────────────────────┬───────────────────────────────┘
                           │ HTTP / SSE
 ┌─────────────────────────▼───────────────────────────────┐
 │              API Layer (Nuxt Nitro)                       │
-│     95 REST endpoints · JWT Middleware · Zod Validation  │
+│    103 REST endpoints · JWT Middleware · Zod Validation  │
 └──────┬──────────────────┬────────────────┬──────────────┘
        │                  │                │
 ┌──────▼──────┐  ┌────────▼──────┐  ┌─────▼────────────┐
@@ -199,8 +199,8 @@ STORAGE_PROVIDER=minio
        │                  │                      │
 ┌──────▼──────────────────▼──────────────────────▼────────┐
 │                    Data Layer                             │
-│  PostgreSQL 14+ (pgvector) · Drizzle ORM · 15 DAOs      │
-│  MinIO / Huawei OBS · 20+ Tables                        │
+│  PostgreSQL 14+ (pgvector) · Drizzle ORM · 17 DAOs      │
+│  MinIO / Huawei OBS · 23+ Tables                        │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -382,7 +382,7 @@ ArchMind/
 │   ├── projects/[id].vue   # PRD 项目详情
 │   └── settings/       # 用户设置
 │
-├── server/api/         # API 路由（95 个端点）
+├── server/api/         # API 路由（103 个端点）
 │   ├── auth/           # 认证接口
 │   ├── documents/      # 文档管理
 │   ├── prd/            # PRD 生成
@@ -390,7 +390,7 @@ ArchMind/
 │   ├── prototypes/     # 原型管理
 │   └── ai/             # AI 配置
 │
-├── components/         # Vue 组件（180+）
+├── components/         # Vue 组件（181+）
 │   ├── ui/             # shadcn/ui 基础组件（30+）
 │   ├── chat/           # 对话组件
 │   ├── prototype/      # 原型组件
@@ -398,22 +398,22 @@ ArchMind/
 │   └── logic-map/      # 逻辑图组件
 │
 ├── lib/                # 核心业务逻辑
-│   ├── ai/             # AI 服务层（8 个适配器）
+│   ├── ai/             # AI 服务层（10 个适配器）
 │   ├── rag/            # RAG 引擎
 │   ├── prd/            # PRD 生成引擎
 │   ├── prototype/      # 原型生成
 │   ├── logic-map/      # 逻辑图生成
-│   ├── db/             # 数据库层（15 个 DAO）
+│   ├── db/             # 数据库层（17 个 DAO）
 │   └── storage/        # 对象存储抽象
 │
-├── composables/        # Vue 组合式函数（8 个）
+├── composables/        # Vue 组合式函数（9 个）
 ├── stores/             # Pinia 状态管理（3 个）
 ├── types/              # TypeScript 类型定义（13 个）
 ├── config/             # 配置文件
 │   └── ai-models.yaml  # AI 模型配置
 ├── migrations/         # 数据库迁移 SQL
 ├── scripts/            # 工具脚本（19 个）
-├── tests/              # 测试文件（9 个，~15% 覆盖率）
+├── tests/              # 测试文件（16 个，~15% 覆盖率）
 └── docs/               # 项目文档（31 个）
     └── WIKI.md         # 项目百科全书（完整参考手册）
 ```
