@@ -188,14 +188,17 @@ jobs:
     needs: [build]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
-      - name: Trigger Vercel production deployment
-        run: |
-          curl -s -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}" \
-            -o /tmp/deploy_response.json
-          cat /tmp/deploy_response.json
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to Vercel (production)
+        run: npx vercel deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Deployment summary
         run: |
           echo "## Vercel Deployment" >> $GITHUB_STEP_SUMMARY
-          echo "Production deployment triggered after all CI checks passed." >> $GITHUB_STEP_SUMMARY
+          echo "Production deployment completed via Vercel CLI after all CI checks passed." >> $GITHUB_STEP_SUMMARY
           echo "URL: https://arch-mind.vercel.app" >> $GITHUB_STEP_SUMMARY
