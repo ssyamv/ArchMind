@@ -55,7 +55,7 @@ function getIcon (iconName: string) {
   return icons[iconName] || FileText
 }
 
-function handleSelect (value: ConversationTargetType) {
-  emit('update:modelValue', value)
+function handleSelect (value: unknown) {
+  emit('update:modelValue', value as ConversationTargetType)
 }
 </script>

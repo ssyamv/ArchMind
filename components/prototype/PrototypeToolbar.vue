@@ -18,7 +18,7 @@
       <div v-if="hasPrd && !hasPrototype" class="flex items-center gap-1.5">
         <Select
           :model-value="selectedDeviceType"
-          @update:model-value="$emit('update:deviceType', $event)"
+          @update:model-value="handleDeviceTypeChange"
         >
           <SelectTrigger class="h-7 w-auto text-xs gap-1 border-dashed">
             <Monitor v-if="selectedDeviceType === 'desktop'" class="w-3 h-3" />
@@ -154,11 +154,15 @@ defineProps<{
   selectedDeviceType: DeviceType
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   generateFromPrd: []
   toggleView: [view: 'preview' | 'code' | 'split']
   openFullscreen: []
   save: []
   'update:deviceType': [deviceType: DeviceType]
 }>()
+
+function handleDeviceTypeChange(value: unknown) {
+  emit('update:deviceType', value as DeviceType)
+}
 </script>

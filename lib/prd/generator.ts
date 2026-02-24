@@ -228,7 +228,7 @@ export class PRDGenerator {
   async *generateStream (
     userInput: string,
     options?: PRDGenerationOptions
-  ): AsyncIterator<string> {
+  ): AsyncGenerator<string> {
     const modelId = options?.model || 'claude-3.5-sonnet'
     const temperature = options?.temperature || 0.7
     const maxTokens = options?.maxTokens || 8000

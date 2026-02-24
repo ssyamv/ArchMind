@@ -71,7 +71,7 @@ export default defineEventHandler(async (event): Promise<DefaultAvatarResponse> 
     }
 
     // 获取用户信息
-    const user = await UserDAO.findById(payload.userId)
+    const user = await UserDAO.getById(payload.userId)
     if (!user) {
       return { success: false, message: '用户不存在' }
     }

@@ -3,7 +3,11 @@
  * 捕获未处理的 Vue 组件错误和 Promise rejection，通过 Toast 提示用户
  */
 
+import { useToast } from '~/components/ui/toast'
+
 export default defineNuxtPlugin((nuxtApp) => {
+  const { toast } = useToast()
+
   // 捕获 Vue 组件内部未处理的错误
   nuxtApp.vueApp.config.errorHandler = (error, instance, info) => {
     console.error('[Vue Error]', { error, info })
@@ -18,7 +22,6 @@ export default defineNuxtPlugin((nuxtApp) => {
 
     // 使用 Toast 通知用户
     try {
-      const { toast } = useToast()
       toast({
         title: '应用发生错误',
         description: error instanceof Error ? error.message : String(error),
@@ -40,7 +43,6 @@ export default defineNuxtPlugin((nuxtApp) => {
       if (reason?.name === 'AbortError') return
 
       try {
-        const { toast } = useToast()
         const message = reason instanceof Error
           ? reason.message
           : (typeof reason === 'string' ? reason : '异步操作失败')

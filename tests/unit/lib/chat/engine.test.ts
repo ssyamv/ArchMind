@@ -53,8 +53,10 @@ import { ChatEngine } from '~/lib/chat/engine'
 function createMockEmbeddingAdapter () {
   return {
     embed: vi.fn().mockResolvedValue(new Array(1536).fill(0.1)),
-    embedBatch: vi.fn().mockResolvedValue([new Array(1536).fill(0.1)]),
-    getDimension: vi.fn().mockReturnValue(1536)
+    embedMany: vi.fn().mockResolvedValue([new Array(1536).fill(0.1)]),
+    calculateCost: vi.fn().mockReturnValue({ inputCost: 0, currency: 'USD' }),
+    getModelInfo: vi.fn().mockReturnValue({ modelId: 'mock-embed', dimensions: 1536, maxInputTokens: 8192, provider: 'test' }),
+    isAvailable: vi.fn().mockResolvedValue(true)
   }
 }
 

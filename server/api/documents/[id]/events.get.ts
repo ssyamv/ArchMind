@@ -6,7 +6,6 @@
  * 当文档处理状态变更时实时推送给客户端
  */
 
-import { createEventStream } from 'h3'
 import { DocumentDAO } from '~/lib/db/dao/document-dao'
 
 /** 轮询间隔（毫秒） */

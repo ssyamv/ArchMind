@@ -11,7 +11,6 @@ import { DocumentDAO } from '~/lib/db/dao/document-dao'
 import { VectorDAO } from '~/lib/db/dao/vector-dao'
 import { DocumentProcessingPipeline } from '~/lib/rag/pipeline'
 import { EmbeddingServiceFactory } from '~/lib/rag/embedding-adapter'
-import { getModelManager } from '~/lib/ai/manager'
 import { verifyToken } from '~/server/utils/jwt'
 
 const BodySchema = z.object({
@@ -50,8 +49,14 @@ export default defineEventHandler(async (event) => {
   }
 
   // 初始化 embedding 服务
-  const modelManager = await getModelManager()
-  const embeddingAdapter = await EmbeddingServiceFactory.createFromModelManager(modelManager)
+  const embeddingAdapter = await EmbeddingServiceFactory.createAvailable({
+    glmApiKey: process.env.GLM_API_KEY,
+    openaiApiKey: process.env.OPENAI_API_KEY
+  })
+
+  if (!embeddingAdapter) {
+    throw createError({ statusCode: 503, message: 'Embedding 服务不可用，请检查 API Key 配置' })
+  }
 
   const pipeline = new DocumentProcessingPipeline({ embeddingAdapter })
 

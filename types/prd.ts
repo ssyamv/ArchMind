@@ -5,6 +5,7 @@
 export interface PRDDocument {
   id: string;
   userId?: string;
+  workspaceId?: string;
   title: string;
   userInput: string;
   content: string;

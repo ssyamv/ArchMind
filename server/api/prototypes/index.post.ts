@@ -16,7 +16,8 @@ export default defineEventHandler(async (event) => {
       title: body.title,
       description: body.description,
       currentVersion: 1,
-      status: 'draft'
+      status: 'draft',
+      deviceType: 'responsive'
     })
 
     const pages = await PrototypePageDAO.batchCreate(
