@@ -7,7 +7,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-4169E1?logo=postgresql)](https://www.postgresql.org/)
 [![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js)](https://vuejs.org/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-0.1.1-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-0.2.0-blue)](CHANGELOG.md)
 
 ---
 
@@ -25,6 +25,7 @@
 - [文档导航](#文档导航)
 - [路线图](#路线图)
 - [贡献指南](#贡献指南)
+- [贡献者](#贡献者)
 
 ---
 
@@ -406,7 +407,7 @@ ArchMind/
 │   └── ai-models.yaml  # AI 模型配置
 ├── migrations/         # 数据库迁移 SQL
 ├── scripts/            # 工具脚本（19 个）
-├── tests/              # 测试文件（16 个，~15% 覆盖率）
+├── tests/              # 测试文件（17 个，292 个测试用例，~18% 覆盖率）
 └── docs/               # 项目文档（31 个）
     └── WIKI.md         # 项目百科全书（完整参考手册）
 ```
@@ -493,18 +494,24 @@ pnpm storage:health
 
 ## 路线图
 
-### v0.1.1（当前）
+### v0.2.0（开发中）
+
+已完成：
+- ✅ **Rate Limiting 中间件**：IP + 路径级别请求限流，无 Redis 依赖
+- ✅ **CSRF 保护中间件**：Origin/Referer 来源校验，防跨站请求伪造
+- ✅ **混合搜索 RRF 正式启用**：`retrieve()` 默认走 RRF 混合搜索，PRD 生成 & 对话检索质量提升
+- ✅ **结构化日志系统**：pino-based JSON 日志，支持请求追踪
+
+计划中：
+- Redis 缓存层
+- Sentry 监控接入
+- 测试覆盖率提升至 60%+
+
+### v0.1.1
 用户级 AI 配置数据隔离、全局 JWT 认证中间件、自定义 API Base URL 支持、动态模型列表获取、模型配置 UI 整合至 Profile 页面
 
 ### v0.1.0
 文档管理、RAG 搜索、PRD 生成、原型系统、逻辑图、图像生成、多工作区、用户系统
-
-### v0.2.0（计划中）
-- Redis 缓存层
-- Rate Limiting + CSRF 保护
-- Sentry 监控接入
-- 测试覆盖率提升至 60%+
-- 混合搜索重排序优化
 
 ### v0.3.0（计划中）
 - WebSocket 实时协作
@@ -588,6 +595,16 @@ git push origin feat/your-feature
 ## License
 
 [MIT](LICENSE)
+
+---
+
+## 贡献者
+
+感谢所有为本项目做出贡献的人！
+
+<a href="https://github.com/ssyamv/ArchMind/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=ssyamv/ArchMind" alt="Contributors" />
+</a>
 
 ---
 

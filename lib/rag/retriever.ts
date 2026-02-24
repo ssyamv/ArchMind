@@ -20,6 +20,8 @@ export interface RetrievalOptions {
   documentIds?: string[];
   prdIds?: string[];
   userId?: string;
+  /** 检索策略：'hybrid'（默认）使用 RRF 混合搜索，'vector' 仅向量检索 */
+  ragStrategy?: 'hybrid' | 'vector';
 }
 
 export interface RetrievedChunk {
@@ -43,8 +45,29 @@ export class RAGRetriever {
 
   /**
    * 根据查询文本检索相关文档块
+   * 默认使用混合搜索（RRF），可通过 ragStrategy: 'vector' 退回纯向量检索
+   * prdIds 专用路径（跨不同数据表）暂不支持混合搜索，继续走纯向量
    */
   async retrieve (query: string, options?: RetrievalOptions): Promise<RetrievedChunk[]> {
+    const strategy = options?.ragStrategy ?? 'hybrid'
+    const hasPrdScope = options?.prdIds && options.prdIds.length > 0
+
+    if (strategy === 'hybrid' && !hasPrdScope) {
+      return this.hybridSearch(query, {
+        topK: options?.topK,
+        threshold: options?.threshold,
+        documentIds: options?.documentIds,
+        userId: options?.userId
+      })
+    }
+
+    return this._vectorRetrieve(query, options)
+  }
+
+  /**
+   * 纯向量检索（内部实现，供 retrieve() 和 hybridSearch() 调用）
+   */
+  private async _vectorRetrieve (query: string, options?: RetrievalOptions): Promise<RetrievedChunk[]> {
     const topK = options?.topK ?? this.topK
     const threshold = options?.threshold ?? this.threshold
     const documentIds = options?.documentIds
@@ -131,9 +154,22 @@ export class RAGRetriever {
   }
 
   /**
-   * 关键词搜索(PostgreSQL 全文检索)
+   * 关键词搜索（PostgreSQL 全文检索）
+   * 自动检测查询语言，中文查询使用 simple 配置（逐字匹配），英文使用 english
+   * 支持按 documentIds 过滤范围
    */
-  async keywordSearch (query: string, topK: number = 10, userId?: string): Promise<RetrievedChunk[]> {
+  async keywordSearch (
+    query: string,
+    topK: number = 10,
+    userId?: string,
+    documentIds?: string[]
+  ): Promise<RetrievedChunk[]> {
+    // 自动检测查询语言：中文用 simple（逐字索引），英文用 english（词干化）
+    // 字面量联合类型限定只能是这两个值，防止 SQL 拼接引入不可信内容
+    type TsConfig = 'simple' | 'english'
+    const hasChineseChars = /[\u4e00-\u9fff]/.test(query)
+    const tsConfig: TsConfig = hasChineseChars ? 'simple' : 'english'
+
     try {
       let sql = `
         SELECT
@@ -141,16 +177,21 @@ export class RAGRetriever {
           dc.document_id,
           d.title as document_title,
           dc.content,
-          ts_rank(d.tsv, plainto_tsquery('english', $1)) as score
+          ts_rank(d.tsv, plainto_tsquery('${tsConfig}', $1)) as score
         FROM document_chunks dc
         JOIN documents d ON dc.document_id = d.id
-        WHERE d.tsv @@ plainto_tsquery('english', $1)
+        WHERE d.tsv @@ plainto_tsquery('${tsConfig}', $1)
       `
-      const params: any[] = [query]
+      const params: unknown[] = [query]
 
       if (userId) {
         sql += ` AND (d.user_id = $${params.length + 1} OR d.user_id IS NULL)`
         params.push(userId)
+      }
+
+      if (documentIds && documentIds.length > 0) {
+        sql += ` AND d.id = ANY($${params.length + 1}::uuid[])`
+        params.push(documentIds)
       }
 
       sql += ` ORDER BY score DESC LIMIT $${params.length + 1}`
@@ -158,12 +199,12 @@ export class RAGRetriever {
 
       const result = await dbClient.query(sql, params)
 
-      return result.rows.map(row => ({
-        id: row.id,
-        documentId: row.document_id,
-        documentTitle: row.document_title,
-        content: row.content,
-        similarity: row.score
+      return result.rows.map((row: Record<string, unknown>) => ({
+        id: String(row.id),
+        documentId: String(row.document_id),
+        documentTitle: String(row.document_title),
+        content: String(row.content),
+        similarity: Number(row.score)
       }))
     } catch (error) {
       console.error('Keyword search error:', error)
@@ -172,11 +213,12 @@ export class RAGRetriever {
   }
 
   /**
-   * 混合搜索: 结合关键词和向量检索，使用重排序模块融合结果
+   * 混合搜索：结合关键词和向量检索，使用重排序模块融合结果
    *
    * 支持：
    * - 自动权重（根据查询长度和语言自动调整）
    * - RRF / Score 两种融合策略
+   * - documentIds 范围过滤
    */
   async hybridSearch (
     query: string,
@@ -187,11 +229,13 @@ export class RAGRetriever {
       vectorWeight?: number;
       strategy?: 'rrf' | 'score';
       userId?: string;
+      documentIds?: string[];
     }
   ): Promise<RetrievedChunk[]> {
     const topK = options?.topK ?? this.topK
     const threshold = options?.threshold ?? this.threshold
     const userId = options?.userId
+    const documentIds = options?.documentIds
 
     // 自动权重：若未指定，根据查询自动计算
     let { keywordWeight, vectorWeight } = options ?? {}
@@ -204,8 +248,8 @@ export class RAGRetriever {
     try {
       // 1. 并行执行关键词搜索和向量检索
       const [keywordResults, vectorResults] = await Promise.all([
-        this.keywordSearch(query, topK * 2, userId),
-        this.retrieve(query, { topK: topK * 2, threshold, userId })
+        this.keywordSearch(query, topK * 2, userId, documentIds),
+        this._vectorRetrieve(query, { topK: topK * 2, threshold, userId, documentIds })
       ])
 
       // 2. 使用 reranker 融合（支持 RRF / Score 策略）
@@ -226,4 +270,3 @@ export class RAGRetriever {
     }
   }
 }
-

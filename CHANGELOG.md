@@ -36,10 +36,20 @@
   - `02.rate-limit.ts` → 请求限流
   - `03.csrf.ts` → CSRF 保护
 
+#### 混合搜索 RRF 正式启用
+
+- **`retrieve()` 默认使用混合搜索**：`RAGRetriever.retrieve()` 默认策略从纯向量改为 RRF（Reciprocal Rank Fusion）混合搜索，可通过 `ragStrategy: 'vector'` 退回纯向量
+- **`keywordSearch()` 支持中文**：自动检测查询语言，中文使用 PostgreSQL `simple` 全文配置（逐字索引），英文使用 `english`（词干化）
+- **`keywordSearch()` 支持 documentIds 过滤**：新增第 4 个参数 `documentIds`，允许在指定文档范围内进行关键词搜索
+- **`hybridSearch()` 支持 documentIds 传递**：`documentIds` 过滤条件同时传递给关键词搜索和向量检索两个子查询，保证范围一致性
+- **PRDGenerator 传递 userId**：`generate()` 和 `generateStream()` 中 RAG 检索时正确传递 `userId`，修复用户数据隔离逻辑
+- **ChatEngine PRD 路径标注策略**：PRD 路径明确指定 `ragStrategy: 'vector'`，文档路径使用混合搜索，语义更清晰
+
 #### 测试覆盖
 
 - **Rate Limiting 单元测试** (`tests/unit/server/middleware/rate-limit.test.ts`): 22 个测试用例，覆盖规则匹配、限流逻辑、窗口重置、IP 隔离等场景
 - **CSRF 单元测试** (`tests/unit/server/middleware/csrf.test.ts`): 21 个测试用例，覆盖安全方法放行、豁免路径、Origin/Referer 校验、开发模式等场景
+- **RAGRetriever 单元测试** (`tests/unit/lib/rag/retriever.test.ts`): 20 个测试用例，覆盖策略路由、混合搜索并行调用、中文语言检测、documentIds 过滤等
 
 ---
 

@@ -135,17 +135,18 @@ ${this.targetContext.prototypeHtml}
 
     if ((useRAG || hasDocumentMentions || hasPrdMentions) && this.ragRetriever) {
       if (hasPrdMentions) {
-        // PRD 检索
+        // PRD 检索：跨不同数据表，暂不支持混合搜索，使用纯向量
         const retrievedChunks = await this.ragRetriever.retrieve(currentMessage, {
           topK,
           threshold: 0.1,
-          prdIds: effectivePrdIds
+          prdIds: effectivePrdIds,
+          ragStrategy: 'vector'
         })
         if (retrievedChunks.length > 0) {
           backgroundContext = this.ragRetriever.summarizeResults(retrievedChunks)
         }
       } else {
-        // 文档检索
+        // 文档检索：使用混合搜索（RRF）提升召回质量
         const retrievedChunks = await this.ragRetriever.retrieve(currentMessage, {
           topK,
           threshold: hasDocumentMentions ? 0.1 : 0.3,

@@ -8,6 +8,7 @@ import { RAGRetriever } from '~/lib/rag/retriever'
 import { buildPRDPrompt } from '~/lib/ai/prompts/prd-system'
 import { PRDDAO } from '~/lib/db/dao/prd-dao'
 import { DocumentDAO } from '~/lib/db/dao/document-dao'
+import { logger } from '~/lib/logger'
 import type { PRDDocument } from '~/types/prd'
 import type { IEmbeddingAdapter } from '~/lib/rag/embedding-adapter'
 
@@ -70,7 +71,7 @@ export class PRDGenerator {
       examples: 2000, // 2个few-shot示例约2000 tokens
       context: 4000, // RAG上下文约4000 tokens
       userInput: 500, // 用户输入约500 tokens
-      output: totalBudget - 8000 // 剩余用于输出
+      output: totalBudget // 传给模型的 maxTokens，代表生成 token 上限
     }
   }
 
@@ -144,8 +145,8 @@ export class PRDGenerator {
     let references: string[] = []
 
     if (useRAG && this.ragRetriever) {
-      // 使用 RAG 检索相关文档
-      const retrievedChunks = await this.ragRetriever.retrieve(userInput, { topK, threshold: 0.7 })
+      // 使用 RAG 检索相关文档（默认混合搜索 RRF，兼顾语义和关键词）
+      const retrievedChunks = await this.ragRetriever.retrieve(userInput, { topK, threshold: 0.7, userId: options?.userId })
 
       if (retrievedChunks.length > 0) {
         const rawContext = this.ragRetriever.summarizeResults(retrievedChunks)
@@ -249,8 +250,8 @@ export class PRDGenerator {
     const references: string[] = []
 
     if (useRAG && this.ragRetriever) {
-      // 使用 RAG 检索相关文档
-      const retrievedChunks = await this.ragRetriever.retrieve(userInput, { topK, threshold: 0.7 })
+      // 使用 RAG 检索相关文档（默认混合搜索 RRF，兼顾语义和关键词）
+      const retrievedChunks = await this.ragRetriever.retrieve(userInput, { topK, threshold: 0.7, userId: options?.userId })
 
       if (retrievedChunks.length > 0) {
         const rawContext = this.ragRetriever.summarizeResults(retrievedChunks)
@@ -315,11 +316,16 @@ export class PRDGenerator {
       status: 'completed'
     }
 
-    const savedPRD = await PRDDAO.create(prd)
+    const savedPRD = await PRDDAO.create(prd).catch((err) => {
+      logger.error({ err }, 'Failed to save PRD to database after streaming')
+      throw err
+    })
 
     // 添加文档引用
     if (references.length > 0) {
-      await PRDDAO.addReferences(savedPRD.id, references)
+      await PRDDAO.addReferences(savedPRD.id, references).catch((err) => {
+        logger.error({ err, prdId: savedPRD.id }, 'Failed to save PRD references')
+      })
     }
   }
 }

@@ -1,5 +1,6 @@
 {
   "buildCommand": "pnpm build",
   "installCommand": "pnpm install",
-  "framework": "nuxtjs"
+  "framework": "nuxtjs",
+  "ignoreCommand": "exit 0"
 }
