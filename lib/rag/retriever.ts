@@ -165,8 +165,11 @@ export class RAGRetriever {
     documentIds?: string[]
   ): Promise<RetrievedChunk[]> {
     // 自动检测查询语言：中文用 simple（逐字索引），英文用 english（词干化）
+    // tsConfig 只允许白名单内的值，防止 SQL 拼接引入不可信内容
+    const ALLOWED_TS_CONFIGS = ['simple', 'english'] as const
+    type TsConfig = typeof ALLOWED_TS_CONFIGS[number]
     const hasChineseChars = /[\u4e00-\u9fff]/.test(query)
-    const tsConfig = hasChineseChars ? 'simple' : 'english'
+    const tsConfig: TsConfig = hasChineseChars ? 'simple' : 'english'
 
     try {
       let sql = `
