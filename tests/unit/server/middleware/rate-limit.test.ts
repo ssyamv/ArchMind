@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeAll } from 'vitest'
 // H3/Nuxt 全局函数在单测环境不存在，需要在模块加载前注入
 // vi.stubGlobal 需要在模块导入前执行，使用 vi.hoisted 确保提升
 const { defineEventHandlerMock } = vi.hoisted(() => {
-  return { defineEventHandlerMock: (fn: Function) => fn }
+  return { defineEventHandlerMock: (fn: (...args: unknown[]) => unknown) => fn }
 })
 
 vi.stubGlobal('defineEventHandler', defineEventHandlerMock)

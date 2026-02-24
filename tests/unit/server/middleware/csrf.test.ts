@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest'
 
 // Mock H3 全局函数
-vi.stubGlobal('defineEventHandler', (fn: Function) => fn)
+vi.stubGlobal('defineEventHandler', (fn: (...args: unknown[]) => unknown) => fn)
 vi.stubGlobal('getHeader', vi.fn())
 vi.stubGlobal('createError', ({ statusCode, message }: { statusCode: number; message: string }) => {
   const err = new Error(message) as any
@@ -24,14 +24,12 @@ let validateCsrfOrigin: (params: {
   referer: string | undefined
   isDev: boolean
 }) => string | null
-let CSRF_EXEMPT_PATHS: string[]
 
 beforeAll(async () => {
   const mod = await import('~/server/middleware/03.csrf')
   isExemptPath = mod.isExemptPath
   getOriginHost = mod.getOriginHost
   validateCsrfOrigin = mod.validateCsrfOrigin
-  CSRF_EXEMPT_PATHS = mod.CSRF_EXEMPT_PATHS
 })
 
 // ─── isExemptPath ─────────────────────────────────────────────────────────────
