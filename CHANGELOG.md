@@ -11,6 +11,38 @@
 
 ---
 
+## [0.2.0] - 2026-02-24
+
+### 新增
+
+#### 安全加固
+
+- **Rate Limiting 中间件** (`server/middleware/02.rate-limit.ts`): 基于内存 Map 的 IP + 路径级别请求频率限制，无需 Redis 依赖
+  - 认证端点（`/api/auth/login|register|forgot-password|reset-password`）：10 次/分钟
+  - AI 生成端点（`/api/prd/stream`、`/api/prototypes/stream`、`/api/chat/stream` 等）：20 次/分钟
+  - 其他 API 端点：120 次/分钟
+  - 超限返回 HTTP 429，响应头携带 `X-RateLimit-Limit`、`X-RateLimit-Remaining`、`X-RateLimit-Reset`、`Retry-After`
+  - 每 5 分钟自动清理过期条目，防止内存泄漏
+
+- **CSRF 保护中间件** (`server/middleware/03.csrf.ts`): 基于 Origin/Referer 校验的跨站请求伪造防护
+  - 对所有写操作（POST/PUT/PATCH/DELETE）校验请求来源与 Host 是否匹配
+  - 开发模式（`NODE_ENV !== 'production'`）自动放宽，不影响本地开发体验
+  - 豁免路径：`/api/health`、`/api/share/*`（公开端点）
+  - Origin 优先，回退 Referer，均无时拒绝请求
+
+- **中间件执行顺序规范化**: 所有服务端中间件添加数字前缀，明确执行顺序
+  - `00.logger.ts` → 请求日志
+  - `01.auth.ts` → JWT 认证
+  - `02.rate-limit.ts` → 请求限流
+  - `03.csrf.ts` → CSRF 保护
+
+#### 测试覆盖
+
+- **Rate Limiting 单元测试** (`tests/unit/server/middleware/rate-limit.test.ts`): 22 个测试用例，覆盖规则匹配、限流逻辑、窗口重置、IP 隔离等场景
+- **CSRF 单元测试** (`tests/unit/server/middleware/csrf.test.ts`): 21 个测试用例，覆盖安全方法放行、豁免路径、Origin/Referer 校验、开发模式等场景
+
+---
+
 ## [0.1.2] - 2026-02-24
 
 ### 新增
