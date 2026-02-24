@@ -1,5 +1,24 @@
 <template>
   <div class="p-6">
+    <!-- 数据迁移一次性通知弹窗 -->
+    <AlertDialog :open="showMigrationNotice">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>系统升级通知</AlertDialogTitle>
+          <AlertDialogDescription>
+            我们近期完成了用户数据隔离功能的升级，每位用户的数据现在已完全独立。
+            在此之前创建的部分项目数据可能存在丢失，对此带来的不便深感抱歉。
+            如有疑问，请联系管理员。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogAction @click="dismissMigrationNotice">
+            我知道了
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
     <!-- Header with Search, View Toggle, and Workspace Switcher -->
     <div class="flex items-center justify-between mb-6">
       <div class="flex items-center gap-4 flex-1">
@@ -149,6 +168,14 @@ const { t } = useI18n()
 const { toast } = useToast()
 const { currentWorkspaceId } = useWorkspace()
 
+const MIGRATION_NOTICE_KEY = 'archmind_migration_notice_v011_dismissed'
+const showMigrationNotice = ref(false)
+
+const dismissMigrationNotice = () => {
+  localStorage.setItem(MIGRATION_NOTICE_KEY, '1')
+  showMigrationNotice.value = false
+}
+
 definePageMeta({
   layout: 'dashboard',
   middleware: ['auth']
@@ -213,6 +240,11 @@ function handlePageChange(page: number) {
 
 onMounted(async () => {
   await loadProjects()
+
+  // 检查是否需要显示数据迁移一次性通知
+  if (!localStorage.getItem(MIGRATION_NOTICE_KEY)) {
+    showMigrationNotice.value = true
+  }
 
   // 监听工作区切换事件
   if (process.client) {
