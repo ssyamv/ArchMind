@@ -3,6 +3,8 @@
  * 定义文本向量化服务的统一接口，支持多种 Embedding 提供商
  */
 
+import { ragLogger } from '~/lib/logger'
+
 export interface EmbeddingModelInfo {
   modelId: string;
   dimensions: number;
@@ -124,11 +126,11 @@ export class EmbeddingServiceFactory {
         const { OpenAIEmbeddingAdapter } = await import('./adapters/openai-embedding')
         return new OpenAIEmbeddingAdapter(apiKeys.openaiApiKey, embeddingModel)
       } else {
-        console.warn(`Embedding provider ${embeddingProvider} not configured or API key missing`)
+        ragLogger.warn({ provider: embeddingProvider }, 'Embedding provider not configured or API key missing')
         return null
       }
     } catch (error) {
-      console.error(`Failed to create embedding adapter for provider ${embeddingProvider}:`, error)
+      ragLogger.error({ err: error, provider: embeddingProvider }, 'Failed to create embedding adapter')
       return null
     }
   }
@@ -155,7 +157,7 @@ export class EmbeddingServiceFactory {
           return adapter
         }
       } catch (error) {
-        console.warn('GLM embedding service not available:', error)
+        ragLogger.warn({ err: error }, 'GLM embedding service not available')
       }
     }
 
@@ -166,7 +168,7 @@ export class EmbeddingServiceFactory {
           return adapter
         }
       } catch (error) {
-        console.warn('OpenAI embedding service not available:', error)
+        ragLogger.warn({ err: error }, 'OpenAI embedding service not available')
       }
     }
 
@@ -178,7 +180,7 @@ export class EmbeddingServiceFactory {
           return adapter
         }
       } catch (error) {
-        console.warn('GLM embedding service not available:', error)
+        ragLogger.warn({ err: error }, 'GLM embedding service not available')
       }
     }
 
@@ -189,7 +191,7 @@ export class EmbeddingServiceFactory {
           return adapter
         }
       } catch (error) {
-        console.warn('OpenAI embedding service not available:', error)
+        ragLogger.warn({ err: error }, 'OpenAI embedding service not available')
       }
     }
 

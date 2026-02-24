@@ -9,6 +9,7 @@ import { DocumentChunkDAO } from '~/lib/db/dao/document-chunk-dao'
 import { VectorDAO } from '~/lib/db/dao/vector-dao'
 import { ProcessingLogDAO } from '~/lib/db/dao/processing-log-dao'
 import type { DocumentChunk } from '~/types/document'
+import { ragLogger } from '~/lib/logger'
 
 export interface PipelineOptions {
   chunkSize?: number;
@@ -60,7 +61,7 @@ export class DocumentProcessingPipeline {
         durationMs
       })
     } catch (error) {
-      console.error('Failed to log processing stage:', error)
+      ragLogger.warn({ err: error, documentId }, 'Failed to log processing stage')
       // 不抛出错误，避免影响主流程
     }
   }
@@ -89,7 +90,7 @@ export class DocumentProcessingPipeline {
         chunkDuration
       )
 
-      console.log(`Split document into ${chunks.length} chunks`)
+      ragLogger.info({ documentId, chunks: chunks.length }, 'Document split into chunks')
 
       if (chunks.length === 0) {
         await this.logStage(
@@ -133,7 +134,7 @@ export class DocumentProcessingPipeline {
         storeDuration
       )
 
-      console.log(`Created ${createdChunks.length} chunk records`)
+      ragLogger.info({ documentId, chunks: createdChunks.length }, 'Chunk records stored')
 
       // 3. 向量化
       await this.logStage(
@@ -160,7 +161,7 @@ export class DocumentProcessingPipeline {
         embedDuration
       )
 
-      console.log(`Generated ${embeddings.length} embeddings`)
+      ragLogger.info({ documentId, embeddings: embeddings.length }, 'Embeddings generated')
 
       // 4. 存储向量
       await this.logStage(documentId, 'store', 'start', 'Storing vectors')
@@ -188,7 +189,7 @@ export class DocumentProcessingPipeline {
         vectorDuration
       )
 
-      console.log(`Stored ${vectorIds.length} vectors`)
+      ragLogger.info({ documentId, vectors: vectorIds.length }, 'Vectors stored')
 
       // 记录完成
       const totalDuration = Date.now() - startTime
@@ -212,7 +213,7 @@ export class DocumentProcessingPipeline {
         processingTime: totalDuration
       }
     } catch (error) {
-      console.error('Pipeline error:', error)
+      ragLogger.error({ err: error, documentId }, 'Pipeline processing error')
 
       // 记录错误
       await this.logStage(
@@ -280,7 +281,7 @@ export class DocumentProcessingPipeline {
         processingTime: Date.now() - startTime
       }
     } catch (error) {
-      console.error('Reindex pipeline error:', error)
+      ragLogger.error({ err: error, documentId }, 'Reindex pipeline error')
       throw error
     }
   }

@@ -16,6 +16,7 @@ import { WenxinAdapter } from './adapters/wenxin'
 import { OllamaAdapter } from './adapters/ollama'
 import type { AIModelAdapter } from '~/lib/ai/types'
 import type { AvailableModelInfo } from '~/types/settings'
+import { aiLogger } from '~/lib/logger'
 
 export enum ModelProvider {
   CLAUDE = 'claude',
@@ -75,7 +76,7 @@ export class ModelManager {
       const parsed = YAML.load(content) as { ai_models: AIModelsConfig }
       this.modelConfig = parsed.ai_models
     } catch (error) {
-      console.warn('Failed to load ai-models.yaml config:', error)
+      aiLogger.warn({ err: error }, 'Failed to load ai-models.yaml config')
       this.modelConfig = null
     }
   }

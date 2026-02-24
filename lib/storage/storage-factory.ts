@@ -1,5 +1,6 @@
 import { HuaweiOBSAdapter } from './adapters/huawei-obs-adapter'
 import type { StorageAdapter } from './storage-adapter'
+import { storageLogger } from '~/lib/logger'
 
 /**
  * 存储工厂 - 根据环境变量选择存储后端
@@ -24,7 +25,7 @@ export function getStorageClient(): StorageAdapter {
 
   const provider = process.env.STORAGE_PROVIDER || 'huawei-obs'
 
-  console.log(`[Storage] 初始化存储客户端: ${provider}`)
+  storageLogger.info({ provider }, 'Storage client initialized')
 
   switch (provider) {
     case 'huawei-obs':

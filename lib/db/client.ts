@@ -7,6 +7,7 @@ import { Pool } from 'pg'
 import type { PoolConfig, PoolClient, QueryResult, QueryResultRow } from 'pg'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import * as schema from './schema'
+import { dbLogger } from '~/lib/logger'
 
 export class DatabaseClient {
   private pool: Pool
@@ -29,7 +30,7 @@ export class DatabaseClient {
 
     // 连接池错误处理（Serverless 环境不 exit）
     this.pool.on('error', (err) => {
-      console.error('Unexpected error on idle client', err)
+      dbLogger.error({ err }, 'Unexpected error on idle client')
       if (!process.env.VERCEL) {
         process.exit(-1)
       }
@@ -77,10 +78,10 @@ export class DatabaseClient {
   public async healthCheck (): Promise<boolean> {
     try {
       const result = await this.pool.query('SELECT NOW()')
-      console.log('✅ Database connected at:', result.rows[0].now)
+      dbLogger.info({ connectedAt: result.rows[0].now }, 'Database connected')
       return true
     } catch (error) {
-      console.error('❌ Database connection failed:', error)
+      dbLogger.error({ err: error }, 'Database connection failed')
       return false
     }
   }
@@ -88,7 +89,7 @@ export class DatabaseClient {
   // 关闭连接池
   public async close (): Promise<void> {
     await this.pool.end()
-    console.log('Database pool closed')
+    dbLogger.info('Database pool closed')
   }
 }
 

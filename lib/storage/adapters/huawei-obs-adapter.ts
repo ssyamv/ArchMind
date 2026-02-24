@@ -1,6 +1,7 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand, CopyObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import type { StorageAdapter, UploadResult } from '../storage-adapter'
+import { storageLogger } from '~/lib/logger'
 
 /**
  * 华为云 OBS 存储适配器
@@ -60,7 +61,7 @@ export class HuaweiOBSAdapter implements StorageAdapter {
         provider: 'huawei-obs'
       }
     } catch (error) {
-      console.error('华为云 OBS 上传失败:', error)
+      storageLogger.error({ err: error, objectKey }, 'OBS upload failed')
       throw new Error(`Failed to upload to Huawei OBS: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
@@ -86,7 +87,7 @@ export class HuaweiOBSAdapter implements StorageAdapter {
 
       return presignedUrl
     } catch (error) {
-      console.error('生成预签名 URL 失败:', error)
+      storageLogger.error({ err: error, objectKey }, 'OBS generate presigned URL failed')
       throw new Error(`Failed to generate presigned URL: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
@@ -123,7 +124,7 @@ export class HuaweiOBSAdapter implements StorageAdapter {
         contentType: response.ContentType || this.getContentType(objectKey)
       }
     } catch (error) {
-      console.error('华为云 OBS 获取文件失败:', error)
+      storageLogger.error({ err: error, objectKey }, 'OBS get file failed')
       throw new Error(`Failed to get file from Huawei OBS: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
@@ -140,7 +141,7 @@ export class HuaweiOBSAdapter implements StorageAdapter {
 
       await this.client.send(command)
     } catch (error) {
-      console.error('删除文件失败:', error)
+      storageLogger.error({ err: error, objectKey }, 'OBS delete file failed')
       throw new Error(`Failed to delete from Huawei OBS: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
@@ -178,7 +179,7 @@ export class HuaweiOBSAdapter implements StorageAdapter {
 
       await this.client.send(command)
     } catch (error) {
-      console.error('复制文件失败:', error)
+      storageLogger.error({ err: error, sourceKey, targetKey }, 'OBS copy file failed')
       throw new Error(`Failed to copy file in Huawei OBS: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
@@ -243,7 +244,7 @@ export class HuaweiOBSAdapter implements StorageAdapter {
 
       return true
     } catch (error) {
-      console.error('华为云 OBS 健康检查失败:', error)
+      storageLogger.error({ err: error }, 'OBS health check failed')
       return false
     }
   }
