@@ -2,24 +2,6 @@
   <div class="min-h-screen bg-background">
     <Toaster />
 
-    <!-- 数据迁移一次性通知弹窗 -->
-    <AlertDialog :open="showMigrationNotice">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>系统升级通知</AlertDialogTitle>
-          <AlertDialogDescription>
-            我们近期完成了用户数据隔离功能的升级，每位用户的数据现在已完全独立。
-            在此之前创建的部分项目数据可能存在丢失，对此带来的不便深感抱歉。
-            如有疑问，请联系管理员。
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogAction @click="dismissMigrationNotice">
-            我知道了
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
     <!-- Navigation Header -->
     <header class="sticky top-0 z-50 glass border-b border-border/50 animate-slide-up">
       <nav class="w-full px-10 py-4">
@@ -135,7 +117,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted } from 'vue'
 import { Sparkles, Moon, Sun, FolderOpen, Database, Layout, LogOut, LogIn, Settings } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
 import {
@@ -146,21 +128,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '~/components/ui/dropdown-menu'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from '~/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '~/components/ui/avatar'
 import { Toaster } from '~/components/ui/toast'
 import LanguageSwitcher from '~/components/common/LanguageSwitcher.vue'
 import { useAuthStore } from '@/stores/auth'
-
-const MIGRATION_NOTICE_KEY = 'archmind_migration_notice_v011_dismissed'
 
 const colorMode = useColorMode()
 const isDark = computed(() => colorMode.value === 'dark')
@@ -168,21 +139,9 @@ const { t } = useI18n()
 const router = useRouter()
 const authStore = useAuthStore()
 
-const showMigrationNotice = ref(false)
-
-// 初始化时检查认证状态
 onMounted(async () => {
   await authStore.checkAuth()
-  // 已登录用户检查是否需要显示迁移通知
-  if (authStore.isAuthenticated && !localStorage.getItem(MIGRATION_NOTICE_KEY)) {
-    showMigrationNotice.value = true
-  }
 })
-
-const dismissMigrationNotice = () => {
-  localStorage.setItem(MIGRATION_NOTICE_KEY, '1')
-  showMigrationNotice.value = false
-}
 
 const toggleDark = () => {
   colorMode.preference = isDark.value ? 'light' : 'dark'
