@@ -22,8 +22,11 @@ export class DatabaseClient {
       max: isServerless ? 3 : (Number(process.env.DATABASE_POOL_MAX) || 10),
       idleTimeoutMillis: isServerless ? 5000 : 30000,
       connectionTimeoutMillis: 5000,
-      // Neon 需要 SSL
-      ssl: process.env.DATABASE_URL?.includes('neon.tech') ? { rejectUnauthorized: false } : undefined
+      // SSL 配置：Neon/生产环境强制启用，等同于 sslmode=verify-full
+      // 注意：pg v9 之后 sslmode=require/prefer/verify-ca 语义会改变，显式配置对象以消除警告
+      ssl: (process.env.DATABASE_URL?.includes('neon.tech') || process.env.NODE_ENV === 'production')
+        ? { rejectUnauthorized: true }
+        : undefined
     }
 
     this.pool = new Pool(poolConfig)

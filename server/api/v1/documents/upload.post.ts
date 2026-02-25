@@ -22,8 +22,8 @@ const FILE_TYPE_MAPPING: Record<string, string> = {
 // Vercel Serverless 请求体限制为 4.5MB，本地环境允许 100MB
 const MAX_FILE_SIZE = process.env.VERCEL ? 4 * 1024 * 1024 : 100 * 1024 * 1024
 
-// 临时目录：Vercel 只有 /tmp 可写
-const TEMP_DIR = process.env.VERCEL ? '/tmp' : 'temp'
+// 临时目录：Vercel 只有 /tmp 可写（使用绝对路径避免 path.join 拼接 cwd）
+const TEMP_DIR = process.env.VERCEL ? '/tmp' : join(process.cwd(), 'temp')
 
 /**
  * 计算文件 SHA-256 哈希
@@ -131,7 +131,7 @@ export default defineEventHandler(async (event) => {
 
     // 保存到临时目录以便提取内容
     const uniqueFileName = `${Date.now()}_${fileName}`
-    const tempDir = join(process.cwd(), TEMP_DIR)
+    const tempDir = TEMP_DIR
 
     try {
       await fs.mkdir(tempDir, { recursive: true })

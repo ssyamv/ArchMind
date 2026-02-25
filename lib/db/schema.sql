@@ -78,6 +78,19 @@ CREATE TABLE IF NOT EXISTS generation_history (
   FOREIGN KEY (prd_id) REFERENCES prd_documents(id) ON DELETE CASCADE
 );
 
+-- 多模型向量表（支持任意维度，每个 chunk 可存储多个模型的向量）
+CREATE TABLE IF NOT EXISTS document_embeddings (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  chunk_id UUID NOT NULL REFERENCES document_chunks(id) ON DELETE CASCADE,
+  model_name VARCHAR(100) NOT NULL,
+  model_provider VARCHAR(50) NOT NULL,
+  model_dimensions INTEGER NOT NULL,
+  embedding vector,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(chunk_id, model_name)
+);
+
 -- 索引
 CREATE INDEX IF NOT EXISTS idx_documents_created_at ON documents(created_at);
 CREATE INDEX IF NOT EXISTS idx_documents_file_type ON documents(file_type);
