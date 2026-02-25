@@ -264,7 +264,7 @@ function main () {
   const hybridScoreMetrics = evaluateRetrieval(queries, hybridScoreFn, K)
 
   const pct = (v: number) => `${(v * 100).toFixed(2)}%`
-  const delta = (base: number, target: number) => {
+  const _delta = (base: number, target: number) => {
     const d = ((target - base) / (base || 1)) * 100
     return d >= 0 ? `+${d.toFixed(1)}%` : `${d.toFixed(1)}%`
   }
