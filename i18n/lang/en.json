@@ -282,6 +282,7 @@
     "noData": "No data",
     "comingSoon": "Coming soon",
     "back": "Back",
+    "backHome": "Back to Home",
     "view": "View",
     "download": "Download",
     "optional": "optional",
@@ -830,7 +831,47 @@
     "yes": "Yes",
     "no": "No",
     "documentCount": "Documents",
-    "prdCount": "PRDs"
+    "prdCount": "PRDs",
+    "tab": {
+      "workspaces": "Workspaces",
+      "members": "Members"
+    },
+    "members": {
+      "inviteTitle": "Invite New Member",
+      "emailPlaceholder": "Enter email address",
+      "roleMember": "Member",
+      "roleAdmin": "Admin",
+      "roleOwner": "Owner",
+      "invite": "Send Invite",
+      "memberList": "Current Members",
+      "noMembers": "No members yet",
+      "pendingInvitations": "Pending Invitations",
+      "pending": "Pending",
+      "removeSuccess": "Member removed",
+      "removeError": "Failed to remove member",
+      "inviteSuccess": "Invitation sent",
+      "inviteError": "Failed to send invitation"
+    },
+    "invitation": {
+      "loading": "Loading invitation...",
+      "title": "Workspace Invitation",
+      "invitedYouTo": "invited you to join",
+      "workspace": "Workspace",
+      "role": "Role",
+      "roleAdmin": "Admin",
+      "roleMember": "Member",
+      "expiresAt": "Expires at",
+      "loginRequired": "Please log in to accept this invitation",
+      "accept": "Accept Invitation",
+      "decline": "Decline",
+      "invalidTitle": "Invalid Invitation",
+      "invalidLink": "This invitation link is invalid or has expired",
+      "acceptSuccess": "Successfully joined workspace",
+      "acceptError": "Failed to accept invitation",
+      "acceptedTitle": "Successfully Joined",
+      "acceptedDescription": "You have successfully joined workspace {workspace}",
+      "goToWorkspace": "Go to Workspace"
+    }
   },
   "defaults": {
     "untitledProject": "Untitled Project",

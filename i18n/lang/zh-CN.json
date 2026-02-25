@@ -282,6 +282,7 @@
     "noData": "暂无数据",
     "comingSoon": "敬请期待",
     "back": "返回",
+    "backHome": "返回首页",
     "view": "查看",
     "download": "下载",
     "optional": "可选",
@@ -830,7 +831,47 @@
     "yes": "是",
     "no": "否",
     "documentCount": "文档数量",
-    "prdCount": "PRD 数量"
+    "prdCount": "PRD 数量",
+    "tab": {
+      "workspaces": "工作区",
+      "members": "成员管理"
+    },
+    "members": {
+      "inviteTitle": "邀请新成员",
+      "emailPlaceholder": "输入邮箱地址",
+      "roleMember": "普通成员",
+      "roleAdmin": "管理员",
+      "roleOwner": "所有者",
+      "invite": "发送邀请",
+      "memberList": "当前成员",
+      "noMembers": "暂无成员",
+      "pendingInvitations": "待接受邀请",
+      "pending": "待接受",
+      "removeSuccess": "成员已移除",
+      "removeError": "移除成员失败",
+      "inviteSuccess": "邀请已发送",
+      "inviteError": "发送邀请失败"
+    },
+    "invitation": {
+      "loading": "正在加载邀请信息...",
+      "title": "工作区邀请",
+      "invitedYouTo": "邀请您加入工作区",
+      "workspace": "工作区",
+      "role": "角色",
+      "roleAdmin": "管理员",
+      "roleMember": "普通成员",
+      "expiresAt": "有效期至",
+      "loginRequired": "请先登录后再接受邀请",
+      "accept": "接受邀请",
+      "decline": "暂不加入",
+      "invalidTitle": "邀请链接无效",
+      "invalidLink": "邀请链接无效或已失效",
+      "acceptSuccess": "成功加入工作区",
+      "acceptError": "接受邀请失败",
+      "acceptedTitle": "已成功加入",
+      "acceptedDescription": "您已成功加入工作区 {workspace}",
+      "goToWorkspace": "进入工作区"
+    }
   },
   "defaults": {
     "untitledProject": "未命名项目",

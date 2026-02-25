@@ -7,7 +7,7 @@
 
 import { verifyToken } from '~/server/utils/jwt'
 
-// 不需要认证的路径
+// 不需要认证的路径（精确前缀）
 const PUBLIC_PATH_PREFIXES = [
   '/api/v1/auth/login',
   '/api/v1/auth/register',
@@ -17,19 +17,27 @@ const PUBLIC_PATH_PREFIXES = [
   '/api/v1/share/'
 ]
 
-function isPublicPath (path: string): boolean {
-  return PUBLIC_PATH_PREFIXES.some(prefix => path.startsWith(prefix))
+// 仅 GET 方法公开的路径前缀（如邀请详情查询）
+const PUBLIC_GET_PATH_PREFIXES = [
+  '/api/v1/invitations/'
+]
+
+function isPublicPath (path: string, method: string): boolean {
+  if (PUBLIC_PATH_PREFIXES.some(prefix => path.startsWith(prefix))) return true
+  if (method === 'GET' && PUBLIC_GET_PATH_PREFIXES.some(prefix => path.startsWith(prefix))) return true
+  return false
 }
 
 export default defineEventHandler((event) => {
   const url = event.node.req.url || ''
   const path = url.split('?')[0]
+  const method = event.node.req.method || 'GET'
 
   // 只拦截 API v1 路由
   if (!path.startsWith('/api/v1/')) return
 
   // 白名单路径跳过认证
-  if (isPublicPath(path)) return
+  if (isPublicPath(path, method)) return
 
   // 提取并验证 JWT
   const token = getCookie(event, 'auth_token')
