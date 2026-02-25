@@ -11,7 +11,7 @@
 
 ---
 
-## [0.2.0] - 2026-02-24
+## [0.2.0] - 2026-02-25
 
 ### 新增
 
@@ -50,6 +50,81 @@
 - **Rate Limiting 单元测试** (`tests/unit/server/middleware/rate-limit.test.ts`): 22 个测试用例，覆盖规则匹配、限流逻辑、窗口重置、IP 隔离等场景
 - **CSRF 单元测试** (`tests/unit/server/middleware/csrf.test.ts`): 21 个测试用例，覆盖安全方法放行、豁免路径、Origin/Referer 校验、开发模式等场景
 - **RAGRetriever 单元测试** (`tests/unit/lib/rag/retriever.test.ts`): 20 个测试用例，覆盖策略路由、混合搜索并行调用、中文语言检测、documentIds 过滤等
+
+#### 异步批量上传队列（fix #4）
+
+- **批量上传改为异步队列**: `server/api/v1/documents/batch-upload.post.ts` 立即返回 `taskId`，后台异步执行文档解析 → 分块 → 向量化全流程
+- **任务状态查询接口**: `GET /api/v1/documents/tasks/:taskId` 支持前端轮询处理进度
+- **失败重试与错误信息**: 任务失败时记录详细错误原因并更新任务状态
+
+#### SSE 文档处理进度实时推送（fix #12）
+
+- **SSE 进度端点**: `GET /api/v1/documents/:id/events` 实时推送文档处理阶段（parsing → chunking → embedding → done）
+- **前端进度条组件**: `components/documents/DocumentUpload.vue` 集成 `EventSource`，展示实时进度与阶段文字说明
+- **连接自动关闭**: 处理完成或失败后服务端自动发送 `done` 事件，前端关闭连接
+
+#### API 版本控制（fix #9）
+
+- **路由迁移至 `/api/v1/`**: 所有服务端 API 路由从 `server/api/` 迁移至 `server/api/v1/`，建立版本控制基础
+- **前端 API 调用同步更新**: 所有 composables 和页面组件的 `$fetch` 路径更新为 `/api/v1/` 前缀
+- **中间件路径更新**: `rate-limit.ts`、`auth.ts` 等中间件的路径匹配规则同步更新为 `/api/v1/`
+
+#### PRD 导出 PDF/Word（fix #10）
+
+- **导出 API**: `GET /api/v1/prd/:id/export?format=pdf|docx` 支持导出完整 PRD 内容
+- **Word 导出**: 使用 `docx` 库生成结构化 `.docx` 文件，包含标题、章节和引用来源
+- **PDF 导出**: 服务端渲染 HTML 后转换为 PDF 二进制流返回
+- **前端导出按钮**: PRD 详情页顶部添加导出 `DropdownMenu`，支持 PDF/Word 格式选择与下载进度提示
+- **文件命名**: 格式为 `PRD-{title}-{YYYY-MM-DD}.pdf/docx`
+
+#### 对话历史搜索（fix #11）
+
+- **搜索 API**: `GET /api/v1/conversations/search?q=keyword&workspaceId=xxx` 支持按关键词全文检索对话标题与消息内容
+- **PostgreSQL 全文检索**: 利用现有 GIN 索引，中文使用 `simple` 配置（逐字），英文使用 `english`（词干化），支持分页
+- **前端搜索框**: 对话侧边栏顶部新增搜索输入框，防抖 300ms 触发，结果中关键词高亮显示
+- **空状态处理**: 无搜索结果时展示友好提示
+
+#### 工作区成员邀请（fix #13）
+
+- **邀请 API 完整流程**:
+  - `POST /api/v1/workspaces/:id/members/invite` — 发起邀请，生成 7 天有效期 Token 并发送邮件
+  - `GET /api/v1/invitations/:token` — 查询邀请信息（邀请人、工作区名称、有效期）
+  - `POST /api/v1/invitations/:token/accept` — 接受邀请，加入工作区
+  - `DELETE /api/v1/workspaces/:id/members/:userId` — 移除成员
+  - `GET /api/v1/workspaces/:id/members` — 获取成员列表
+- **邀请接受页面**: `pages/invite/[token].vue` 展示邀请详情，支持登录后一键接受
+- **邮件通知**: `server/utils/email.ts` 封装邮件发送工具，支持邀请邮件模板
+- **WorkspaceSwitcher 成员管理**: 工作区切换器新增成员列表展示与邀请入口
+- **数据库迁移**: `migrations/add-workspace-members-invitations.sql` 新增 `workspace_invitations` 表（含 token、邮箱、状态、过期时间字段）
+
+#### 测试覆盖率提升（fix #8）
+
+- **覆盖率从 15% 提升至 89%**: 补充核心模块单元测试，超额完成 60% 目标
+- **新增测试模块**:
+  - `lib/rag/` — document-processor、retriever、text-splitter、embeddings（共 60+ 用例）
+  - `lib/prd/` — generator、template（共 30+ 用例）
+  - `lib/db/dao/` — document-dao、prd-dao、workspace-dao 等（共 50+ 用例）
+  - `lib/ai/adapters/` — 各模型适配器 Mock 测试（共 40+ 用例）
+  - `server/api/` — 文档、PRD、认证相关 API 集成测试（共 50+ 用例）
+
+#### 其他基础设施
+
+- **Sentry 错误监控（fix #5）**: 接入 `@sentry/nuxt`，前后端全链路错误追踪，关联 `reqId`，Source Map 自动上传
+- **Redis 缓存层（fix #6）**: `lib/cache/` 统一缓存模块，支持 Redis（`REDIS_URL`）/ 内存降级；RAG 检索结果缓存 TTL 10min，AI 模型列表缓存 TTL 1h
+- **混合搜索 RRF 优化（fix #7）**: RRF 参数可配置（k 值），引入加权融合策略，添加 MRR/NDCG 检索质量评估指标与 A/B 对比脚本
+
+### 修复
+
+- **Vercel 生产错误修复**:
+  - 文件上传临时目录 ENOENT：`/var/task/tmp` → 正确使用 `/tmp`（修复 `path.join` 拼接绝对路径的问题）
+  - `/api/stats` 持续 500：`VectorDAO.count()` 在 `document_embeddings` 表未迁移时优雅降级返回 `0`（捕获 pg 错误码 `42P01`）
+  - pg SSL 安全警告：将 `sslmode` 字符串依赖改为显式 `{ rejectUnauthorized: true }` 配置
+
+### 变更
+
+- `package.json` 版本号更新至 `0.2.0`
+- `lib/db/schema.sql` 补充 `document_embeddings` 表定义
+- GitHub Branch Protection：`develop` 和 `main` 分支启用 `enforce_admins=true`，管理员也无法绕过 CI 检查合并 PR
 
 ---
 
