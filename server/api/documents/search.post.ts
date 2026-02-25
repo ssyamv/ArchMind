@@ -6,6 +6,10 @@
  * - keyword: 纯关键词搜索(PostgreSQL 全文检索)
  * - vector: 纯向量检索(语义相似度)
  * - hybrid: 混合搜索(RRF 融合算法) - 默认
+ *
+ * 缓存策略：
+ * - 相同 (userId + query + mode + topK + threshold) 缓存 10 分钟
+ * - 文档更新时通过 delPattern 主动失效
  */
 
 import { RAGRetriever } from '~/lib/rag/retriever'
@@ -15,6 +19,8 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import YAML from 'js-yaml'
 import { z } from 'zod'
+import { cache } from '~/lib/cache'
+import { CacheKeys, CacheTTL } from '~/lib/cache/keys'
 
 const searchSchema = z.object({
   query: z.string().min(1),
@@ -43,6 +49,14 @@ export default defineEventHandler(async (event) => {
     }
 
     const { query, mode, topK, threshold, keywordWeight, vectorWeight } = validationResult.data
+
+    // ── 检查缓存 ──────────────────────────────────────────────────────────────
+    // 以 userId 作为 workspaceId 参数（用户级隔离）
+    const cacheKey = CacheKeys.ragSearch(userId, `${mode}:${query}:${topK}:${threshold}`, topK)
+    const cached = await cache.get(cacheKey)
+    if (cached) {
+      return cached
+    }
 
     // 初始化 embedding 适配器
     const glmApiKey = config.glmApiKey as string | undefined
@@ -132,7 +146,7 @@ export default defineEventHandler(async (event) => {
         break
     }
 
-    return {
+    const response = {
       success: true,
       data: {
         query,
@@ -153,6 +167,11 @@ export default defineEventHandler(async (event) => {
         }))
       }
     }
+
+    // ── 写入缓存（10 分钟）────────────────────────────────────────────────────
+    await cache.set(cacheKey, response, CacheTTL.RAG_SEARCH)
+
+    return response
   } catch (error) {
     console.error('Search error:', error)
 

@@ -6,6 +6,8 @@
 import { UserAPIConfigDAO } from '~/lib/db/dao/user-api-config-dao'
 import type { AIProviderType } from '~/types/settings'
 import { AI_PROVIDERS } from '~/lib/ai/providers'
+import { cache } from '~/lib/cache'
+import { CacheKeys } from '~/lib/cache/keys'
 
 function isValidProvider(provider: string): provider is AIProviderType {
   return provider in AI_PROVIDERS
@@ -38,6 +40,9 @@ export default defineEventHandler(async (event) => {
         message: 'Configuration not found'
       }
     }
+
+    // 清除该用户的模型列表缓存
+    await cache.del(CacheKeys.aiModels('all', userId))
 
     return {
       success: true,

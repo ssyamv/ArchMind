@@ -12,6 +12,8 @@
 import { ModelManager, getModelManager } from '~/lib/ai/manager'
 import { UserAPIConfigDAO } from '~/lib/db/dao/user-api-config-dao'
 import type { AvailableModelInfo } from '~/types/settings'
+import { cache } from '~/lib/cache'
+import { CacheKeys, CacheTTL } from '~/lib/cache/keys'
 
 // 判断一个 API Key 是否为真实有效值（排除占位符）
 function isValidApiKey (key: string | undefined): string | undefined {
@@ -26,6 +28,13 @@ export default defineEventHandler(async (event) => {
   try {
     const userId = requireAuth(event)
     const runtimeConfig = useRuntimeConfig()
+
+    // ── 检查缓存（1 小时）────────────────────────────────────────────────────
+    const cacheKey = CacheKeys.aiModels('all', userId)
+    const cachedModels = await cache.get(cacheKey)
+    if (cachedModels) {
+      return cachedModels
+    }
 
     // 从数据库获取当前用户的 API 配置
     const userConfigs = await UserAPIConfigDAO.getAllEnabledWithKeys(userId)
@@ -160,7 +169,7 @@ export default defineEventHandler(async (event) => {
 
     const defaultModel = sysManager.getDefaultModelId()
 
-    return {
+    const response = {
       success: true,
       data: {
         availableModels,
@@ -168,6 +177,11 @@ export default defineEventHandler(async (event) => {
         selectedModel: defaultModel
       }
     }
+
+    // ── 写入缓存（1 小时）────────────────────────────────────────────────────
+    await cache.set(cacheKey, response, CacheTTL.AI_MODELS)
+
+    return response
   } catch (error) {
     console.error('Error getting available models:', error)
     setResponseStatus(event, 500)

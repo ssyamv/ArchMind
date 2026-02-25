@@ -19,6 +19,8 @@ services:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://archmind:${DB_PASSWORD:-archmind123}@postgres:5432/archmind
       - APP_URL=${APP_URL:-http://localhost:3000}
+      # Redis 缓存（不配置则降级为内存缓存）
+      - REDIS_URL=redis://redis:6379
       # AI API Keys（按需配置）
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -38,6 +40,8 @@ services:
       - HUAWEI_OBS_BUCKET=${HUAWEI_OBS_BUCKET:-archmind-documents}
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - archmind-network
@@ -74,6 +78,26 @@ services:
       - "5432:5432"
 
   # ================================
+  # Redis 缓存
+  # ================================
+  redis:
+    image: redis:7-alpine
+    container_name: archmind-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - archmind-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    ports:
+      - "6379:6379"
+
+  # ================================
   # Nginx 反向代理（可选，用于生产环境）
   # ================================
   nginx:
@@ -99,4 +123,6 @@ networks:
 
 volumes:
   postgres-data:
+    driver: local
+  redis-data:
     driver: local

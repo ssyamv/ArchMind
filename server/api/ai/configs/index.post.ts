@@ -7,6 +7,8 @@ import { UserAPIConfigDAO } from '~/lib/db/dao/user-api-config-dao'
 import type { SaveAPIConfigRequest } from '~/types/settings'
 import type { AIProviderType } from '~/types/settings'
 import { AI_PROVIDERS } from '~/lib/ai/providers'
+import { cache } from '~/lib/cache'
+import { CacheKeys } from '~/lib/cache/keys'
 
 // 验证提供商是否有效
 function isValidProvider(provider: string): provider is AIProviderType {
@@ -61,6 +63,9 @@ export default defineEventHandler(async (event) => {
       models: body.models,
       enabled: body.enabled ?? true
     })
+
+    // 清除该用户的模型列表缓存（配置变更后需要重新加载）
+    await cache.del(CacheKeys.aiModels('all', userId))
 
     return {
       success: true,
