@@ -386,7 +386,9 @@
       "uploadFailed": "Upload failed",
       "queued": "Queued, waiting for vectorization...",
       "vectorizing": "Vectorizing...",
-      "processing": "Processing document..."
+      "processing": "Processing document...",
+      "successTitle": "Upload Successful",
+      "successDesc": "Document uploaded, indexing in background"
     },
     "details": {
       "title": "Document Details",
@@ -473,6 +475,7 @@
       "name": "Name",
       "type": "Type",
       "source": "Source",
+      "indexStatus": "Index Status",
       "lastSync": "Last Sync",
       "size": "Size"
     },

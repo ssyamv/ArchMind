@@ -2,10 +2,10 @@
   <div class="document-upload space-y-4">
     <div
       class="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors"
-      :class="uploading ? 'pointer-events-none' : ''"
+      :class="uploading ? 'pointer-events-none opacity-60' : ''"
       @dragover.prevent
       @drop.prevent="handleDrop"
-      @click.self="fileInput?.click()"
+      @click="fileInput?.click()"
     >
       <input
         ref="fileInput"
@@ -27,8 +27,9 @@
 
       <!-- 上传阶段 -->
       <div v-else>
+        <Loader2 class="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
         <Progress :model-value="uploadProgress" class="mb-2" />
-        <p class="text-muted-foreground">
+        <p class="text-muted-foreground text-sm">
           {{ $t('documents.upload.uploading', { progress: uploadProgress }) }}
         </p>
       </div>
@@ -44,9 +45,11 @@
 </template>
 
 <script setup lang="ts">
-import { CloudUpload, AlertCircle } from 'lucide-vue-next'
+import { CloudUpload, AlertCircle, Loader2 } from 'lucide-vue-next'
+import { useToast } from '~/components/ui/toast/use-toast'
 
 const { t } = useI18n()
+const { toast } = useToast()
 
 const props = defineProps<{
   workspaceId?: string
@@ -76,33 +79,56 @@ function handleDrop (event: DragEvent) {
   }
 }
 
-async function uploadFile (file: File) {
+function uploadFile (file: File) {
   error.value = ''
   uploading.value = true
   uploadProgress.value = 0
 
-  try {
-    const formData = new FormData()
-    formData.append('file', file)
-    if (props.workspaceId) {
-      formData.append('workspace_id', props.workspaceId)
-    }
-
-    const response = await $fetch<{ success: boolean; data: { id: string } }>('/api/v1/documents/upload', {
-      method: 'POST',
-      body: formData
-    })
-
-    uploadProgress.value = 100
-    uploading.value = false
-
-    // 上传成功后立即通知父组件刷新列表，向量化在后台进行
-    emit('uploaded', response.data.id)
-  } catch (err: any) {
-    error.value = err.message || t('documents.upload.uploadFailed')
-    uploading.value = false
-  } finally {
-    uploadProgress.value = 0
+  const formData = new FormData()
+  formData.append('file', file)
+  if (props.workspaceId) {
+    formData.append('workspace_id', props.workspaceId)
   }
+
+  const xhr = new XMLHttpRequest()
+
+  xhr.upload.addEventListener('progress', (e) => {
+    if (e.lengthComputable) {
+      uploadProgress.value = Math.round((e.loaded / e.total) * 100)
+    }
+  })
+
+  xhr.addEventListener('load', () => {
+    uploading.value = false
+    uploadProgress.value = 0
+    if (xhr.status >= 200 && xhr.status < 300) {
+      try {
+        const response = JSON.parse(xhr.responseText)
+        toast({
+          title: t('documents.upload.successTitle'),
+          description: t('documents.upload.successDesc'),
+        })
+        emit('uploaded', response.data.id)
+      } catch {
+        error.value = t('documents.upload.uploadFailed')
+      }
+    } else {
+      try {
+        const res = JSON.parse(xhr.responseText)
+        error.value = res.message || t('documents.upload.uploadFailed')
+      } catch {
+        error.value = t('documents.upload.uploadFailed')
+      }
+    }
+  })
+
+  xhr.addEventListener('error', () => {
+    uploading.value = false
+    uploadProgress.value = 0
+    error.value = t('documents.upload.uploadFailed')
+  })
+
+  xhr.open('POST', '/api/v1/documents/upload')
+  xhr.send(formData)
 }
 </script>

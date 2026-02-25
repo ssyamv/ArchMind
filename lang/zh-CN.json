@@ -386,7 +386,9 @@
       "uploadFailed": "上传失败",
       "queued": "已加入队列，等待向量化处理...",
       "vectorizing": "向量化处理中...",
-      "processing": "文档处理中..."
+      "processing": "文档处理中...",
+      "successTitle": "上传成功",
+      "successDesc": "文档已上传，正在后台进行索引处理"
     },
     "details": {
       "title": "文档详情",
@@ -473,6 +475,7 @@
       "name": "名称",
       "type": "类型",
       "source": "来源",
+      "indexStatus": "索引状态",
       "lastSync": "最后同步",
       "size": "大小"
     },

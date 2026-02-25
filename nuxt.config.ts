@@ -51,9 +51,8 @@ export default defineNuxtConfig({
 
   i18n: {
     locales: [
-      { code: 'en', name: 'English', file: 'en.json' },
-      { code: 'zh-CN', name: '简体中文', file: 'zh-CN.json' },
-      { code: 'zh', name: '简体中文', file: 'zh-CN.json' }
+      { code: 'en', language: 'en', name: 'English', file: 'en.json' },
+      { code: 'zh-CN', language: 'zh', name: '简体中文', file: 'zh-CN.json' }
     ],
     defaultLocale: 'zh-CN',
     strategy: 'no_prefix',
@@ -62,7 +61,8 @@ export default defineNuxtConfig({
       useCookie: true,
       cookieKey: 'i18n_locale',
       redirectOn: 'root',
-      alwaysRedirect: true
+      alwaysRedirect: false,
+      fallbackLocale: 'zh-CN'
     },
     compilation: {
       strictMessage: false,
