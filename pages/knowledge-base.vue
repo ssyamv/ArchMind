@@ -197,7 +197,7 @@
 
     <!-- Upload Document Dialog -->
     <Dialog v-model:open="uploadDialogOpen">
-      <DialogContent class="max-w-2xl">
+      <DialogContent class="max-w-2xl" @pointer-down-outside.prevent @interact-outside.prevent>
         <DialogHeader>
           <DialogTitle>{{ t('documents.upload.title') }}</DialogTitle>
         </DialogHeader>

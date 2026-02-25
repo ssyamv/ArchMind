@@ -5,7 +5,7 @@
       :class="uploading ? 'pointer-events-none' : ''"
       @dragover.prevent
       @drop.prevent="handleDrop"
-      @click.self="fileInput?.click()"
+      @click="fileInput?.click()"
     >
       <input
         ref="fileInput"
