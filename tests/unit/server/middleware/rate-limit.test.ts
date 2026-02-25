@@ -11,9 +11,12 @@ const { defineEventHandlerMock } = vi.hoisted(() => {
   return { defineEventHandlerMock: (fn: (...args: unknown[]) => unknown) => fn }
 })
 
+const getHeaderMock = vi.hoisted(() => vi.fn())
+const setResponseHeadersMock = vi.hoisted(() => vi.fn())
+
 vi.stubGlobal('defineEventHandler', defineEventHandlerMock)
-vi.stubGlobal('getHeader', vi.fn())
-vi.stubGlobal('setResponseHeaders', vi.fn())
+vi.stubGlobal('getHeader', getHeaderMock)
+vi.stubGlobal('setResponseHeaders', setResponseHeadersMock)
 vi.stubGlobal('createError', ({ statusCode, message }: { statusCode: number; message: string }) => {
   const err = new Error(message) as any
   err.statusCode = statusCode
@@ -24,12 +27,16 @@ vi.stubGlobal('createError', ({ statusCode, message }: { statusCode: number; mes
 let RATE_LIMIT_RULES: any[]
 let checkRateLimit: (ip: string, path: string, now: number) => any
 let cleanupExpiredEntries: () => void
+let getClientIp: (event: any) => string
+let rateLimitMiddleware: (event: any) => any
 
 beforeAll(async () => {
   const mod = await import('~/server/middleware/02.rate-limit')
   RATE_LIMIT_RULES = mod.RATE_LIMIT_RULES
   checkRateLimit = mod.checkRateLimit
   cleanupExpiredEntries = mod.cleanupExpiredEntries
+  getClientIp = mod.getClientIp
+  rateLimitMiddleware = mod.default as any
 })
 
 // ─── RATE_LIMIT_RULES 规则定义 ────────────────────────────────────────────────
@@ -231,5 +238,136 @@ describe('cleanupExpiredEntries', () => {
 
     // 状态不变
     expect(checkRateLimit(ip, '/api/auth/login', now).allowed).toBe(false)
+  })
+})
+
+// ─── getClientIp ──────────────────────────────────────────────────────────────
+
+describe('getClientIp', () => {
+  beforeEach(() => {
+    getHeaderMock.mockReset()
+  })
+
+  it('x-forwarded-for 存在时取第一个 IP', () => {
+    getHeaderMock.mockImplementation((_event: any, header: string) => {
+      if (header === 'x-forwarded-for') return '1.2.3.4, 5.6.7.8'
+      return undefined
+    })
+    const event = { node: { req: { socket: { remoteAddress: '127.0.0.1' } } } }
+    expect(getClientIp(event)).toBe('1.2.3.4')
+  })
+
+  it('无 x-forwarded-for 时使用 x-real-ip', () => {
+    getHeaderMock.mockImplementation((_event: any, header: string) => {
+      if (header === 'x-forwarded-for') return undefined
+      if (header === 'x-real-ip') return '10.0.0.1'
+      return undefined
+    })
+    const event = { node: { req: { socket: { remoteAddress: '127.0.0.1' } } } }
+    expect(getClientIp(event)).toBe('10.0.0.1')
+  })
+
+  it('无代理头时使用 socket.remoteAddress', () => {
+    getHeaderMock.mockReturnValue(undefined)
+    const event = { node: { req: { socket: { remoteAddress: '192.168.1.100' } } } }
+    expect(getClientIp(event)).toBe('192.168.1.100')
+  })
+
+  it('socket 不存在时返回 unknown', () => {
+    getHeaderMock.mockReturnValue(undefined)
+    const event = { node: { req: { socket: undefined } } }
+    expect(getClientIp(event)).toBe('unknown')
+  })
+
+  it('x-forwarded-for 多个 IP 用逗号分隔时取第一个并去除空格', () => {
+    getHeaderMock.mockImplementation((_event: any, header: string) => {
+      if (header === 'x-forwarded-for') return '  203.0.113.1  , 198.51.100.2'
+      return undefined
+    })
+    const event = { node: { req: { socket: {} } } }
+    expect(getClientIp(event)).toBe('203.0.113.1')
+  })
+})
+
+// ─── 中间件 defineEventHandler 行为 ──────────────────────────────────────────
+
+describe('rate-limit middleware 行为', () => {
+  function makeEvent (url: string, method = 'GET') {
+    return {
+      node: {
+        req: {
+          url,
+          method,
+          socket: { remoteAddress: '127.0.0.1' }
+        }
+      }
+    }
+  }
+
+  beforeEach(() => {
+    setResponseHeadersMock.mockReset()
+    getHeaderMock.mockReturnValue(undefined)
+  })
+
+  it('非 API 路由直接返回（不限流）', () => {
+    const event = makeEvent('/static/logo.png')
+    const result = rateLimitMiddleware(event)
+    expect(result).toBeUndefined()
+    expect(setResponseHeadersMock).not.toHaveBeenCalled()
+  })
+
+  it('OPTIONS 预检请求直接返回', () => {
+    const event = makeEvent('/api/auth/login', 'OPTIONS')
+    const result = rateLimitMiddleware(event)
+    expect(result).toBeUndefined()
+    expect(setResponseHeadersMock).not.toHaveBeenCalled()
+  })
+
+  it('正常 API 请求设置 X-RateLimit 响应头', () => {
+    const event = makeEvent('/api/documents')
+    rateLimitMiddleware(event)
+    expect(setResponseHeadersMock).toHaveBeenCalledWith(
+      event,
+      expect.objectContaining({
+        'X-RateLimit-Limit': expect.any(String),
+        'X-RateLimit-Remaining': expect.any(String),
+        'X-RateLimit-Reset': expect.any(String)
+      })
+    )
+  })
+
+  it('query string 去除后只匹配路径', () => {
+    const event = makeEvent('/api/auth/login?redirect=/dashboard')
+    // login 受 10 次/分钟限制，传入带参的 URL 应该正常走限流
+    rateLimitMiddleware(event)
+    expect(setResponseHeadersMock).toHaveBeenCalledWith(
+      event,
+      expect.objectContaining({ 'X-RateLimit-Limit': '10' })
+    )
+  })
+
+  it('超出限制时抛出 429 错误并设置 Retry-After 响应头', () => {
+    const ip = '172.20.1.1'
+    getHeaderMock.mockImplementation((_e: any, header: string) => {
+      if (header === 'x-forwarded-for') return ip
+      return undefined
+    })
+
+    const now = Date.now()
+    // 先直接用 checkRateLimit 耗尽额度
+    for (let i = 0; i < 10; i++) {
+      checkRateLimit(ip, '/api/auth/login', now)
+    }
+
+    const event = makeEvent('/api/auth/login')
+    expect(() => rateLimitMiddleware(event)).toThrow()
+    expect(setResponseHeadersMock).toHaveBeenCalledWith(
+      event,
+      expect.objectContaining({
+        'Retry-After': expect.any(String),
+        'X-RateLimit-Limit': '10',
+        'X-RateLimit-Remaining': '0'
+      })
+    )
   })
 })

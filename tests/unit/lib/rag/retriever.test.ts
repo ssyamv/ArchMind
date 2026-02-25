@@ -313,3 +313,231 @@ describe('RAGRetriever.summarizeResults()', () => {
     expect(summary).toContain('---')
   })
 })
+
+// ─── _vectorRetrieve() 内部实现 ───────────────────────────────────────────────
+
+describe('RAGRetriever._vectorRetrieve() PRD 检索路径', () => {
+  let retriever: RAGRetriever
+  let VectorDAOMock: any
+  let PrdChunkDAOMock: any
+  let PRDDAOMock: any
+
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    const { VectorDAO } = await import('~/lib/db/dao/vector-dao')
+    const { PrdChunkDAO } = await import('~/lib/db/dao/prd-chunk-dao')
+    const { PRDDAO } = await import('~/lib/db/dao/prd-dao')
+    VectorDAOMock = VectorDAO
+    PrdChunkDAOMock = PrdChunkDAO
+    PRDDAOMock = PRDDAO
+    retriever = new RAGRetriever(makeMockEmbeddingAdapter() as any)
+  })
+
+  it('prdIds 路径：返回带 [PRD] 前缀的 documentTitle', async () => {
+    VectorDAOMock.similaritySearch.mockResolvedValue([
+      { chunkId: 'chunk-1', score: 0.9 }
+    ])
+    PrdChunkDAOMock.findByIds.mockResolvedValue([
+      { id: 'chunk-1', prdId: 'prd-1', content: 'PRD content' }
+    ])
+    PRDDAOMock.findByIds.mockResolvedValue(
+      new Map([['prd-1', { id: 'prd-1', title: 'My PRD' }]])
+    )
+
+    const result = await (retriever as any)._vectorRetrieve('query', { prdIds: ['prd-1'] })
+
+    expect(result).toHaveLength(1)
+    expect(result[0].documentTitle).toBe('[PRD] My PRD')
+    expect(result[0].documentId).toBe('prd-1')
+    expect(result[0].similarity).toBe(0.9)
+  })
+
+  it('prdIds 路径：PRD 元数据不存在时过滤掉该 chunk', async () => {
+    VectorDAOMock.similaritySearch.mockResolvedValue([
+      { chunkId: 'chunk-1', score: 0.9 }
+    ])
+    PrdChunkDAOMock.findByIds.mockResolvedValue([
+      { id: 'chunk-1', prdId: 'prd-99', content: 'PRD content' }
+    ])
+    PRDDAOMock.findByIds.mockResolvedValue(new Map()) // 空 map
+
+    const result = await (retriever as any)._vectorRetrieve('query', { prdIds: ['prd-99'] })
+    expect(result).toHaveLength(0)
+  })
+
+  it('向量搜索返回空时直接返回空数组', async () => {
+    VectorDAOMock.similaritySearch.mockResolvedValue([])
+    const result = await (retriever as any)._vectorRetrieve('query', { prdIds: ['prd-1'] })
+    expect(result).toEqual([])
+    expect(PrdChunkDAOMock.findByIds).not.toHaveBeenCalled()
+  })
+
+  it('检索异常时抛出错误', async () => {
+    VectorDAOMock.similaritySearch.mockRejectedValue(new Error('DB connection failed'))
+    await expect(
+      (retriever as any)._vectorRetrieve('query', { prdIds: ['prd-1'] })
+    ).rejects.toThrow('DB connection failed')
+  })
+})
+
+describe('RAGRetriever._vectorRetrieve() 文档检索路径（userId 权限隔离）', () => {
+  let retriever: RAGRetriever
+  let VectorDAOMock: any
+  let DocumentChunkDAOMock: any
+  let DocumentDAOMock: any
+
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    const { VectorDAO } = await import('~/lib/db/dao/vector-dao')
+    const { DocumentChunkDAO } = await import('~/lib/db/dao/document-chunk-dao')
+    const { DocumentDAO } = await import('~/lib/db/dao/document-dao')
+    VectorDAOMock = VectorDAO
+    DocumentChunkDAOMock = DocumentChunkDAO
+    DocumentDAOMock = DocumentDAO
+    retriever = new RAGRetriever(makeMockEmbeddingAdapter() as any)
+  })
+
+  it('文档路径：正常返回检索结果', async () => {
+    VectorDAOMock.similaritySearch.mockResolvedValue([
+      { chunkId: 'chunk-1', score: 0.85 }
+    ])
+    DocumentChunkDAOMock.findByIds.mockResolvedValue([
+      { id: 'chunk-1', documentId: 'doc-1', content: 'Doc content' }
+    ])
+    DocumentDAOMock.findByIds.mockResolvedValue(
+      new Map([['doc-1', { id: 'doc-1', title: 'Test Doc', userId: 'user-1' }]])
+    )
+
+    const result = await (retriever as any)._vectorRetrieve('query', { userId: 'user-1' })
+
+    expect(result).toHaveLength(1)
+    expect(result[0].documentTitle).toBe('Test Doc')
+    expect(result[0].similarity).toBe(0.85)
+  })
+
+  it('userId 不匹配时过滤掉该文档', async () => {
+    VectorDAOMock.similaritySearch.mockResolvedValue([
+      { chunkId: 'chunk-1', score: 0.85 }
+    ])
+    DocumentChunkDAOMock.findByIds.mockResolvedValue([
+      { id: 'chunk-1', documentId: 'doc-1', content: 'Doc content' }
+    ])
+    DocumentDAOMock.findByIds.mockResolvedValue(
+      new Map([['doc-1', { id: 'doc-1', title: 'Other User Doc', userId: 'other-user' }]])
+    )
+
+    const result = await (retriever as any)._vectorRetrieve('query', { userId: 'user-1' })
+    expect(result).toHaveLength(0)
+  })
+
+  it('文档 userId 为 null 时（历史数据）不过滤', async () => {
+    VectorDAOMock.similaritySearch.mockResolvedValue([
+      { chunkId: 'chunk-1', score: 0.9 }
+    ])
+    DocumentChunkDAOMock.findByIds.mockResolvedValue([
+      { id: 'chunk-1', documentId: 'doc-1', content: 'Legacy content' }
+    ])
+    DocumentDAOMock.findByIds.mockResolvedValue(
+      new Map([['doc-1', { id: 'doc-1', title: 'Legacy Doc', userId: null }]])
+    )
+
+    const result = await (retriever as any)._vectorRetrieve('query', { userId: 'user-1' })
+    expect(result).toHaveLength(1)
+    expect(result[0].documentTitle).toBe('Legacy Doc')
+  })
+
+  it('不传 userId 时不过滤任何文档', async () => {
+    VectorDAOMock.similaritySearch.mockResolvedValue([
+      { chunkId: 'chunk-1', score: 0.9 }
+    ])
+    DocumentChunkDAOMock.findByIds.mockResolvedValue([
+      { id: 'chunk-1', documentId: 'doc-1', content: 'Content' }
+    ])
+    DocumentDAOMock.findByIds.mockResolvedValue(
+      new Map([['doc-1', { id: 'doc-1', title: 'Any Doc', userId: 'any-user' }]])
+    )
+
+    const result = await (retriever as any)._vectorRetrieve('query')
+    expect(result).toHaveLength(1)
+  })
+
+  it('文档元数据不存在时过滤掉该 chunk', async () => {
+    VectorDAOMock.similaritySearch.mockResolvedValue([
+      { chunkId: 'chunk-1', score: 0.8 }
+    ])
+    DocumentChunkDAOMock.findByIds.mockResolvedValue([
+      { id: 'chunk-1', documentId: 'doc-orphan', content: 'Orphan content' }
+    ])
+    DocumentDAOMock.findByIds.mockResolvedValue(new Map()) // 空
+
+    const result = await (retriever as any)._vectorRetrieve('query')
+    expect(result).toHaveLength(0)
+  })
+
+  it('结果按相似度降序排列', async () => {
+    VectorDAOMock.similaritySearch.mockResolvedValue([
+      { chunkId: 'chunk-low', score: 0.5 },
+      { chunkId: 'chunk-high', score: 0.95 }
+    ])
+    DocumentChunkDAOMock.findByIds.mockResolvedValue([
+      { id: 'chunk-low', documentId: 'doc-1', content: 'Low' },
+      { id: 'chunk-high', documentId: 'doc-2', content: 'High' }
+    ])
+    DocumentDAOMock.findByIds.mockResolvedValue(
+      new Map([
+        ['doc-1', { id: 'doc-1', title: 'Low Doc', userId: null }],
+        ['doc-2', { id: 'doc-2', title: 'High Doc', userId: null }]
+      ])
+    )
+
+    const result = await (retriever as any)._vectorRetrieve('query')
+    expect(result[0].similarity).toBe(0.95)
+    expect(result[1].similarity).toBe(0.5)
+  })
+})
+
+describe('RAGRetriever.hybridSearch() 异常处理', () => {
+  let retriever: RAGRetriever
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    retriever = new RAGRetriever(makeMockEmbeddingAdapter() as any)
+  })
+
+  it('keywordSearch 抛出异常时 hybridSearch 也抛出', async () => {
+    vi.spyOn(retriever, 'keywordSearch').mockRejectedValue(new Error('Keyword search failed'))
+    vi.spyOn(retriever as any, '_vectorRetrieve').mockResolvedValue([])
+
+    await expect(retriever.hybridSearch('query')).rejects.toThrow('Keyword search failed')
+  })
+
+  it('_vectorRetrieve 抛出异常时 hybridSearch 也抛出', async () => {
+    vi.spyOn(retriever, 'keywordSearch').mockResolvedValue([])
+    vi.spyOn(retriever as any, '_vectorRetrieve').mockRejectedValue(new Error('Vector search failed'))
+
+    await expect(retriever.hybridSearch('query')).rejects.toThrow('Vector search failed')
+  })
+
+  it('指定显式 keywordWeight 和 vectorWeight 时不走自动权重', async () => {
+    const keywordSpy = vi.spyOn(retriever, 'keywordSearch').mockResolvedValue([])
+    vi.spyOn(retriever as any, '_vectorRetrieve').mockResolvedValue([])
+
+    await retriever.hybridSearch('query', { keywordWeight: 0.3, vectorWeight: 0.7 })
+    expect(keywordSpy).toHaveBeenCalled()
+  })
+})
+
+describe('RAGRetriever.keywordSearch() 异常处理', () => {
+  let retriever: RAGRetriever
+
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    const { dbClient } = await import('~/lib/db/client')
+    vi.mocked(dbClient.query).mockRejectedValue(new Error('SQL error'))
+    retriever = new RAGRetriever(makeMockEmbeddingAdapter() as any)
+  })
+
+  it('SQL 执行失败时抛出错误', async () => {
+    await expect(retriever.keywordSearch('query')).rejects.toThrow('SQL error')
+  })
+})
