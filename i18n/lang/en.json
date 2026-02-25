@@ -301,6 +301,9 @@
     "noProjects": "No projects found",
     "noProjectsHint": "Create your first project to get started",
     "tryDifferentSearch": "Try a different search term",
+    "searching": "Searching...",
+    "conversationSearchResults": "{count} conversation(s) found",
+    "messageCount": "{count} messages",
     "newProject": "New Project",
     "loadFailed": "Failed to load projects",
     "deleteConfirm": "Are you sure you want to delete this project?",
@@ -361,6 +364,9 @@
       "actions": {
         "edit": "Edit",
         "exportMarkdown": "Export Markdown",
+        "exportWord": "Export Word (.docx)",
+        "exportPdf": "Print as PDF",
+        "exportFailed": "Export failed, please try again",
         "delete": "Delete"
       }
     },

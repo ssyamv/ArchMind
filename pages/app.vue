@@ -30,6 +30,11 @@
               :placeholder="$t('projects.searchPlaceholder')"
               class="pl-10"
             />
+            <!-- 搜索中加载指示器 -->
+            <RefreshCw
+              v-if="isSearching"
+              class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin"
+            />
           </div>
         </div>
         <ClientOnly>
@@ -56,6 +61,47 @@
         >
           <List class="w-4 h-4" />
         </Button>
+      </div>
+    </div>
+
+    <!-- 搜索结果面板（仅在搜索时展示） -->
+    <div v-if="searchQuery && (searchResults.length > 0 || isSearching)" class="mb-6">
+      <div class="flex items-center gap-2 mb-3">
+        <MessageSquare class="w-4 h-4 text-muted-foreground" />
+        <span class="text-sm text-muted-foreground">
+          {{ $t('projects.conversationSearchResults', { count: searchResults.length }) }}
+        </span>
+      </div>
+      <div v-if="isSearching" class="flex items-center gap-2 py-3 text-sm text-muted-foreground">
+        <RefreshCw class="w-4 h-4 animate-spin" />
+        {{ $t('projects.searching') }}
+      </div>
+      <div v-else-if="searchResults.length > 0" class="space-y-2">
+        <div
+          v-for="result in searchResults"
+          :key="result.id"
+          class="flex items-start gap-3 p-3 rounded-lg border border-border bg-card hover:bg-accent cursor-pointer transition-colors"
+          @click="handleSearchResultClick(result)"
+        >
+          <MessageSquare class="w-4 h-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+          <div class="min-w-0 flex-1">
+            <!-- 标题带高亮 -->
+            <p
+              class="text-sm font-medium truncate"
+              v-html="highlightKeyword(result.title, searchQuery)"
+            />
+            <!-- 摘要带高亮 -->
+            <p
+              v-if="result.summary"
+              class="text-xs text-muted-foreground mt-0.5 line-clamp-2"
+              v-html="highlightKeyword(result.summary, searchQuery)"
+            />
+            <p class="text-xs text-muted-foreground mt-1">
+              {{ $t('projects.messageCount', { count: result.messageCount ?? 0 }) }}
+              · {{ formatDate(result.updatedAt) }}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -144,8 +190,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { Search, Grid3x3, List, RefreshCw, FolderOpen, Plus } from 'lucide-vue-next'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { Search, Grid3x3, List, RefreshCw, FolderOpen, Plus, MessageSquare } from 'lucide-vue-next'
 import { Input } from '~/components/ui/input'
 import { Button } from '~/components/ui/button'
 import {
@@ -198,6 +244,16 @@ interface Stats {
   ragSources: number
 }
 
+interface ConversationSearchResult {
+  id: string
+  title: string
+  summary: string | null
+  messageCount: number | null
+  prdId: string | null
+  createdAt: string | null
+  updatedAt: string | null
+}
+
 const searchQuery = ref('')
 const viewMode = ref<'grid' | 'list'>('grid')
 const loading = ref(true)
@@ -212,6 +268,87 @@ const stats = ref<Stats>({
 })
 const deleteDialogOpen = ref(false)
 const projectToDelete = ref<string | null>(null)
+
+// 对话历史搜索相关状态
+const isSearching = ref(false)
+const searchResults = ref<ConversationSearchResult[]>([])
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+// 监听搜索关键词变化，防抖 300ms 触发后端搜索
+watch(searchQuery, (newVal) => {
+  // 清除上一个 timer
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer)
+    searchDebounceTimer = null
+  }
+
+  if (!newVal.trim()) {
+    searchResults.value = []
+    isSearching.value = false
+    return
+  }
+
+  isSearching.value = true
+  searchDebounceTimer = setTimeout(() => {
+    performConversationSearch(newVal.trim())
+  }, 300)
+})
+
+async function performConversationSearch(keyword: string) {
+  try {
+    const response = await $fetch<{
+      success: boolean
+      data: ConversationSearchResult[]
+      pagination: { page: number; limit: number; total: number }
+    }>('/api/v1/conversations/search', {
+      query: { q: keyword, page: 1, limit: 10 }
+    })
+
+    if (response.success) {
+      searchResults.value = response.data
+    } else {
+      searchResults.value = []
+    }
+  } catch (error) {
+    console.error('Conversation search failed:', error)
+    searchResults.value = []
+  } finally {
+    isSearching.value = false
+  }
+}
+
+/**
+ * 高亮关键词：将匹配到的关键词用 <mark> 标签包裹
+ * 使用 CSS 类而非内联样式，防止 XSS 时仍使用转义后的文本
+ */
+function highlightKeyword(text: string, keyword: string): string {
+  if (!keyword || !text) return escapeHtml(text)
+  const escaped = escapeHtml(text)
+  const escapedKeyword = escapeHtml(keyword).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(`(${escapedKeyword})`, 'gi')
+  return escaped.replace(regex, '<mark class="bg-yellow-200 dark:bg-yellow-800 rounded-sm px-0.5">$1</mark>')
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
+function formatDate(dateStr: string | null): string {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString()
+}
+
+function handleSearchResultClick(result: ConversationSearchResult) {
+  if (result.prdId) {
+    // 有关联的 PRD，跳转到项目详情页
+    navigateTo(`/projects/${result.prdId}`)
+  }
+}
 
 const filteredProjects = computed(() => {
   if (!searchQuery.value) return projects.value
@@ -252,10 +389,13 @@ onMounted(async () => {
   }
 })
 
-// 清理事件监听器
+// 清理事件监听器和 debounce timer
 if (process.client) {
   onBeforeUnmount(() => {
     window.removeEventListener('workspace-changed', handleWorkspaceChange)
+    if (searchDebounceTimer) {
+      clearTimeout(searchDebounceTimer)
+    }
   })
 }
 
