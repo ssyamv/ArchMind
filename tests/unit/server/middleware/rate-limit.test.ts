@@ -3,7 +3,7 @@
  * 只测试导出的纯逻辑函数，不依赖 H3/Nuxt 运行时
  */
 
-import { describe, it, expect, vi, beforeAll } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 
 // H3/Nuxt 全局函数在单测环境不存在，需要在模块加载前注入
 // vi.stubGlobal 需要在模块导入前执行，使用 vi.hoisted 确保提升
@@ -317,14 +317,14 @@ describe('rate-limit middleware 行为', () => {
   })
 
   it('OPTIONS 预检请求直接返回', () => {
-    const event = makeEvent('/api/auth/login', 'OPTIONS')
+    const event = makeEvent('/api/v1/auth/login', 'OPTIONS')
     const result = rateLimitMiddleware(event)
     expect(result).toBeUndefined()
     expect(setResponseHeadersMock).not.toHaveBeenCalled()
   })
 
   it('正常 API 请求设置 X-RateLimit 响应头', () => {
-    const event = makeEvent('/api/documents')
+    const event = makeEvent('/api/v1/documents')
     rateLimitMiddleware(event)
     expect(setResponseHeadersMock).toHaveBeenCalledWith(
       event,
@@ -337,7 +337,7 @@ describe('rate-limit middleware 行为', () => {
   })
 
   it('query string 去除后只匹配路径', () => {
-    const event = makeEvent('/api/auth/login?redirect=/dashboard')
+    const event = makeEvent('/api/v1/auth/login?redirect=/dashboard')
     // login 受 10 次/分钟限制，传入带参的 URL 应该正常走限流
     rateLimitMiddleware(event)
     expect(setResponseHeadersMock).toHaveBeenCalledWith(
@@ -356,10 +356,10 @@ describe('rate-limit middleware 行为', () => {
     const now = Date.now()
     // 先直接用 checkRateLimit 耗尽额度
     for (let i = 0; i < 10; i++) {
-      checkRateLimit(ip, '/api/auth/login', now)
+      checkRateLimit(ip, '/api/v1/auth/login', now)
     }
 
-    const event = makeEvent('/api/auth/login')
+    const event = makeEvent('/api/v1/auth/login')
     expect(() => rateLimitMiddleware(event)).toThrow()
     expect(setResponseHeadersMock).toHaveBeenCalledWith(
       event,

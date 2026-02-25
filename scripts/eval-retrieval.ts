@@ -29,7 +29,6 @@ import {
 import {
   evaluateRetrieval,
   abTest,
-  formatMetrics,
   type EvalQuery,
   type RetrievedItem
 } from '../lib/rag/metrics'

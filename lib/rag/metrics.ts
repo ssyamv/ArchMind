@@ -278,11 +278,10 @@ export function abTest (
   // 用 NDCG 作为主要对比指标
   const primaryA = metricsA.ndcg
   const primaryB = metricsB.ndcg
-  const delta = 0.001 // 小于此差距视为平局
 
   let winner: 'A' | 'B' | 'tie' = 'tie'
-  if (primaryA - primaryB > delta) winner = 'A'
-  else if (primaryB - primaryA > delta) winner = 'B'
+  if (primaryA - primaryB > 0.001) winner = 'A'
+  else if (primaryB - primaryA > 0.001) winner = 'B'
 
   const pctChange = (a: number, b: number): string => {
     if (a === 0) return b === 0 ? '0.00%' : '+∞%'
