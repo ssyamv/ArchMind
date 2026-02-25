@@ -115,6 +115,16 @@ export default defineNuxtConfig({
 
   nitro: {
     preset: process.env.VERCEL ? 'vercel' : 'node-server',
+    serverAssets: [
+      {
+        baseName: 'config',
+        dir: './config'
+      },
+      {
+        baseName: 'migrations',
+        dir: './migrations'
+      }
+    ],
     routeRules: {
       // 向后兼容：将旧版 /api/* 路径 307 重定向到 /api/v1/*
       // 使用 307 Temporary Redirect 保持 HTTP 方法不变（POST 仍为 POST）

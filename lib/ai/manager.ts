@@ -7,6 +7,29 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import YAML from 'js-yaml'
 import { ClaudeAdapter } from './adapters/claude'
+
+// 内嵌默认配置，当 yaml 文件在 Vercel 等环境中不可访问时作为降级
+const DEFAULT_MODEL_CONFIG: AIModelsConfig = {
+  default: 'glm-4.7',
+  fallback: ['glm-4.5-air', 'gpt-4o', 'claude-3.5-sonnet'],
+  preferences: {
+    prd_generation: ['claude-3.5-sonnet', 'gpt-4o', 'glm-4.7'],
+    chinese_content: ['glm-4.7', 'glm-4.5-air', 'qwen-max', 'ernie-4.0-8k'],
+    large_document: ['gemini-1.5-pro', 'claude-3.5-sonnet'],
+    cost_sensitive: ['glm-4.5-air', 'deepseek-chat', 'qwen-turbo'],
+    privacy_mode: ['ollama-llama3', 'ollama-qwen']
+  },
+  models: {
+    'glm-4.7': { enabled: true, name: 'GLM 4.7', provider: 'Zhipu AI', description: '最新推理模型，支持思考模式，适合复杂逻辑分析和 PRD 生成', api_key_env: 'GLM_API_KEY', capabilities: { maxContextLength: 128000, supportsStreaming: true, supportsStructuredOutput: true, supportsVision: false, supportedLanguages: ['zh', 'en'] }, costEstimate: { input: '¥0.0001/token', output: '¥0.0001/token' } },
+    'glm-4.5-air': { enabled: true, name: 'GLM 4.5 Air', provider: 'Zhipu AI', description: '经济版模型，最低成本，适合快速原型和成本敏感场景', api_key_env: 'GLM_API_KEY', capabilities: { maxContextLength: 128000, supportsStreaming: true, supportsStructuredOutput: true, supportsVision: false, supportedLanguages: ['zh', 'en'] }, costEstimate: { input: '¥0.00002/token', output: '¥0.00006/token' } },
+    'claude-3.5-sonnet': { enabled: false, name: 'Claude 3.5 Sonnet', provider: 'Anthropic', description: '企业级推理能力，支持 200K 上下文', api_key_env: 'ANTHROPIC_API_KEY', capabilities: { maxContextLength: 200000, supportsStreaming: true, supportsStructuredOutput: true, supportsVision: true, supportedLanguages: ['zh', 'en'] }, costEstimate: { input: '¥0.003/1K tokens', output: '¥0.015/1K tokens' } },
+    'gpt-4o': { enabled: false, name: 'GPT-4o', provider: 'OpenAI', description: '多模态 AI，图片理解能力强', api_key_env: 'OPENAI_API_KEY', capabilities: { maxContextLength: 128000, supportsStreaming: true, supportsStructuredOutput: true, supportsVision: true, supportedLanguages: ['zh', 'en'] }, costEstimate: { input: '¥0.005/1K tokens', output: '¥0.015/1K tokens' } },
+    'gemini-1.5-pro': { enabled: false, name: 'Gemini 1.5 Pro', provider: 'Google', description: '超大上下文窗口 (100K+)', api_key_env: 'GOOGLE_API_KEY', capabilities: { maxContextLength: 1000000, supportsStreaming: true, supportsStructuredOutput: true, supportsVision: true, supportedLanguages: ['zh', 'en'] }, costEstimate: { input: '¥0.0013/1K tokens', output: '¥0.0053/1K tokens' } },
+    'qwen-max': { enabled: false, name: '通义千问 Qwen Max', provider: 'Alibaba', description: '旗舰模型，中文理解能力最强', api_key_env: 'DASHSCOPE_API_KEY', capabilities: { maxContextLength: 32000, supportsStreaming: true, supportsStructuredOutput: true, supportsVision: false, supportedLanguages: ['zh', 'en'] }, costEstimate: { input: '¥0.02/1K tokens', output: '¥0.06/1K tokens' } },
+    'deepseek-chat': { enabled: false, name: 'DeepSeek Chat', provider: 'DeepSeek', description: '高性价比通用对话模型', api_key_env: 'DEEPSEEK_API_KEY', capabilities: { maxContextLength: 128000, supportsStreaming: true, supportsStructuredOutput: true, supportsVision: false, supportedLanguages: ['zh', 'en'] }, costEstimate: { input: '¥0.001/1K tokens', output: '¥0.002/1K tokens' } },
+    'ernie-4.0-8k': { enabled: false, name: '文心一言 ERNIE 4.0', provider: 'Baidu', description: '百度旗舰大模型', api_key_env: 'BAIDU_API_KEY', capabilities: { maxContextLength: 8192, supportsStreaming: true, supportsStructuredOutput: false, supportsVision: false, supportedLanguages: ['zh', 'en'] }, costEstimate: { input: '¥0.03/1K tokens', output: '¥0.09/1K tokens' } }
+  }
+}
 import { OpenAIAdapter } from './adapters/openai'
 import { GeminiAdapter } from './adapters/gemini'
 import { GLMAdapter } from './adapters/glm'
@@ -76,8 +99,8 @@ export class ModelManager {
       const parsed = YAML.load(content) as { ai_models: AIModelsConfig }
       this.modelConfig = parsed.ai_models
     } catch (error) {
-      aiLogger.warn({ err: error }, 'Failed to load ai-models.yaml config')
-      this.modelConfig = null
+      aiLogger.warn({ err: error }, 'Failed to load ai-models.yaml config, using built-in defaults')
+      this.modelConfig = DEFAULT_MODEL_CONFIG
     }
   }
 
