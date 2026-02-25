@@ -19,6 +19,30 @@ export interface Workspace {
   }
 }
 
+export interface WorkspaceMember {
+  id: string
+  workspaceId: string
+  userId: string
+  role: 'owner' | 'admin' | 'member'
+  joinedAt: string
+  userEmail?: string
+  userFullName?: string
+  userAvatarUrl?: string
+  username?: string
+}
+
+export interface WorkspaceInvitation {
+  id: string
+  workspaceId: string
+  inviterId: string
+  email: string
+  role: 'admin' | 'member'
+  token: string
+  status: 'pending' | 'accepted' | 'expired'
+  expiresAt: string
+  createdAt: string
+}
+
 const workspaces = ref<Workspace[]>([])
 const currentWorkspaceId = ref<string | null>(null)
 const loading = ref(false)
@@ -257,6 +281,43 @@ export function useWorkspace () {
     }
   }
 
+  /**
+   * 获取工作区成员列表
+   */
+  async function fetchMembers (workspaceId: string): Promise<{
+    members: WorkspaceMember[]
+    pendingInvitations: WorkspaceInvitation[]
+  }> {
+    const response = await $fetch<{
+      success: boolean
+      data: { members: WorkspaceMember[]; pendingInvitations: WorkspaceInvitation[] }
+    }>(`/api/v1/workspaces/${workspaceId}/members`)
+    return response.data
+  }
+
+  /**
+   * 邀请成员
+   */
+  async function inviteMember (workspaceId: string, email: string, role: 'admin' | 'member' = 'member') {
+    const response = await $fetch<{ success: boolean; data: { invitation: WorkspaceInvitation; inviteUrl: string }; message: string }>(
+      `/api/v1/workspaces/${workspaceId}/members/invite`,
+      {
+        method: 'POST',
+        body: { email, role }
+      }
+    )
+    return response
+  }
+
+  /**
+   * 移除成员
+   */
+  async function removeMember (workspaceId: string, userId: string) {
+    await $fetch(`/api/v1/workspaces/${workspaceId}/members/${userId}`, {
+      method: 'DELETE'
+    })
+  }
+
   // 初始化时从 localStorage 加载
   if (process.client) {
     loadFromLocalStorage()
@@ -277,6 +338,9 @@ export function useWorkspace () {
     updateWorkspace,
     deleteWorkspace,
     setDefaultWorkspace,
-    refreshStats
+    refreshStats,
+    fetchMembers,
+    inviteMember,
+    removeMember
   }
 }
