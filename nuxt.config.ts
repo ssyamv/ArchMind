@@ -1,4 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { fileURLToPath, URL } from 'node:url'
+
 export default defineNuxtConfig({
   devtools: { enabled: true },
 
@@ -118,11 +120,11 @@ export default defineNuxtConfig({
     serverAssets: [
       {
         baseName: 'config',
-        dir: './config'
+        dir: fileURLToPath(new URL('./config', import.meta.url))
       },
       {
         baseName: 'migrations',
-        dir: './migrations'
+        dir: fileURLToPath(new URL('./migrations', import.meta.url))
       }
     ],
     routeRules: {
