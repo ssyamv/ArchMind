@@ -38,7 +38,7 @@ export function useLogicMap () {
   async function loadByPrdId (prdId: string) {
     try {
       const response = await $fetch<{ success: boolean; data: LogicMapData | null }>(
-        `/api/logic-maps/${prdId}`
+        `/api/v1/logic-maps/${prdId}`
       )
 
       if (response.success && response.data) {
@@ -70,7 +70,7 @@ export function useLogicMap () {
 
     try {
       const response = await $fetch<LogicMapGenerateResponse>(
-        '/api/logic-maps/generate-from-prd',
+        '/api/v1/logic-maps/generate-from-prd',
         {
           method: 'POST',
           body: {

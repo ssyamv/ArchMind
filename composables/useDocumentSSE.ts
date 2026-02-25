@@ -50,7 +50,7 @@ export function useDocumentSSE () {
     // 关闭已存在的连接
     unsubscribe()
 
-    const url = `/api/documents/${encodeURIComponent(documentId)}/events`
+    const url = `/api/v1/documents/${encodeURIComponent(documentId)}/events`
     eventSource = new EventSource(url)
 
     eventSource.addEventListener('status', (e: MessageEvent) => {

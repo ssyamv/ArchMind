@@ -414,7 +414,7 @@ async function handleSendMessage (
     const history = allMessages.slice(0, allMessages.length - 2) // 排除本轮的 user + AI 占位
 
     // Stream the response
-    const response = await fetch('/api/chat/stream', {
+    const response = await fetch('/api/v1/chat/stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

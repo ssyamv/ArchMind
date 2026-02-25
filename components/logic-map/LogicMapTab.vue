@@ -462,7 +462,7 @@ async function handleGenerate () {
     // 如果还没有保存到数据库,先自动保存
     let prdId = props.prdId
     if (!prdId) {
-      const response = await $fetch('/api/conversations/save', {
+      const response = await $fetch('/api/v1/conversations/save', {
         method: 'POST',
         body: {
           conversationId: Date.now().toString(),

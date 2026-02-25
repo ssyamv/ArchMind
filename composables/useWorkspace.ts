@@ -39,7 +39,7 @@ export function useWorkspace () {
   async function loadWorkspaces () {
     loading.value = true
     try {
-      const response = await $fetch<{ success: boolean; data: Workspace[] }>('/api/workspaces')
+      const response = await $fetch<{ success: boolean; data: Workspace[] }>('/api/v1/workspaces')
       workspaces.value = response.data
 
       // 如果还没有设置当前工作区,使用默认工作区
@@ -91,7 +91,7 @@ export function useWorkspace () {
     loading.value = true
     try {
       const response = await $fetch<{ success: boolean; data: Workspace }>(
-        '/api/workspaces',
+        '/api/v1/workspaces',
         {
           method: 'POST',
           body: data
@@ -134,7 +134,7 @@ export function useWorkspace () {
     loading.value = true
     try {
       const response = await $fetch<{ success: boolean; data: Workspace }>(
-        `/api/workspaces/${workspaceId}`,
+        `/api/v1/workspaces/${workspaceId}`,
         {
           method: 'PATCH',
           body: data
@@ -170,7 +170,7 @@ export function useWorkspace () {
   async function deleteWorkspace (workspaceId: string) {
     loading.value = true
     try {
-      await $fetch(`/api/workspaces/${workspaceId}`, {
+      await $fetch(`/api/v1/workspaces/${workspaceId}`, {
         method: 'DELETE'
       })
 
@@ -198,7 +198,7 @@ export function useWorkspace () {
     loading.value = true
     try {
       const response = await $fetch<{ success: boolean; data: Workspace }>(
-        `/api/workspaces/${workspaceId}/set-default`,
+        `/api/v1/workspaces/${workspaceId}/set-default`,
         {
           method: 'POST'
         }
@@ -245,7 +245,7 @@ export function useWorkspace () {
   async function refreshStats (workspaceId: string) {
     try {
       const response = await $fetch<{ success: boolean; data: Workspace }>(
-        `/api/workspaces/${workspaceId}`
+        `/api/v1/workspaces/${workspaceId}`
       )
 
       const index = workspaces.value.findIndex(w => w.id === workspaceId)

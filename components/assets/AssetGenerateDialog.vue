@@ -84,7 +84,7 @@ const suggestedPrompt = computed(() => {
 async function loadModels() {
   isLoadingModels.value = true
   try {
-    const response = await $fetch<{ success: boolean; data?: { models: ImageModel[]; defaultModel?: string } }>('/api/assets/models')
+    const response = await $fetch<{ success: boolean; data?: { models: ImageModel[]; defaultModel?: string } }>('/api/v1/assets/models')
     if (response.success && response.data) {
       models.value = response.data.models
       if (response.data.defaultModel) {
@@ -137,7 +137,7 @@ async function handleGenerate() {
   isGenerating.value = true
 
   try {
-    const response = await $fetch<{ success: boolean; data?: { assets: Asset[] }; message?: string }>('/api/assets/generate', {
+    const response = await $fetch<{ success: boolean; data?: { assets: Asset[] }; message?: string }>('/api/v1/assets/generate', {
       method: 'POST',
       body: {
         prompt: prompt.value,

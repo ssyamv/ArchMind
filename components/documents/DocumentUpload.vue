@@ -121,7 +121,7 @@ async function uploadFile (file: File) {
       formData.append('workspace_id', props.workspaceId)
     }
 
-    const response = await $fetch<{ success: boolean; data: { id: string } }>('/api/documents/upload', {
+    const response = await $fetch<{ success: boolean; data: { id: string } }>('/api/v1/documents/upload', {
       method: 'POST',
       body: formData
     })

@@ -35,18 +35,18 @@ beforeAll(async () => {
 // ─── isExemptPath ─────────────────────────────────────────────────────────────
 
 describe('isExemptPath', () => {
-  it('/api/health 路径豁免', () => {
-    expect(isExemptPath('/api/health')).toBe(true)
+  it('/api/v1/health 路径豁免', () => {
+    expect(isExemptPath('/api/v1/health')).toBe(true)
   })
 
-  it('/api/share/ 前缀路径豁免', () => {
-    expect(isExemptPath('/api/share/abc123')).toBe(true)
+  it('/api/v1/share/ 前缀路径豁免', () => {
+    expect(isExemptPath('/api/v1/share/abc123')).toBe(true)
   })
 
   it('普通 API 路径不豁免', () => {
-    expect(isExemptPath('/api/prd')).toBe(false)
-    expect(isExemptPath('/api/auth/login')).toBe(false)
-    expect(isExemptPath('/api/documents')).toBe(false)
+    expect(isExemptPath('/api/v1/prd')).toBe(false)
+    expect(isExemptPath('/api/v1/auth/login')).toBe(false)
+    expect(isExemptPath('/api/v1/documents')).toBe(false)
   })
 })
 
@@ -73,7 +73,7 @@ describe('getOriginHost', () => {
 
 describe('validateCsrfOrigin - 安全方法（GET/HEAD/OPTIONS）', () => {
   const baseParams = {
-    path: '/api/prd',
+    path: '/api/v1/prd',
     requestHost: 'example.com',
     origin: undefined,
     referer: undefined,
@@ -108,10 +108,10 @@ describe('validateCsrfOrigin - 非 API 路径', () => {
 })
 
 describe('validateCsrfOrigin - 豁免路径', () => {
-  it('/api/health POST 豁免', () => {
+  it('/api/v1/health POST 豁免', () => {
     const result = validateCsrfOrigin({
       method: 'POST',
-      path: '/api/health',
+      path: '/api/v1/health',
       requestHost: 'example.com',
       origin: 'https://evil.com',
       referer: undefined,
@@ -120,10 +120,10 @@ describe('validateCsrfOrigin - 豁免路径', () => {
     expect(result).toBeNull()
   })
 
-  it('/api/share/* POST 豁免', () => {
+  it('/api/v1/share/* POST 豁免', () => {
     const result = validateCsrfOrigin({
       method: 'POST',
-      path: '/api/share/abc123',
+      path: '/api/v1/share/abc123',
       requestHost: 'example.com',
       origin: undefined,
       referer: undefined,
@@ -137,7 +137,7 @@ describe('validateCsrfOrigin - 开发模式', () => {
   it('开发模式下放行所有写操作', () => {
     const result = validateCsrfOrigin({
       method: 'POST',
-      path: '/api/prd',
+      path: '/api/v1/prd',
       requestHost: 'localhost:3000',
       origin: undefined,
       referer: undefined,
@@ -150,7 +150,7 @@ describe('validateCsrfOrigin - 开发模式', () => {
 describe('validateCsrfOrigin - 生产模式 Origin 校验', () => {
   const prodBase = {
     method: 'POST',
-    path: '/api/prd',
+    path: '/api/v1/prd',
     requestHost: 'arch-mind.vercel.app',
     referer: undefined,
     isDev: false
@@ -184,7 +184,7 @@ describe('validateCsrfOrigin - 生产模式 Origin 校验', () => {
     for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
       const result = validateCsrfOrigin({
         method,
-        path: '/api/prd',
+        path: '/api/v1/prd',
         requestHost: 'example.com',
         origin: 'https://evil.com',
         referer: undefined,
@@ -198,7 +198,7 @@ describe('validateCsrfOrigin - 生产模式 Origin 校验', () => {
 describe('validateCsrfOrigin - 生产模式 Referer 回退', () => {
   const prodBase = {
     method: 'POST',
-    path: '/api/prd',
+    path: '/api/v1/prd',
     requestHost: 'arch-mind.vercel.app',
     origin: undefined,
     isDev: false
@@ -233,7 +233,7 @@ describe('validateCsrfOrigin - 缺少 Host', () => {
   it('请求缺少 Host 头时拒绝（生产模式）', () => {
     const result = validateCsrfOrigin({
       method: 'POST',
-      path: '/api/prd',
+      path: '/api/v1/prd',
       requestHost: undefined,
       origin: 'https://example.com',
       referer: undefined,

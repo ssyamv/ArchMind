@@ -43,55 +43,55 @@ beforeAll(async () => {
 
 describe('RATE_LIMIT_RULES 规则定义', () => {
   it('认证端点规则匹配 login，限制 10 次/分钟', () => {
-    const rule = RATE_LIMIT_RULES.find((r: any) => r.pattern.test('/api/auth/login'))
+    const rule = RATE_LIMIT_RULES.find((r: any) => r.pattern.test('/api/v1/auth/login'))
     expect(rule).toBeDefined()
     expect(rule.maxRequests).toBe(10)
   })
 
   it('认证端点规则匹配 register', () => {
-    const rule = RATE_LIMIT_RULES.find((r: any) => r.pattern.test('/api/auth/register'))
+    const rule = RATE_LIMIT_RULES.find((r: any) => r.pattern.test('/api/v1/auth/register'))
     expect(rule).toBeDefined()
     expect(rule.maxRequests).toBe(10)
   })
 
   it('认证端点规则匹配 forgot-password', () => {
-    const rule = RATE_LIMIT_RULES.find((r: any) => r.pattern.test('/api/auth/forgot-password'))
+    const rule = RATE_LIMIT_RULES.find((r: any) => r.pattern.test('/api/v1/auth/forgot-password'))
     expect(rule).toBeDefined()
     expect(rule.maxRequests).toBe(10)
   })
 
   it('认证端点规则匹配 reset-password', () => {
-    const rule = RATE_LIMIT_RULES.find((r: any) => r.pattern.test('/api/auth/reset-password'))
+    const rule = RATE_LIMIT_RULES.find((r: any) => r.pattern.test('/api/v1/auth/reset-password'))
     expect(rule).toBeDefined()
     expect(rule.maxRequests).toBe(10)
   })
 
   it('AI 生成端点规则匹配 prd/stream，限制 20 次/分钟', () => {
-    const rule = RATE_LIMIT_RULES.find((r: any) => r.pattern.test('/api/prd/stream'))
+    const rule = RATE_LIMIT_RULES.find((r: any) => r.pattern.test('/api/v1/prd/stream'))
     expect(rule).toBeDefined()
     expect(rule.maxRequests).toBe(20)
   })
 
   it('AI 生成端点规则匹配 prototypes/stream', () => {
-    const rule = RATE_LIMIT_RULES.find((r: any) => r.pattern.test('/api/prototypes/stream'))
+    const rule = RATE_LIMIT_RULES.find((r: any) => r.pattern.test('/api/v1/prototypes/stream'))
     expect(rule).toBeDefined()
     expect(rule.maxRequests).toBe(20)
   })
 
   it('AI 生成端点规则匹配 chat/stream', () => {
-    const rule = RATE_LIMIT_RULES.find((r: any) => r.pattern.test('/api/chat/stream'))
+    const rule = RATE_LIMIT_RULES.find((r: any) => r.pattern.test('/api/v1/chat/stream'))
     expect(rule).toBeDefined()
     expect(rule.maxRequests).toBe(20)
   })
 
   it('AI 生成端点规则匹配 user/avatar/generate', () => {
-    const rule = RATE_LIMIT_RULES.find((r: any) => r.pattern.test('/api/user/avatar/generate'))
+    const rule = RATE_LIMIT_RULES.find((r: any) => r.pattern.test('/api/v1/user/avatar/generate'))
     expect(rule).toBeDefined()
     expect(rule.maxRequests).toBe(20)
   })
 
   it('其他 API 端点使用通用规则（120 次/分钟）', () => {
-    const rule = RATE_LIMIT_RULES.find((r: any) => r.pattern.test('/api/prd'))
+    const rule = RATE_LIMIT_RULES.find((r: any) => r.pattern.test('/api/v1/prd'))
     expect(rule).toBeDefined()
     expect(rule.maxRequests).toBe(120)
   })
@@ -103,7 +103,7 @@ describe('RATE_LIMIT_RULES 规则定义', () => {
 
   it('认证路径优先匹配认证规则（取第一个匹配），限制为 10 次/分钟', () => {
     // 使用 find 取第一个匹配（与 checkRateLimit 行为一致）
-    const firstMatchedRule = RATE_LIMIT_RULES.find((r: any) => r.pattern.test('/api/auth/login'))
+    const firstMatchedRule = RATE_LIMIT_RULES.find((r: any) => r.pattern.test('/api/v1/auth/login'))
     expect(firstMatchedRule).toBeDefined()
     expect(firstMatchedRule.maxRequests).toBe(10) // 认证规则优先，而非通用的 120 次
   })
@@ -118,7 +118,7 @@ describe('checkRateLimit 限流逻辑', () => {
 
   it('首次请求应被允许，remaining = limit - 1', () => {
     const now = Date.now()
-    const result = checkRateLimit(nextIp(), '/api/auth/login', now)
+    const result = checkRateLimit(nextIp(), '/api/v1/auth/login', now)
     expect(result.allowed).toBe(true)
     expect(result.limit).toBe(10)
     expect(result.remaining).toBe(9)
@@ -129,9 +129,9 @@ describe('checkRateLimit 限流逻辑', () => {
     const now = Date.now()
 
     for (let i = 0; i < 9; i++) {
-      checkRateLimit(ip, '/api/auth/login', now)
+      checkRateLimit(ip, '/api/v1/auth/login', now)
     }
-    const result = checkRateLimit(ip, '/api/auth/login', now)
+    const result = checkRateLimit(ip, '/api/v1/auth/login', now)
     expect(result.allowed).toBe(true)
     expect(result.remaining).toBe(0)
   })
@@ -141,10 +141,10 @@ describe('checkRateLimit 限流逻辑', () => {
     const now = Date.now()
 
     for (let i = 0; i < 10; i++) {
-      checkRateLimit(ip, '/api/auth/login', now)
+      checkRateLimit(ip, '/api/v1/auth/login', now)
     }
 
-    const result = checkRateLimit(ip, '/api/auth/login', now)
+    const result = checkRateLimit(ip, '/api/v1/auth/login', now)
     expect(result.allowed).toBe(false)
     expect(result.remaining).toBe(0)
     expect(result.retryAfter).toBeGreaterThan(0)
@@ -157,13 +157,13 @@ describe('checkRateLimit 限流逻辑', () => {
     const windowMs = 60 * 1000
 
     for (let i = 0; i < 11; i++) {
-      checkRateLimit(ip, '/api/auth/login', now)
+      checkRateLimit(ip, '/api/v1/auth/login', now)
     }
-    expect(checkRateLimit(ip, '/api/auth/login', now).allowed).toBe(false)
+    expect(checkRateLimit(ip, '/api/v1/auth/login', now).allowed).toBe(false)
 
     // 模拟窗口过期
     const futureNow = now + windowMs + 1
-    const result = checkRateLimit(ip, '/api/auth/login', futureNow)
+    const result = checkRateLimit(ip, '/api/v1/auth/login', futureNow)
     expect(result.allowed).toBe(true)
     expect(result.remaining).toBe(9)
   })
@@ -174,10 +174,10 @@ describe('checkRateLimit 限流逻辑', () => {
     const now = Date.now()
 
     for (let i = 0; i < 11; i++) {
-      checkRateLimit(ip1, '/api/auth/login', now)
+      checkRateLimit(ip1, '/api/v1/auth/login', now)
     }
-    expect(checkRateLimit(ip1, '/api/auth/login', now).allowed).toBe(false)
-    expect(checkRateLimit(ip2, '/api/auth/login', now).allowed).toBe(true)
+    expect(checkRateLimit(ip1, '/api/v1/auth/login', now).allowed).toBe(false)
+    expect(checkRateLimit(ip2, '/api/v1/auth/login', now).allowed).toBe(true)
   })
 
   it('同一 IP 不同路径计数相互独立', () => {
@@ -185,11 +185,11 @@ describe('checkRateLimit 限流逻辑', () => {
     const now = Date.now()
 
     for (let i = 0; i < 11; i++) {
-      checkRateLimit(ip, '/api/auth/login', now)
+      checkRateLimit(ip, '/api/v1/auth/login', now)
     }
-    expect(checkRateLimit(ip, '/api/auth/login', now).allowed).toBe(false)
+    expect(checkRateLimit(ip, '/api/v1/auth/login', now).allowed).toBe(false)
     // register 是独立 key，不受 login 影响
-    expect(checkRateLimit(ip, '/api/auth/register', now).allowed).toBe(true)
+    expect(checkRateLimit(ip, '/api/v1/auth/register', now).allowed).toBe(true)
   })
 
   it('非 API 路径不受限流限制', () => {
@@ -201,7 +201,7 @@ describe('checkRateLimit 限流逻辑', () => {
 
   it('返回的 reset 时间戳在未来', () => {
     const now = Date.now()
-    const result = checkRateLimit(nextIp(), '/api/auth/login', now)
+    const result = checkRateLimit(nextIp(), '/api/v1/auth/login', now)
     expect(result.reset).toBeGreaterThan(Math.floor(now / 1000))
   })
 
@@ -210,10 +210,10 @@ describe('checkRateLimit 限流逻辑', () => {
     const now = Date.now()
 
     for (let i = 0; i < 20; i++) {
-      expect(checkRateLimit(ip, '/api/prd/stream', now).allowed).toBe(true)
+      expect(checkRateLimit(ip, '/api/v1/prd/stream', now).allowed).toBe(true)
     }
     // 第 21 次被拒绝
-    expect(checkRateLimit(ip, '/api/prd/stream', now).allowed).toBe(false)
+    expect(checkRateLimit(ip, '/api/v1/prd/stream', now).allowed).toBe(false)
   })
 })
 
@@ -229,15 +229,15 @@ describe('cleanupExpiredEntries', () => {
     const now = Date.now()
 
     for (let i = 0; i < 10; i++) {
-      checkRateLimit(ip, '/api/auth/login', now)
+      checkRateLimit(ip, '/api/v1/auth/login', now)
     }
-    expect(checkRateLimit(ip, '/api/auth/login', now).allowed).toBe(false)
+    expect(checkRateLimit(ip, '/api/v1/auth/login', now).allowed).toBe(false)
 
     // 清理（当前窗口未过期，条目应被保留）
     cleanupExpiredEntries()
 
     // 状态不变
-    expect(checkRateLimit(ip, '/api/auth/login', now).allowed).toBe(false)
+    expect(checkRateLimit(ip, '/api/v1/auth/login', now).allowed).toBe(false)
   })
 })
 

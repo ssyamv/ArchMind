@@ -156,7 +156,7 @@ async function handleDuplicate() {
   isDuplicating.value = true
   try {
     const result = await $fetch<{ success: boolean; data: { id: string } }>(
-      `/api/prd/${props.project.id}/duplicate`,
+      `/api/v1/prd/${props.project.id}/duplicate`,
       { method: 'POST' }
     )
     toast({ title: t('projects.duplicateSuccess'), variant: 'success' })

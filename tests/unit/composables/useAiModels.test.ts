@@ -62,7 +62,7 @@ describe('useAiModels', () => {
       ;(global.$fetch as any).mockResolvedValueOnce(mockResponse)
 
       // 模拟 fetch 调用
-      const response = await $fetch<any>('/api/ai/models')
+      const response = await $fetch<any>('/api/v1/ai/models')
 
       expect(response.success).toBe(true)
       expect(response.data.availableModels.length).toBe(2)
@@ -73,7 +73,7 @@ describe('useAiModels', () => {
       ;(global.$fetch as any).mockRejectedValueOnce(new Error('Network error'))
 
       try {
-        await $fetch('/api/ai/models')
+        await $fetch('/api/v1/ai/models')
       } catch (error: any) {
         expect(error.message).toBe('Network error')
       }
@@ -87,7 +87,7 @@ describe('useAiModels', () => {
 
       ;(global.$fetch as any).mockResolvedValueOnce(mockResponse)
 
-      const response = await $fetch<any>('/api/ai/models')
+      const response = await $fetch<any>('/api/v1/ai/models')
 
       expect(response.success).toBe(false)
       expect(response.message).toBe('No API keys configured')
@@ -265,7 +265,7 @@ describe('useApiConfigs', () => {
 
       ;(global.$fetch as any).mockResolvedValueOnce(mockResponse)
 
-      const response = await $fetch<any>('/api/ai/providers')
+      const response = await $fetch<any>('/api/v1/ai/providers')
 
       expect(response.success).toBe(true)
       expect(response.data.length).toBe(2)
@@ -284,7 +284,7 @@ describe('useApiConfigs', () => {
 
       ;(global.$fetch as any).mockResolvedValueOnce(mockResponse)
 
-      const response = await $fetch<any>('/api/ai/configs')
+      const response = await $fetch<any>('/api/v1/ai/configs')
 
       expect(response.success).toBe(true)
       expect(response.data.length).toBe(2)
@@ -304,7 +304,7 @@ describe('useApiConfigs', () => {
 
       ;(global.$fetch as any).mockResolvedValueOnce(mockResponse)
 
-      const response = await $fetch<any>('/api/ai/configs', {
+      const response = await $fetch<any>('/api/v1/ai/configs', {
         method: 'POST',
         body: {
           provider: 'anthropic',
@@ -322,7 +322,7 @@ describe('useApiConfigs', () => {
       })
 
       try {
-        await $fetch('/api/ai/configs', {
+        await $fetch('/api/v1/ai/configs', {
           method: 'POST',
           body: { provider: 'anthropic', apiKey: 'invalid' }
         })
@@ -342,7 +342,7 @@ describe('useApiConfigs', () => {
 
       ;(global.$fetch as any).mockResolvedValueOnce(mockResponse)
 
-      const response = await $fetch<any>('/api/ai/configs/validate', {
+      const response = await $fetch<any>('/api/v1/ai/configs/validate', {
         method: 'POST',
         body: {
           provider: 'anthropic',
@@ -362,7 +362,7 @@ describe('useApiConfigs', () => {
 
       ;(global.$fetch as any).mockResolvedValueOnce(mockResponse)
 
-      const response = await $fetch<any>('/api/ai/configs/validate', {
+      const response = await $fetch<any>('/api/v1/ai/configs/validate', {
         method: 'POST',
         body: { provider: 'anthropic', apiKey: 'invalid' }
       })
@@ -381,7 +381,7 @@ describe('useApiConfigs', () => {
 
       ;(global.$fetch as any).mockResolvedValueOnce(mockResponse)
 
-      const response = await $fetch<any>('/api/ai/configs/anthropic', {
+      const response = await $fetch<any>('/api/v1/ai/configs/anthropic', {
         method: 'DELETE'
       })
 
@@ -398,7 +398,7 @@ describe('useApiConfigs', () => {
 
       ;(global.$fetch as any).mockResolvedValueOnce(mockResponse)
 
-      const response = await $fetch<any>('/api/ai/configs/anthropic/toggle', {
+      const response = await $fetch<any>('/api/v1/ai/configs/anthropic/toggle', {
         method: 'PATCH',
         body: { enabled: false }
       })

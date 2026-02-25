@@ -25,19 +25,19 @@ export const RATE_LIMIT_RULES: Array<{
 }> = [
   // 敏感认证端点：10 次/分钟
   {
-    pattern: /^\/api\/auth\/(login|register|forgot-password|reset-password)$/,
+    pattern: /^\/api\/v1\/auth\/(login|register|forgot-password|reset-password)$/,
     maxRequests: 10,
     windowMs: 60 * 1000
   },
   // AI 生成端点（耗时且耗费资源）：20 次/分钟
   {
-    pattern: /^\/api\/(prd\/stream|prototypes\/stream|chat\/stream|prototypes\/generate-from-prd|logic-maps\/generate-from-prd|user\/avatar\/generate)$/,
+    pattern: /^\/api\/v1\/(prd\/stream|prototypes\/stream|chat\/stream|prototypes\/generate-from-prd|logic-maps\/generate-from-prd|user\/avatar\/generate)$/,
     maxRequests: 20,
     windowMs: 60 * 1000
   },
   // 其他 API：每分钟 120 次
   {
-    pattern: /^\/api\//,
+    pattern: /^\/api\/v1\//,
     maxRequests: 120,
     windowMs: 60 * 1000
   }
@@ -116,8 +116,8 @@ export default defineEventHandler((event) => {
   const url = event.node.req.url || ''
   const method = event.node.req.method || 'GET'
 
-  // 只对 API 路由进行限流，跳过静态资源和 Nuxt 内部路由
-  if (!url.startsWith('/api/')) return
+  // 只对 API v1 路由进行限流，跳过静态资源和 Nuxt 内部路由
+  if (!url.startsWith('/api/v1/')) return
 
   // 跳过 OPTIONS 预检请求
   if (method === 'OPTIONS') return

@@ -166,7 +166,7 @@ export function usePrototype () {
     clearStreamingState()
 
     try {
-      const response = await fetch('/api/prototypes/generate-from-prd', {
+      const response = await fetch('/api/v1/prototypes/generate-from-prd', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -265,7 +265,7 @@ export function usePrototype () {
     isGenerating.value = true
 
     try {
-      const response = await fetch('/api/prototypes/stream', {
+      const response = await fetch('/api/v1/prototypes/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -371,7 +371,7 @@ export function usePrototype () {
   // 从服务端加载原型
   async function loadFromServer (prototypeId: string) {
     try {
-      const response = await $fetch<{ success: boolean; data: any }>(`/api/prototypes/${prototypeId}`)
+      const response = await $fetch<{ success: boolean; data: any }>(`/api/v1/prototypes/${prototypeId}`)
       if (response.success) {
         prototype.value = response.data.prototype
         pages.value = response.data.pages
@@ -390,7 +390,7 @@ export function usePrototype () {
   // 通过 PRD ID 加载关联的原型
   async function loadByPrdId (prdId: string) {
     try {
-      const response = await $fetch<{ success: boolean; data: any }>('/api/prototypes', {
+      const response = await $fetch<{ success: boolean; data: any }>('/api/v1/prototypes', {
         params: { prdId }
       })
       if (response.success && response.data.prototypes?.length > 0) {
@@ -408,7 +408,7 @@ export function usePrototype () {
     const page = pages.value.find(p => p.pageSlug === pageSlug)
     if (!page || !page.id || !prototype.value) return
 
-    await $fetch(`/api/prototypes/${prototype.value.id}/pages/${page.id}`, {
+    await $fetch(`/api/v1/prototypes/${prototype.value.id}/pages/${page.id}`, {
       method: 'PUT',
       body: {
         htmlContent: page.htmlContent,

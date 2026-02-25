@@ -190,7 +190,7 @@ async function fetchPrototypes () {
       queryParams.workspace_id = currentWorkspaceId.value
     }
 
-    const response = await $fetch<{ success: boolean; data: { prototypes: Prototype[] } }>('/api/prototypes', {
+    const response = await $fetch<{ success: boolean; data: { prototypes: Prototype[] } }>('/api/v1/prototypes', {
       query: queryParams
     })
     if (response.success) {
@@ -216,7 +216,7 @@ async function confirmDelete () {
   if (!prototypeToDelete.value) return
 
   try {
-    await $fetch(`/api/prototypes/${prototypeToDelete.value}`, { method: 'DELETE' })
+    await $fetch(`/api/v1/prototypes/${prototypeToDelete.value}`, { method: 'DELETE' })
     prototypes.value = prototypes.value.filter(p => p.id !== prototypeToDelete.value)
     toast({ title: t('prototype.deleteSuccess'), variant: 'success' })
   } catch {

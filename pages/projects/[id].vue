@@ -542,9 +542,9 @@ onMounted(async () => {
   try {
     // Load PRD details, conversation history, and prototype data in parallel
     const [prdResponse, conversationResult, prototypeResult] = await Promise.allSettled([
-      $fetch<{ data: any }>(`/api/prd/${prdId}`),
-      $fetch<{ success: boolean; data: any }>(`/api/conversations/${prdId}`),
-      $fetch<{ success: boolean; data: any }>('/api/prototypes', { params: { prdId } })
+      $fetch<{ data: any }>(`/api/v1/prd/${prdId}`),
+      $fetch<{ success: boolean; data: any }>(`/api/v1/conversations/${prdId}`),
+      $fetch<{ success: boolean; data: any }>('/api/v1/prototypes', { params: { prdId } })
     ])
 
     if (prdResponse.status === 'fulfilled') {
@@ -563,7 +563,7 @@ onMounted(async () => {
         // Load prototype pages
         try {
           const pagesResponse = await $fetch<{ success: boolean; data: any }>(
-            `/api/prototypes/${prototypes[0].id}`
+            `/api/v1/prototypes/${prototypes[0].id}`
           )
           if (pagesResponse.success) {
             prototypePages.value = pagesResponse.data.pages || []
@@ -670,7 +670,7 @@ function handleDelete () {
 
 async function confirmDelete () {
   try {
-    await $fetch(`/api/prd/${prdId}`, { method: 'DELETE' })
+    await $fetch(`/api/v1/prd/${prdId}`, { method: 'DELETE' })
     toast({
       title: t('projects.deleteSuccess'),
       description: t('projects.deleteSuccessDescription'),
@@ -721,12 +721,12 @@ async function handleRagToggle (enabled: boolean) {
           metadata: { ...(prd.value.metadata || {}), ragEnabled: false, ragStatus: 'processing' }
         }
       }
-      await $fetch(`/api/prd/${prdId}/vectorize`, { method: 'POST' })
+      await $fetch(`/api/v1/prd/${prdId}/vectorize`, { method: 'POST' })
       // 服务端后台处理，轮询状态直到完成
       pollRagStatus()
       toast({ title: t('projects.details.ragEnableSuccess') })
     } else {
-      await $fetch(`/api/prd/${prdId}/vectorize`, { method: 'DELETE' })
+      await $fetch(`/api/v1/prd/${prdId}/vectorize`, { method: 'DELETE' })
       if (prd.value) {
         prd.value = {
           ...prd.value,
@@ -759,7 +759,7 @@ function pollRagStatus () {
   if (ragPollTimer) clearTimeout(ragPollTimer)
   ragPollTimer = setTimeout(async () => {
     try {
-      const res = await $fetch<{ data: any }>(`/api/prd/${prdId}`)
+      const res = await $fetch<{ data: any }>(`/api/v1/prd/${prdId}`)
       if (res.data) {
         prd.value = res.data
       }

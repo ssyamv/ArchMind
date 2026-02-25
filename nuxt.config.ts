@@ -114,7 +114,28 @@ export default defineNuxtConfig({
   },
 
   nitro: {
-    preset: process.env.VERCEL ? 'vercel' : 'node-server'
+    preset: process.env.VERCEL ? 'vercel' : 'node-server',
+    routeRules: {
+      // 向后兼容：将旧版 /api/* 路径 307 重定向到 /api/v1/*
+      // 使用 307 Temporary Redirect 保持 HTTP 方法不变（POST 仍为 POST）
+      '/api/ai/**': { redirect: { to: '/api/v1/ai/**', statusCode: 307 } },
+      '/api/assets/**': { redirect: { to: '/api/v1/assets/**', statusCode: 307 } },
+      '/api/auth/**': { redirect: { to: '/api/v1/auth/**', statusCode: 307 } },
+      '/api/categories/**': { redirect: { to: '/api/v1/categories/**', statusCode: 307 } },
+      '/api/chat/**': { redirect: { to: '/api/v1/chat/**', statusCode: 307 } },
+      '/api/conversations/**': { redirect: { to: '/api/v1/conversations/**', statusCode: 307 } },
+      '/api/documents/**': { redirect: { to: '/api/v1/documents/**', statusCode: 307 } },
+      '/api/health': { redirect: { to: '/api/v1/health', statusCode: 307 } },
+      '/api/logic-coverage/**': { redirect: { to: '/api/v1/logic-coverage/**', statusCode: 307 } },
+      '/api/logic-maps/**': { redirect: { to: '/api/v1/logic-maps/**', statusCode: 307 } },
+      '/api/prd/**': { redirect: { to: '/api/v1/prd/**', statusCode: 307 } },
+      '/api/prototypes/**': { redirect: { to: '/api/v1/prototypes/**', statusCode: 307 } },
+      '/api/share/**': { redirect: { to: '/api/v1/share/**', statusCode: 307 } },
+      '/api/stats/**': { redirect: { to: '/api/v1/stats/**', statusCode: 307 } },
+      '/api/tags/**': { redirect: { to: '/api/v1/tags/**', statusCode: 307 } },
+      '/api/user/**': { redirect: { to: '/api/v1/user/**', statusCode: 307 } },
+      '/api/workspaces/**': { redirect: { to: '/api/v1/workspaces/**', statusCode: 307 } }
+    }
   },
 
   compatibilityDate: '2024-01-01'

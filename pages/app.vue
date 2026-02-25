@@ -269,7 +269,7 @@ async function loadProjects () {
     }
 
     // Load projects from PRD API (not documents API)
-    const response = await $fetch<{ success: boolean; data: { prds: any[]; total: number } }>('/api/prd', {
+    const response = await $fetch<{ success: boolean; data: { prds: any[]; total: number } }>('/api/v1/prd', {
       query: queryParams
     })
 
@@ -297,7 +297,7 @@ async function loadProjects () {
       try {
         const prdIds = projects.value.map(p => p.id)
         const coverageResponse = await $fetch<{ success: boolean; data: Record<string, number> }>(
-          '/api/logic-coverage/batch',
+          '/api/v1/logic-coverage/batch',
           {
             query: { prdIds }
           }
@@ -316,7 +316,7 @@ async function loadProjects () {
     }
 
     // Load stats
-    const statsResponse = await $fetch<{ success: boolean; data: any }>('/api/stats')
+    const statsResponse = await $fetch<{ success: boolean; data: any }>('/api/v1/stats')
     stats.value = {
       totalPRDs: response.data.total || projects.value.length,
       logicVerified: Math.floor((response.data.total || projects.value.length) * 0.67),
@@ -354,7 +354,7 @@ async function confirmDelete() {
   if (!projectToDelete.value) return
 
   try {
-    await $fetch(`/api/prd/${projectToDelete.value}`, { method: 'DELETE' })
+    await $fetch(`/api/v1/prd/${projectToDelete.value}`, { method: 'DELETE' })
     projects.value = projects.value.filter(p => p.id !== projectToDelete.value)
 
     toast({

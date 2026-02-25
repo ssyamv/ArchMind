@@ -9,12 +9,12 @@ import { verifyToken } from '~/server/utils/jwt'
 
 // 不需要认证的路径
 const PUBLIC_PATH_PREFIXES = [
-  '/api/auth/login',
-  '/api/auth/register',
-  '/api/auth/forgot-password',
-  '/api/auth/reset-password',
-  '/api/health',
-  '/api/share/'
+  '/api/v1/auth/login',
+  '/api/v1/auth/register',
+  '/api/v1/auth/forgot-password',
+  '/api/v1/auth/reset-password',
+  '/api/v1/health',
+  '/api/v1/share/'
 ]
 
 function isPublicPath (path: string): boolean {
@@ -25,8 +25,8 @@ export default defineEventHandler((event) => {
   const url = event.node.req.url || ''
   const path = url.split('?')[0]
 
-  // 只拦截 API 路由
-  if (!path.startsWith('/api/')) return
+  // 只拦截 API v1 路由
+  if (!path.startsWith('/api/v1/')) return
 
   // 白名单路径跳过认证
   if (isPublicPath(path)) return

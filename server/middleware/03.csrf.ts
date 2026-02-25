@@ -13,8 +13,8 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
 
 // 跳过 CSRF 检查的路径前缀（如公开的 webhook、健康检查）
 export const CSRF_EXEMPT_PATHS = [
-  '/api/health',
-  '/api/share/'  // 公开分享端点
+  '/api/v1/health',
+  '/api/v1/share/'  // 公开分享端点
 ]
 
 export function isExemptPath (path: string): boolean {
@@ -46,8 +46,8 @@ export function validateCsrfOrigin (params: {
   // GET/HEAD/OPTIONS 无需 CSRF 保护
   if (SAFE_METHODS.has(method)) return null
 
-  // 只保护 API 路由
-  if (!path.startsWith('/api/')) return null
+  // 只保护 API v1 路由
+  if (!path.startsWith('/api/v1/')) return null
 
   // 豁免路径
   if (isExemptPath(path)) return null

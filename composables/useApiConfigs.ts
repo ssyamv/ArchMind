@@ -56,7 +56,7 @@ export function useApiConfigs () {
   // 获取所有提供商定义
   const fetchProviders = async () => {
     try {
-      const response = await $fetch<{ success: boolean; data: AIProviderConfig[] }>('/api/ai/providers')
+      const response = await $fetch<{ success: boolean; data: AIProviderConfig[] }>('/api/v1/ai/providers')
       if (response.success && response.data) {
         providers.value = response.data
       }
@@ -72,7 +72,7 @@ export function useApiConfigs () {
     error.value = null
 
     try {
-      const response = await $fetch<{ success: boolean; data?: UserAPIConfig[]; message?: string }>('/api/ai/configs')
+      const response = await $fetch<{ success: boolean; data?: UserAPIConfig[]; message?: string }>('/api/v1/ai/configs')
       if (response.success && response.data) {
         configs.value = response.data
       } else if (!response.success) {
@@ -89,7 +89,7 @@ export function useApiConfigs () {
   // 保存配置
   const saveConfig = async (request: SaveAPIConfigRequest): Promise<{ success: boolean; message?: string }> => {
     try {
-      const response = await $fetch<{ success: boolean; data?: UserAPIConfig; message?: string }>('/api/ai/configs', {
+      const response = await $fetch<{ success: boolean; data?: UserAPIConfig; message?: string }>('/api/v1/ai/configs', {
         method: 'POST',
         body: request
       })
@@ -130,7 +130,7 @@ export function useApiConfigs () {
 
     try {
       const response = await $fetch<{ success: boolean; message?: string; availableModels?: string[]; modelsFetched?: boolean }>(
-        '/api/ai/configs/validate',
+        '/api/v1/ai/configs/validate',
         {
           method: 'POST',
           body: { provider, apiKey, baseUrl }
@@ -157,7 +157,7 @@ export function useApiConfigs () {
   // 删除配置
   const deleteConfig = async (provider: AIProviderType): Promise<{ success: boolean; message?: string }> => {
     try {
-      const response = await $fetch<{ success: boolean; message?: string }>(`/api/ai/configs/${provider}`, {
+      const response = await $fetch<{ success: boolean; message?: string }>(`/api/v1/ai/configs/${provider}`, {
         method: 'DELETE'
       })
 
@@ -181,7 +181,7 @@ export function useApiConfigs () {
   ): Promise<{ success: boolean; message?: string }> => {
     try {
       const response = await $fetch<{ success: boolean; message?: string }>(
-        `/api/ai/configs/${provider}/toggle`,
+        `/api/v1/ai/configs/${provider}/toggle`,
         {
           method: 'PATCH',
           body: { enabled }

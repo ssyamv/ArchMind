@@ -12,7 +12,7 @@ export function usePrdGenerator () {
     content.value = ''
 
     try {
-      const response = await $fetch<{ success: boolean; data: { content: string; id: string } }>('/api/prd', {
+      const response = await $fetch<{ success: boolean; data: { content: string; id: string } }>('/api/v1/prd', {
         method: 'POST',
         body: { userInput, ...options }
       })
@@ -33,7 +33,7 @@ export function usePrdGenerator () {
     content.value = ''
 
     try {
-      const response = await fetch('/api/prd/stream', {
+      const response = await fetch('/api/v1/prd/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userInput, ...options })

@@ -444,8 +444,8 @@ async function loadResources () {
 
     // Load both documents and PRDs in parallel
     const [documentsResponse, prdsResponse] = await Promise.all([
-      $fetch<{ success: boolean; data: { documents: any[] } }>('/api/documents', { query: queryParams }),
-      $fetch<{ success: boolean; data: { prds: any[] } }>('/api/prd', { query: queryParams })
+      $fetch<{ success: boolean; data: { documents: any[] } }>('/api/v1/documents', { query: queryParams }),
+      $fetch<{ success: boolean; data: { prds: any[] } }>('/api/v1/prd', { query: queryParams })
     ])
 
     // Map documents
@@ -574,7 +574,7 @@ function handleDownload(resource: Resource) {
     return
   }
   // 通过浏览器直接跳转到下载接口，后端会重定向到预签名 URL
-  window.open(`/api/documents/${resource.id}/download`, '_blank')
+  window.open(`/api/v1/documents/${resource.id}/download`, '_blank')
 }
 
 function handleDeleteResource(resource: Resource) {
@@ -586,7 +586,7 @@ async function confirmDelete() {
   if (!resourceToDelete.value) return
 
   try {
-    await $fetch(`/api/documents/${resourceToDelete.value.id}`, { method: 'DELETE' })
+    await $fetch(`/api/v1/documents/${resourceToDelete.value.id}`, { method: 'DELETE' })
     resources.value = resources.value.filter(r => r.id !== resourceToDelete.value!.id)
     if (selectedResource.value?.id === resourceToDelete.value.id) {
       selectedResource.value = null
@@ -608,7 +608,7 @@ async function confirmDelete() {
 
 function handleClearCache() {
   if (!currentWorkspaceId.value) return
-  $fetch('/api/documents/cache', {
+  $fetch('/api/v1/documents/cache', {
     method: 'DELETE',
     query: { workspaceId: currentWorkspaceId.value }
   }).then(() => {
@@ -622,7 +622,7 @@ function handleClearCache() {
 
 function handleReindexAll() {
   if (!currentWorkspaceId.value) return
-  $fetch('/api/documents/reindex', {
+  $fetch('/api/v1/documents/reindex', {
     method: 'POST',
     body: { workspaceId: currentWorkspaceId.value }
   }).then(() => {

@@ -293,16 +293,16 @@ const diffStats = computed(() => {
 
 onMounted(async () => {
   try {
-    const docResponse = await $fetch<{ data: any }>(`/api/documents/${documentId}`)
+    const docResponse = await $fetch<{ data: any }>(`/api/v1/documents/${documentId}`)
     document.value = docResponse.data
 
-    const chunksResponse = await $fetch<{ data: any[] }>(`/api/documents/${documentId}/chunks`)
+    const chunksResponse = await $fetch<{ data: any[] }>(`/api/v1/documents/${documentId}/chunks`)
     chunks.value = chunksResponse.data
 
-    const usageResponse = await $fetch<{ data: any[] }>(`/api/documents/${documentId}/usage`)
+    const usageResponse = await $fetch<{ data: any[] }>(`/api/v1/documents/${documentId}/usage`)
     usedInPRDs.value = usageResponse.data
 
-    const versionsResponse = await $fetch<{ data: { versions: any[] } }>(`/api/documents/${documentId}/versions`)
+    const versionsResponse = await $fetch<{ data: { versions: any[] } }>(`/api/v1/documents/${documentId}/versions`)
     versions.value = versionsResponse.data.versions || []
   } catch (error) {
     console.error('Failed to load document:', error)
@@ -346,10 +346,10 @@ async function handleReindex() {
 
 async function confirmReindex() {
   try {
-    await $fetch(`/api/documents/${documentId}/reindex`, { method: 'POST' })
+    await $fetch(`/api/v1/documents/${documentId}/reindex`, { method: 'POST' })
 
     // 重新加载分块数据
-    const chunksResponse = await $fetch<{ data: any[] }>(`/api/documents/${documentId}/chunks`)
+    const chunksResponse = await $fetch<{ data: any[] }>(`/api/v1/documents/${documentId}/chunks`)
     chunks.value = chunksResponse.data
 
     reindexDialogOpen.value = false
@@ -372,7 +372,7 @@ function handleDelete() {
 
 async function confirmDelete() {
   try {
-    await $fetch(`/api/documents/${documentId}`, { method: 'DELETE' })
+    await $fetch(`/api/v1/documents/${documentId}`, { method: 'DELETE' })
     toast({
       title: t('documents.deleteSuccess'),
       variant: 'success',
@@ -402,8 +402,8 @@ async function selectVersionForDiff (ver: any) {
 
   try {
     const [fromRes, toRes] = await Promise.all([
-      $fetch<{ data: any }>(`/api/documents/${documentId}/versions/${ver.id}`),
-      $fetch<{ data: any }>(`/api/documents/${documentId}/versions/${currentVer.id}`)
+      $fetch<{ data: any }>(`/api/v1/documents/${documentId}/versions/${ver.id}`),
+      $fetch<{ data: any }>(`/api/v1/documents/${documentId}/versions/${currentVer.id}`)
     ])
 
     const fromLines = (fromRes.data?.content || '').split('\n')

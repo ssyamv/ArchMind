@@ -167,8 +167,8 @@ async function fetchAllDocuments() {
     const qs = queryParams.toString()
 
     const [docsRes, prdsRes] = await Promise.all([
-      $fetch<DocumentListResponse>(`/api/documents?${qs}`).catch(() => null),
-      $fetch<PrdListResponse>(`/api/prd?${qs}`).catch(() => null)
+      $fetch<DocumentListResponse>(`/api/v1/documents?${qs}`).catch(() => null),
+      $fetch<PrdListResponse>(`/api/v1/prd?${qs}`).catch(() => null)
     ])
 
     const docItems: MentionedDocument[] = docsRes?.success

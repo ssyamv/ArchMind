@@ -77,7 +77,7 @@ export function useAssets () {
     error.value = null
 
     try {
-      const response = await $fetch<any>('/api/assets', {
+      const response = await $fetch<any>('/api/v1/assets', {
         params: { limit: 100, offset: 0 }
       })
 
@@ -101,7 +101,7 @@ export function useAssets () {
     currentPrdId.value = prdId
 
     try {
-      const response = await $fetch<any>(`/api/assets/prd/${prdId}`)
+      const response = await $fetch<any>(`/api/v1/assets/prd/${prdId}`)
 
       if (response.success) {
         prdAssets.value = response.data
@@ -130,7 +130,7 @@ export function useAssets () {
       if (options?.title) formData.append('title', options.title)
       if (options?.description) formData.append('description', options.description)
 
-      const response = await $fetch<any>('/api/assets/upload', {
+      const response = await $fetch<any>('/api/v1/assets/upload', {
         method: 'POST',
         body: formData
       })
@@ -160,7 +160,7 @@ export function useAssets () {
     error.value = null
 
     try {
-      const response = await $fetch<any>(`/api/assets/${assetId}`, {
+      const response = await $fetch<any>(`/api/v1/assets/${assetId}`, {
         method: 'DELETE'
       })
 
@@ -187,7 +187,7 @@ export function useAssets () {
     error.value = null
 
     try {
-      const response = await $fetch<any>('/api/assets/generate', {
+      const response = await $fetch<any>('/api/v1/assets/generate', {
         method: 'POST',
         body: {
           prompt,

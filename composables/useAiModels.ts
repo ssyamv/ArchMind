@@ -34,7 +34,7 @@ export function useAiModels () {
     error.value = null
 
     try {
-      const response = await $fetch<AvailableModelsResponse>('/api/ai/models')
+      const response = await $fetch<AvailableModelsResponse>('/api/v1/ai/models')
 
       if (response && response.success && response.data) {
         models.value = response.data.availableModels

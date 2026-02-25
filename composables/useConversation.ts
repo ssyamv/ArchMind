@@ -35,7 +35,7 @@ export function useConversation () {
   // Load from database (for continuing saved conversations)
   async function loadFromDatabase (prdId: string) {
     try {
-      const response = await $fetch<{ success: boolean; data: any }>(`/api/conversations/${prdId}`)
+      const response = await $fetch<{ success: boolean; data: any }>(`/api/v1/conversations/${prdId}`)
       if (response.success && response.data.messages) {
         conversation.value = {
           id: nanoid(),
@@ -123,7 +123,7 @@ export function useConversation () {
   // Save conversation to database (first time)
   async function saveConversation (title: string) {
     try {
-      const response = await $fetch('/api/conversations/save', {
+      const response = await $fetch('/api/v1/conversations/save', {
         method: 'POST',
         body: {
           conversationId: conversation.value.id,
@@ -148,7 +148,7 @@ export function useConversation () {
   async function updateConversation () {
     if (!conversation.value.dbId) return
     try {
-      await $fetch(`/api/conversations/${conversation.value.dbId}`, {
+      await $fetch(`/api/v1/conversations/${conversation.value.dbId}`, {
         method: 'PUT',
         body: {
           messages: conversation.value.messages,

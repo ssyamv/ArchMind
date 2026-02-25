@@ -368,7 +368,7 @@ async function handleAiGenerate() {
 
   try {
     const res = await $fetch<{ success: boolean; avatarUrl?: string; message?: string }>(
-      '/api/user/avatar/generate',
+      '/api/v1/user/avatar/generate',
       {
         method: 'POST',
         body: {
@@ -407,7 +407,7 @@ async function handleApplyAiAvatar() {
 async function handleApplyDefault() {
   try {
     const res = await $fetch<{ success: boolean; avatarUrl?: string; message?: string }>(
-      '/api/user/avatar/default',
+      '/api/v1/user/avatar/default',
       { method: 'POST' }
     )
 
