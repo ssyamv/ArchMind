@@ -19,8 +19,23 @@ export default defineNuxtConfig({
     '@nuxtjs/color-mode',
     '@pinia/nuxt',
     '@vueuse/nuxt',
-    '@nuxtjs/i18n'
+    '@nuxtjs/i18n',
+    '@sentry/nuxt/module'
   ],
+
+  // Sentry 错误监控配置
+  // 仅在 SENTRY_DSN 环境变量存在时启用，本地开发默认关闭
+  // Source Map 上传需额外配置 SENTRY_AUTH_TOKEN、SENTRY_ORG、SENTRY_PROJECT（CI/CD 环境）
+  sentry: {
+    ...(process.env.SENTRY_AUTH_TOKEN
+      ? {
+          org: process.env.SENTRY_ORG,
+          project: process.env.SENTRY_PROJECT,
+          authToken: process.env.SENTRY_AUTH_TOKEN
+        }
+      : {}),
+    autoUploadSourcemaps: !!process.env.SENTRY_AUTH_TOKEN
+  },
 
   tailwindcss: {
     configPath: '~/tailwind.config.ts',
@@ -90,7 +105,11 @@ export default defineNuxtConfig({
     emailFrom: process.env.EMAIL_FROM || process.env.EMAIL_USER,
     public: {
       appUrl: process.env.APP_URL || 'http://localhost:3000',
-      baseUrl: process.env.BASE_URL || process.env.APP_URL || 'http://localhost:3000'
+      baseUrl: process.env.BASE_URL || process.env.APP_URL || 'http://localhost:3000',
+      // Sentry 前端 DSN（空字符串 = 禁用）
+      sentryDsn: process.env.SENTRY_DSN || '',
+      // 应用环境，供 Sentry 区分事件来源
+      appEnv: process.env.NODE_ENV || 'production'
     }
   },
 
