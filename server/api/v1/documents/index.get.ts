@@ -5,8 +5,8 @@ export default defineEventHandler(async (event) => {
   try {
     const userId = requireAuth(event)
     const query = getQuery(event)
-    const page = parseInt((query.page as string) || '1', 10)
-    const limit = parseInt((query.limit as string) || '50', 10)
+    const page = Math.max(1, parseInt((query.page as string) || '1', 10))
+    const limit = Math.min(100, Math.max(1, parseInt((query.limit as string) || '50', 10)))
     const offset = (page - 1) * limit
     const workspaceId = query.workspace_id as string | undefined
 
@@ -24,11 +24,11 @@ export default defineEventHandler(async (event) => {
         limit
       }
     }
-  } catch (error) {
-    setResponseStatus(event, 500)
-    return {
-      success: false,
+  } catch (error: any) {
+    if (error.statusCode) throw error
+    throw createError({
+      statusCode: 500,
       message: error instanceof Error ? error.message : ErrorMessages.UNKNOWN_ERROR
-    }
+    })
   }
 })

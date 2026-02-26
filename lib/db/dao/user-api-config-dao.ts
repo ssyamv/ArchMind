@@ -14,13 +14,16 @@ const IV_LENGTH = 16
 // Note: AUTH_TAG_LENGTH is defined by the cipher (16 bytes for AES-GCM)
 const SALT_LENGTH = 32
 
-// 从环境变量获取加密密钥，如果没有则生成一个（仅用于开发环境）
+// 从环境变量获取加密密钥，开发环境使用安全默认值，生产环境强制要求配置
 function getEncryptionKey(): Buffer {
   const secret = process.env.API_KEY_ENCRYPTION_SECRET
   if (!secret) {
-    // 开发环境下使用默认密钥（生产环境必须设置环境变量）
-    console.warn('WARNING: API_KEY_ENCRYPTION_SECRET not set, using default key. This is not secure for production!')
-    return crypto.scryptSync('archmind-default-secret', 'salt', KEY_LENGTH)
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('FATAL: API_KEY_ENCRYPTION_SECRET must be set in production')
+    }
+    // 开发/测试环境：使用固定默认密钥（注意：与旧版 'archmind-default-secret' 不同，本地重置即可）
+    console.warn('WARNING: API_KEY_ENCRYPTION_SECRET not set, using dev default. Do NOT use in production!')
+    return crypto.scryptSync('archmind-dev-only-secret', 'archmind-dev-salt', KEY_LENGTH)
   }
   return crypto.scryptSync(secret, 'archmind-salt', KEY_LENGTH)
 }

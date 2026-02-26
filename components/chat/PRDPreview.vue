@@ -291,6 +291,7 @@ import { Markdown } from '@tiptap/markdown'
 import Placeholder from '@tiptap/extension-placeholder'
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table'
 import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 import {
   Download,
   Bold,
@@ -351,7 +352,14 @@ const isUpdatingFromProp = ref(false)
 // Rendered markdown for preview
 const renderedMarkdown = computed(() => {
   if (!markdownRaw.value) return ''
-  return marked.parse(markdownRaw.value, { breaks: true, gfm: true }) as string
+  const rawHtml = marked.parse(markdownRaw.value, { breaks: true, gfm: true }) as string
+  if (!import.meta.client) return rawHtml
+  return DOMPurify.sanitize(rawHtml, {
+    ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'ul', 'ol', 'li',
+      'strong', 'em', 'code', 'pre', 'blockquote', 'table', 'thead',
+      'tbody', 'tr', 'th', 'td', 'a', 'hr', 'mark'],
+    ALLOWED_ATTR: ['href', 'target', 'rel', 'class']
+  })
 })
 
 const editor = useEditor({

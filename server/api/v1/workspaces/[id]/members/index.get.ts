@@ -4,21 +4,16 @@
  */
 
 import { WorkspaceMemberDAO } from '~/lib/db/dao/workspace-member-dao'
-import { WorkspaceDAO } from '~/lib/db/dao/workspace-dao'
 
 export default defineEventHandler(async (event) => {
-  requireAuth(event)
   const workspaceId = getRouterParam(event, 'id')
 
   if (!workspaceId) {
     throw createError({ statusCode: 400, message: '缺少工作区 ID' })
   }
 
-  // 检查工作区是否存在
-  const workspace = await WorkspaceDAO.getById(workspaceId)
-  if (!workspace) {
-    throw createError({ statusCode: 404, message: '工作区不存在' })
-  }
+  // 验证用户是该工作区成员，同时隐含检查了工作区是否存在
+  await requireWorkspaceMember(event, workspaceId)
 
   const [members, pendingInvitations] = await Promise.all([
     WorkspaceMemberDAO.getMembers(workspaceId),

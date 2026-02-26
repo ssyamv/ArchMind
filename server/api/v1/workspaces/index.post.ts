@@ -4,12 +4,13 @@
  */
 
 import { WorkspaceDAO, type CreateWorkspaceInput } from '~/lib/db/dao/workspace-dao'
+import { WorkspaceMemberDAO } from '~/lib/db/dao/workspace-member-dao'
 
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
 
   try {
-    requireAuth(event)
+    const userId = requireAuth(event)
 
     const body = await readBody<CreateWorkspaceInput>(event)
 
@@ -31,6 +32,9 @@ export default defineEventHandler(async (event) => {
     }
 
     const workspace = await WorkspaceDAO.create(body)
+
+    // 将创建者添加为工作区 owner
+    await WorkspaceMemberDAO.addMember(workspace.id, userId, 'owner')
 
     return {
       success: true,

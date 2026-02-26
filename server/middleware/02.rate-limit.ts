@@ -35,6 +35,12 @@ export const RATE_LIMIT_RULES: Array<{
     maxRequests: 20,
     windowMs: 60 * 1000
   },
+  // 邀请令牌操作：严格限速，防止暴力破解
+  {
+    pattern: /^\/api\/v1\/invitations\//,
+    maxRequests: 5,
+    windowMs: 60 * 1000
+  },
   // 其他 API：每分钟 120 次
   {
     pattern: /^\/api\/v1\//,

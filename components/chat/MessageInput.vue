@@ -253,17 +253,17 @@ watch(locale, async () => {
 
 // 监听 RAG 开关变化,持久化到 localStorage
 watch(useRAG, (newValue) => {
-  localStorage.setItem(RAG_STORAGE_KEY, String(newValue))
+  try { localStorage.setItem(RAG_STORAGE_KEY, String(newValue)) } catch { /* quota exceeded */ }
 })
 
 // 监听目标切换,持久化到 localStorage
 watch(selectedTarget, (newValue) => {
-  localStorage.setItem(TARGET_STORAGE_KEY, newValue)
+  try { localStorage.setItem(TARGET_STORAGE_KEY, newValue) } catch { /* quota exceeded */ }
 })
 
 // 监听高度变化,持久化到 localStorage
 watch(containerHeight, (newValue) => {
-  localStorage.setItem(HEIGHT_STORAGE_KEY, String(newValue))
+  try { localStorage.setItem(HEIGHT_STORAGE_KEY, String(newValue)) } catch { /* quota exceeded */ }
 })
 
 // Auto-select first model when availableModels changes

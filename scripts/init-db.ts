@@ -127,6 +127,21 @@ CREATE INDEX IF NOT EXISTS idx_prd_refs_prd_id ON prd_document_references(prd_id
 CREATE INDEX IF NOT EXISTS idx_prd_refs_document_id ON prd_document_references(document_id);
 
 -- ============================================
+-- PRD 知识库分块表（用于 PRD 级别 RAG 检索）
+-- ============================================
+CREATE TABLE IF NOT EXISTS prd_chunks (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  prd_id UUID NOT NULL REFERENCES prd_documents(id) ON DELETE CASCADE,
+  chunk_index INTEGER NOT NULL,
+  content TEXT NOT NULL,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_prd_chunks_prd_id ON prd_chunks(prd_id);
+CREATE INDEX IF NOT EXISTS idx_prd_chunks_prd_id_chunk_index ON prd_chunks(prd_id, chunk_index);
+
+-- ============================================
 -- 系统配置表
 -- ============================================
 CREATE TABLE IF NOT EXISTS system_config (

@@ -57,7 +57,21 @@ vi.mock('~/lib/db/dao/prd-dao', () => ({
       createdAt: new Date(),
       updatedAt: new Date()
     }),
-    addReferences: async () => undefined
+    addReferences: async () => undefined,
+    createWithClient: async () => ({
+      id: 'prd-test-123',
+      title: 'Test PRD',
+      content: 'Generated content',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }),
+    addReferencesWithClient: async () => undefined
+  }
+}))
+
+vi.mock('~/lib/db/client', () => ({
+  dbClient: {
+    transaction: async (fn: (client: any) => Promise<any>) => fn({})
   }
 }))
 
@@ -391,10 +405,10 @@ describe('PRDGenerator', () => {
     })
 
     it('PRDDAO.create 失败时抛出错误', async () => {
-      // 直接 spy 模块 mock 对象上的方法
+      // 直接 spy 模块 mock 对象上的方法（现在 generateStream 调用 createWithClient）
       const prdDaoMod = await import('~/lib/db/dao/prd-dao')
-      const originalCreate = prdDaoMod.PRDDAO.create
-      prdDaoMod.PRDDAO.create = vi.fn().mockRejectedValueOnce(new Error('DB error')) as any
+      const originalCreate = prdDaoMod.PRDDAO.createWithClient
+      prdDaoMod.PRDDAO.createWithClient = vi.fn().mockRejectedValueOnce(new Error('DB error')) as any
 
       const stream = generator.generateStream('Test input')
       const chunks: string[] = []
@@ -404,23 +418,23 @@ describe('PRDGenerator', () => {
         }
       }).rejects.toThrow('DB error')
 
-      prdDaoMod.PRDDAO.create = originalCreate
+      prdDaoMod.PRDDAO.createWithClient = originalCreate
     })
 
     it('PRDDAO.addReferences 失败时不影响流式结果', async () => {
       const prdDaoMod = await import('~/lib/db/dao/prd-dao')
-      const originalAddReferences = prdDaoMod.PRDDAO.addReferences
-      prdDaoMod.PRDDAO.addReferences = vi.fn().mockRejectedValueOnce(new Error('Ref error')) as any
+      const originalAddReferences = prdDaoMod.PRDDAO.addReferencesWithClient
+      prdDaoMod.PRDDAO.addReferencesWithClient = vi.fn().mockRejectedValueOnce(new Error('Ref error')) as any
 
       const chunks: string[] = []
-      // 有 documentIds 才会调用 addReferences
+      // 有 documentIds 才会调用 addReferencesWithClient
       for await (const chunk of generator.generateStream('Test', { documentIds: ['doc-1'] })) {
         chunks.push(chunk)
       }
-      // 流式内容正常输出（addReferences 错误被 catch 吞掉）
+      // 流式内容正常输出（addReferencesWithClient 错误被 catch 吞掉）
       expect(chunks.join('')).toContain('Mock')
 
-      prdDaoMod.PRDDAO.addReferences = originalAddReferences
+      prdDaoMod.PRDDAO.addReferencesWithClient = originalAddReferences
     })
 
     it('自定义 temperature 和 maxTokens', async () => {

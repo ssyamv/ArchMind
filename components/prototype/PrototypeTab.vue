@@ -318,7 +318,7 @@ async function handleGenerateFromPRD () {
     // 如果还没有保存到数据库,先自动保存
     let prdId = props.prdId
     if (!prdId) {
-      const response = await $fetch('/api/v1/conversations/save', {
+      const response = await $fetch<{ success: boolean; id: string }>('/api/v1/conversations/save', {
         method: 'POST',
         body: {
           conversationId: Date.now().toString(),
@@ -327,7 +327,7 @@ async function handleGenerateFromPRD () {
           finalPrdContent: props.prdContent
         }
       })
-      prdId = (response as any).id as string
+      prdId = response.id
       // 通知父组件更新 prdId
       emit('update:prdId', prdId)
       toast({

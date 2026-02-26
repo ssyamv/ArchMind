@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto'
+import type { PoolClient } from 'pg'
 import { dbClient } from '../client'
 import type { PRDDocument, PRDDocumentReference } from '@/types/prd'
 
@@ -135,6 +136,64 @@ export class PRDDAO {
     `
 
     await dbClient.query(sql, values)
+  }
+
+  // 事务版本：在已有的 PoolClient 中创建 PRD（供事务使用）
+  static async createWithClient (client: PoolClient, prd: Omit<PRDDocument, 'id' | 'createdAt' | 'updatedAt'>): Promise<PRDDocument> {
+    const id = randomUUID()
+    const now = new Date().toISOString()
+
+    const sql = `
+      INSERT INTO prd_documents (
+        id, user_id, workspace_id, title, content, user_input, model_used,
+        generation_time, token_count, estimated_cost, status, metadata, created_at, updated_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      RETURNING *
+    `
+
+    const result = await client.query<any>(sql, [
+      id,
+      prd.userId || null,
+      prd.workspaceId || null,
+      prd.title,
+      prd.content,
+      prd.userInput,
+      prd.modelUsed,
+      prd.generationTime || null,
+      prd.tokenCount || null,
+      prd.estimatedCost || null,
+      prd.status || 'draft',
+      JSON.stringify(prd.metadata || {}),
+      now,
+      now
+    ])
+
+    return this.mapRowToPRD(result.rows[0])
+  }
+
+  // 事务版本：在已有的 PoolClient 中添加文档引用
+  static async addReferencesWithClient (client: PoolClient, prdId: string, documentIds: string[], relevanceScores?: number[]): Promise<void> {
+    if (documentIds.length === 0) { return }
+
+    const values: any[] = []
+    let paramIndex = 1
+    const sqlParts: string[] = []
+
+    for (let i = 0; i < documentIds.length; i++) {
+      const id = randomUUID()
+      sqlParts.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3})`)
+      values.push(id, prdId, documentIds[i], relevanceScores?.[i] || null)
+      paramIndex += 4
+    }
+
+    const sql = `
+      INSERT INTO prd_document_references (id, prd_id, document_id, relevance_score)
+      VALUES ${sqlParts.join(', ')}
+      ON CONFLICT (prd_id, document_id) DO NOTHING
+    `
+
+    await client.query(sql, values)
   }
 
   // 获取 PRD 的引用文档

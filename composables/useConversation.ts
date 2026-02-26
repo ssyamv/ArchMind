@@ -23,12 +23,13 @@ export function useConversation () {
   function loadFromStorage () {
     if (!process.client) return
     const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      conversation.value = JSON.parse(stored)
-      // 确保兼容旧数据
-      if (!conversation.value.target) {
-        conversation.value.target = 'prd'
-      }
+    if (!stored) return
+    try {
+      const parsed = JSON.parse(stored)
+      conversation.value = parsed
+    } catch (e) {
+      console.warn('Corrupted conversation localStorage data, clearing:', e)
+      localStorage.removeItem(STORAGE_KEY)
     }
   }
 
@@ -62,7 +63,11 @@ export function useConversation () {
   // Save to localStorage
   function saveToStorage () {
     if (!process.client) return
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(conversation.value))
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(conversation.value))
+    } catch (e) {
+      console.warn('Failed to save conversation to localStorage (quota exceeded?):', e)
+    }
   }
 
   // Add user message
@@ -123,7 +128,7 @@ export function useConversation () {
   // Save conversation to database (first time)
   async function saveConversation (title: string) {
     try {
-      const response = await $fetch('/api/v1/conversations/save', {
+      const response = await $fetch<{ success: boolean; id: string }>('/api/v1/conversations/save', {
         method: 'POST',
         body: {
           conversationId: conversation.value.id,
@@ -133,7 +138,7 @@ export function useConversation () {
         }
       })
       conversation.value.savedToDb = true
-      conversation.value.dbId = (response as any).id
+      conversation.value.dbId = response.id
       conversation.value.title = title
       conversation.value.lastSavedMessageCount = conversation.value.messages.length
       saveToStorage()

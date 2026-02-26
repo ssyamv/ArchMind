@@ -99,9 +99,15 @@ export default defineEventHandler(async (event) => {
       prdIds: body.prdIds
     })
 
+    const MAX_CONTENT_LENGTH = 200_000 // 200K 字符上限，防止内存溢出
     let fullContent = ''
     for await (const chunk of stream) {
       fullContent += chunk
+      if (fullContent.length > MAX_CONTENT_LENGTH) {
+        event.node.res.write(`data: ${JSON.stringify({ error: '响应内容超过最大长度限制', done: true })}\n\n`)
+        event.node.res.end()
+        return
+      }
       event.node.res.write(`data: ${JSON.stringify({ chunk, done: false })}\n\n`)
     }
 

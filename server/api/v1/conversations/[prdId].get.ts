@@ -3,6 +3,12 @@ import { conversations, conversationMessages, prdDocuments } from '~/lib/db/sche
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { eq } from 'drizzle-orm'
 
+interface PRDMetadata {
+  conversationId?: string
+  conversationDbId?: string
+  [key: string]: unknown
+}
+
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
 
@@ -40,7 +46,7 @@ export default defineEventHandler(async (event) => {
     requireResourceOwner({ userId: prd.userId }, userId)
 
     // 从 metadata 中获取 conversationDbId
-    const conversationDbId = (prd.metadata as any)?.conversationDbId
+    const conversationDbId = (prd.metadata as PRDMetadata)?.conversationDbId
 
     if (!conversationDbId) {
       // 如果没有对话历史,返回空数组

@@ -115,8 +115,9 @@ export class ModelManager {
       return
     }
 
-    // 清空现有适配器，确保每次重新初始化时只包含当前配置中有 API Key 的模型
-    this.adapters.clear()
+    // 先构建新的 Map，完成后原子替换 this.adapters
+    // 避免 clear() 后填充期间存在"空适配器"的中间状态
+    const newAdapters = new Map<string, AIModelAdapter>()
 
     // Claude 适配器
     if (config.anthropicApiKey) {
@@ -126,7 +127,7 @@ export class ModelManager {
         : ['claude-opus-4-20250514', 'claude-sonnet-4-20250514', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022']
       for (const modelId of userModels) {
         const claude = new ClaudeAdapter(config.anthropicApiKey as string, modelId, baseUrl)
-        this.adapters.set(modelId, claude)
+        newAdapters.set(modelId, claude)
       }
     }
 
@@ -138,7 +139,7 @@ export class ModelManager {
         : ['gpt-4o', 'gpt-4o-mini', 'o3-mini']
       for (const modelId of userModels) {
         const openai = new OpenAIAdapter(config.openaiApiKey as string, modelId, baseUrl)
-        this.adapters.set(modelId, openai)
+        newAdapters.set(modelId, openai)
       }
     }
 
@@ -149,7 +150,7 @@ export class ModelManager {
         : ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash']
       for (const modelId of userModels) {
         const gemini = new GeminiAdapter(config.googleApiKey as string, modelId)
-        this.adapters.set(modelId, gemini)
+        newAdapters.set(modelId, gemini)
       }
     }
 
@@ -161,7 +162,7 @@ export class ModelManager {
         : ['glm-4-plus', 'glm-4-air', 'glm-4-flash']
       for (const modelId of userModels) {
         const glm = new GLMAdapter(config.glmApiKey as string, modelId, baseUrl)
-        this.adapters.set(modelId, glm)
+        newAdapters.set(modelId, glm)
       }
     }
 
@@ -173,7 +174,7 @@ export class ModelManager {
         : ['deepseek-chat', 'deepseek-reasoner']
       for (const modelId of userModels) {
         const deepseek = new DeepSeekAdapter(config.deepseekApiKey as string, modelId, baseUrl)
-        this.adapters.set(modelId, deepseek)
+        newAdapters.set(modelId, deepseek)
       }
     }
 
@@ -184,7 +185,7 @@ export class ModelManager {
         : ['qwen-max', 'qwen-plus', 'qwen-turbo']
       for (const modelId of userModels) {
         const qwen = new QwenAdapter(config.dashscopeApiKey as string, modelId)
-        this.adapters.set(modelId, qwen)
+        newAdapters.set(modelId, qwen)
       }
     }
 
@@ -195,7 +196,7 @@ export class ModelManager {
         : ['ernie-4.0-8k', 'ernie-3.5-8k']
       for (const modelId of userModels) {
         const wenxin = new WenxinAdapter(config.baiduApiKey as string, modelId)
-        this.adapters.set(modelId, wenxin)
+        newAdapters.set(modelId, wenxin)
       }
     }
 
@@ -206,7 +207,7 @@ export class ModelManager {
         : ['llama3.2', 'qwen2.5', 'deepseek-r1']
       for (const modelId of userModels) {
         const ollama = new OllamaAdapter(config.ollamaBaseUrl as string, modelId)
-        this.adapters.set(`ollama-${modelId}`, ollama)
+        newAdapters.set(`ollama-${modelId}`, ollama)
       }
     }
 
@@ -218,9 +219,12 @@ export class ModelManager {
           modelId,
           config.customBaseUrl as string
         )
-        this.adapters.set(`custom-${modelId}`, custom)
+        newAdapters.set(`custom-${modelId}`, custom)
       }
     }
+
+    // 原子替换，避免 clear+fill 之间的中间状态
+    this.adapters = newAdapters
   }
 
   /**
@@ -364,8 +368,7 @@ export function getModelManager (config?: Record<string, any>): ModelManager {
   if (!managerInstance) {
     managerInstance = new ModelManager(config)
   } else if (config && Object.keys(config).length > 0) {
-    // 如果已经有实例但收到新的有效配置，重新初始化适配器
-    // 这确保了在运行时配置更新时，模型管理器能正确地重新初始化
+    // 有新配置时，在同一实例上原子替换适配器（initializeAdapters 内部用新 Map 替换）
     managerInstance.initializeAdapters(config)
   }
   return managerInstance

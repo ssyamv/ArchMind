@@ -72,7 +72,7 @@ export default defineEventHandler(async (event) => {
       1800  // 30 分钟
     )
 
-    console.log(`Shared document accessed via token: ${token}`)
+    console.log(`Shared document accessed via token: ${token.substring(0, 8)}..., documentId: ${document.id}`)
 
     // 重定向到预签名 URL
     return sendRedirect(event, presignedUrl)

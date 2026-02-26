@@ -136,7 +136,6 @@ export class EmbeddingServiceFactory {
   }
 
   /**
-   * @deprecated 使用 createFromModelConfig 代替
    * 自动选择可用的 Embedding 服务
    * 优先级：GLM > OpenAI
    * @param config 配置对象

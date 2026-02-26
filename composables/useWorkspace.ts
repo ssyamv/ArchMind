@@ -259,7 +259,11 @@ export function useWorkspace () {
    */
   function saveToLocalStorage () {
     if (process.client && currentWorkspaceId.value) {
-      localStorage.setItem('current-workspace-id', currentWorkspaceId.value)
+      try {
+        localStorage.setItem('current-workspace-id', currentWorkspaceId.value)
+      } catch (e) {
+        console.warn('Failed to save workspace id to localStorage:', e)
+      }
     }
   }
 

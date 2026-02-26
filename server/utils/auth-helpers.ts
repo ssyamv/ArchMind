@@ -5,6 +5,8 @@
  * 放在 server/utils/ 下由 Nuxt 自动导入。
  */
 
+import { dbClient } from '~/lib/db/client'
+
 /**
  * 从 event.context 获取已认证的 userId
  * 如果未认证则抛出 401 错误
@@ -38,4 +40,38 @@ export function requireResourceOwner (
       message: '无权访问此资源'
     })
   }
+}
+
+/**
+ * 验证当前用户是否为工作区成员，并返回其角色
+ * @param event H3 事件对象
+ * @param workspaceId 工作区 ID
+ * @param requiredRole 'admin'：要求 owner 或 admin；'owner'：仅 owner；不传则 member 即可
+ */
+export async function requireWorkspaceMember (
+  event: any,
+  workspaceId: string,
+  requiredRole?: 'admin' | 'owner'
+): Promise<{ userId: string; role: string }> {
+  const userId = requireAuth(event)
+
+  const result = await dbClient.query<{ role: string }>(
+    'SELECT role FROM workspace_members WHERE workspace_id = $1 AND user_id = $2',
+    [workspaceId, userId]
+  )
+
+  if (result.rows.length === 0) {
+    throw createError({ statusCode: 403, message: '无权访问此工作区' })
+  }
+
+  const { role } = result.rows[0]
+
+  if (requiredRole === 'admin' && !['owner', 'admin'].includes(role)) {
+    throw createError({ statusCode: 403, message: '需要工作区管理员权限' })
+  }
+  if (requiredRole === 'owner' && role !== 'owner') {
+    throw createError({ statusCode: 403, message: '需要工作区所有者权限' })
+  }
+
+  return { userId, role }
 }

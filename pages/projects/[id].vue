@@ -394,9 +394,9 @@
                     <div class="flex items-center justify-between">
                       <div class="flex items-center gap-2">
                         <Switch
-                          :checked="ragEnabled"
+                          :model-value="ragEnabled"
                           :disabled="ragLoading || ragStatus === 'processing'"
-                          @update:checked="handleRagToggle"
+                          @update:model-value="handleRagToggle"
                         />
                         <span class="text-sm font-medium">
                           {{ ragEnabled ? $t('projects.details.ragEnabled') : $t('projects.details.ragDisabled') }}
@@ -486,6 +486,7 @@
 
 <script setup lang="ts">
 import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 import {
   ArrowLeft, MoreVertical, Download, Trash2, MessageSquarePlus,
   FileText, MessageCircle, Layout, BookOpen, Calendar, Info,
@@ -598,7 +599,14 @@ onMounted(async () => {
 
 const renderedContent = computed(() => {
   if (!prd.value?.content) return ''
-  return marked(prd.value.content)
+  const rawHtml = marked(prd.value.content) as string
+  if (!import.meta.client) return rawHtml
+  return DOMPurify.sanitize(rawHtml, {
+    ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'ul', 'ol', 'li',
+      'strong', 'em', 'code', 'pre', 'blockquote', 'table', 'thead',
+      'tbody', 'tr', 'th', 'td', 'a', 'hr', 'mark'],
+    ALLOWED_ATTR: ['href', 'target', 'rel', 'class']
+  })
 })
 
 const contentWordCount = computed(() => {
@@ -767,7 +775,7 @@ async function handleRagToggle (enabled: boolean) {
       if (prd.value) {
         prd.value = {
           ...prd.value,
-          metadata: { ...(prd.value.metadata || {}), ragEnabled: false, ragStatus: 'processing' }
+          metadata: { ...(prd.value.metadata || {}), ragEnabled: true, ragStatus: 'processing' }
         }
       }
       await $fetch(`/api/v1/prd/${prdId}/vectorize`, { method: 'POST' })

@@ -42,6 +42,9 @@ export class GLMAdapter implements AIModelAdapter {
       top_p: options?.topP
     })
 
+    if (!response.choices || response.choices.length === 0) {
+      throw new Error(`Model ${this.modelId} returned empty choices`)
+    }
     const textContent = response.choices[0].message.content
     if (!textContent) {
       throw new Error('No text content in response')
@@ -61,6 +64,7 @@ export class GLMAdapter implements AIModelAdapter {
     })
 
     for await (const chunk of stream) {
+      if (!chunk.choices || chunk.choices.length === 0) continue
       const delta = chunk.choices[0].delta
       if (delta && delta.content) {
         yield delta.content

@@ -139,7 +139,11 @@ export class VectorDAO {
   ): Promise<string[]> {
     if (chunks.length === 0) return []
 
-    const vtype = vecType(chunks[0].dimensions)
+    const dimensions = chunks[0].dimensions
+    if (chunks.some(c => c.dimensions !== dimensions)) {
+      throw new Error('All chunks in a batch must have the same embedding dimensions')
+    }
+    const vtype = vecType(dimensions)
 
     const values = chunks.map((_, i) => {
       const base = i * 5

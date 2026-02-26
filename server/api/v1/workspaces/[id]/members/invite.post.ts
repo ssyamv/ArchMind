@@ -16,7 +16,6 @@ const InviteSchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-  const userId = requireAuth(event)
   const workspaceId = getRouterParam(event, 'id')
 
   if (!workspaceId) {
@@ -25,7 +24,10 @@ export default defineEventHandler(async (event) => {
 
   const body = await readValidatedBody(event, InviteSchema.parse)
 
-  // 检查工作区是否存在
+  // 验证邀请人是该工作区的管理员或 owner（同时验证工作区存在）
+  const { userId } = await requireWorkspaceMember(event, workspaceId, 'admin')
+
+  // 检查工作区是否存在（用于邮件信息）
   const workspace = await WorkspaceDAO.getById(workspaceId)
   if (!workspace) {
     throw createError({ statusCode: 404, message: '工作区不存在' })

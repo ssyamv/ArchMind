@@ -4,10 +4,8 @@
  */
 
 import { WorkspaceMemberDAO } from '~/lib/db/dao/workspace-member-dao'
-import { WorkspaceDAO } from '~/lib/db/dao/workspace-dao'
 
 export default defineEventHandler(async (event) => {
-  const currentUserId = requireAuth(event)
   const workspaceId = getRouterParam(event, 'id')
   const targetUserId = getRouterParam(event, 'userId')
 
@@ -18,11 +16,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: '缺少用户 ID' })
   }
 
-  // 检查工作区是否存在
-  const workspace = await WorkspaceDAO.getById(workspaceId)
-  if (!workspace) {
-    throw createError({ statusCode: 404, message: '工作区不存在' })
-  }
+  // 验证操作者是该工作区的管理员或 owner
+  const { userId: currentUserId } = await requireWorkspaceMember(event, workspaceId, 'admin')
 
   // 不允许移除自己
   if (targetUserId === currentUserId) {

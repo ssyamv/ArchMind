@@ -8,6 +8,7 @@ import { RAGRetriever } from '~/lib/rag/retriever'
 import { buildPRDPrompt } from '~/lib/ai/prompts/prd-system'
 import { PRDDAO } from '~/lib/db/dao/prd-dao'
 import { DocumentDAO } from '~/lib/db/dao/document-dao'
+import { dbClient } from '~/lib/db/client'
 import { logger } from '~/lib/logger'
 import type { PRDDocument } from '~/types/prd'
 import type { IEmbeddingAdapter } from '~/lib/rag/embedding-adapter'
@@ -208,12 +209,14 @@ export class PRDGenerator {
       }
     }
 
-    const savedPRD = await PRDDAO.create(prd)
-
-    // 添加文档引用
-    if (references.length > 0) {
-      await PRDDAO.addReferences(savedPRD.id, references)
-    }
+    // 保存到数据库（使用事务确保 PRD 和引用关系的原子性）
+    const savedPRD = await dbClient.transaction(async (client) => {
+      const created = await PRDDAO.createWithClient(client, prd)
+      if (references.length > 0) {
+        await PRDDAO.addReferencesWithClient(client, created.id, references)
+      }
+      return created
+    })
 
     return {
       prdId: savedPRD.id,
@@ -316,17 +319,19 @@ export class PRDGenerator {
       status: 'completed'
     }
 
-    const savedPRD = await PRDDAO.create(prd).catch((err) => {
-      logger.error({ err }, 'Failed to save PRD to database after streaming')
-      throw err
-    })
-
-    // 添加文档引用
-    if (references.length > 0) {
-      await PRDDAO.addReferences(savedPRD.id, references).catch((err) => {
-        logger.error({ err, prdId: savedPRD.id }, 'Failed to save PRD references')
+    await dbClient.transaction(async (client) => {
+      const created = await PRDDAO.createWithClient(client, prd).catch((err) => {
+        logger.error({ err }, 'Failed to save PRD to database after streaming')
+        throw err
       })
-    }
+      if (references.length > 0) {
+        await PRDDAO.addReferencesWithClient(client, created.id, references).catch((err) => {
+          logger.error({ err, prdId: created.id }, 'Failed to save PRD references')
+          // 引用保存失败不影响已完成的流式输出，静默处理
+        })
+      }
+      return created
+    })
   }
 }
 

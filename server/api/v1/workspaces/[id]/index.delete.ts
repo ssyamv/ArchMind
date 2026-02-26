@@ -9,8 +9,6 @@ export default defineEventHandler(async (event) => {
   const t = useServerT(event)
 
   try {
-    requireAuth(event)
-
     const id = getRouterParam(event, 'id')
 
     if (!id) {
@@ -19,6 +17,9 @@ export default defineEventHandler(async (event) => {
         message: t('errors.workspaceIdRequired')
       })
     }
+
+    // 只有工作区 owner 才能删除
+    await requireWorkspaceMember(event, id, 'owner')
 
     const deleted = await WorkspaceDAO.delete(id)
 

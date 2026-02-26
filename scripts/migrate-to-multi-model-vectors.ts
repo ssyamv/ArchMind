@@ -31,7 +31,7 @@ async function migrateToMultiModelVectors() {
     await dbClient.query(`
       CREATE TABLE IF NOT EXISTS document_embeddings (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        chunk_id UUID NOT NULL REFERENCES document_chunks(id) ON DELETE CASCADE,
+        chunk_id UUID NOT NULL,  -- 不加外键约束，同时支持 document_chunks.id 和 prd_chunks.id
         model_name VARCHAR(100) NOT NULL,
         model_provider VARCHAR(50) NOT NULL,
         model_dimensions INTEGER NOT NULL,

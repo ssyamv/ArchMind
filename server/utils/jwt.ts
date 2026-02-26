@@ -8,7 +8,10 @@ import type { JwtPayload } from '~/types/auth'
 
 const { sign, verify } = jwt
 
-const JWT_SECRET = process.env.JWT_SECRET || 'archmind-default-secret-change-in-production'
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('FATAL: JWT_SECRET environment variable must be set in production')
+}
+const JWT_SECRET = process.env.JWT_SECRET || 'archmind-dev-secret-do-not-use-in-production'
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
 
 /**

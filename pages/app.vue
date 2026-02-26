@@ -465,6 +465,10 @@ async function loadProjects () {
     }
   } catch (error) {
     console.error('Failed to load projects:', error)
+    toast({
+      title: t('projects.loadFailed'),
+      variant: 'destructive'
+    })
   } finally {
     loading.value = false
   }

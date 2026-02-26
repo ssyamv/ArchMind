@@ -9,8 +9,6 @@ export default defineEventHandler(async (event) => {
   const t = useServerT(event)
 
   try {
-    requireAuth(event)
-
     const id = getRouterParam(event, 'id')
 
     if (!id) {
@@ -19,6 +17,9 @@ export default defineEventHandler(async (event) => {
         message: t('errors.workspaceIdRequired')
       })
     }
+
+    // 验证用户是该工作区的管理员或 owner
+    await requireWorkspaceMember(event, id, 'admin')
 
     const body = await readBody<UpdateWorkspaceInput>(event)
 

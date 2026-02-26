@@ -1,6 +1,16 @@
 import { defineStore } from 'pinia'
 import type { PRDDocument } from '@/types/prd'
 
+interface PRDListResponse {
+  success: boolean
+  data: { prds: PRDDocument[]; total?: number }
+}
+
+interface PRDDetailResponse {
+  success: boolean
+  data: PRDDocument
+}
+
 export const usePrdStore = defineStore('prd', () => {
   const prds = ref<PRDDocument[]>([])
   const currentPrd = ref<PRDDocument | null>(null)
@@ -12,7 +22,7 @@ export const usePrdStore = defineStore('prd', () => {
     error.value = null
 
     try {
-      const response = await $fetch('/api/prd') as any
+      const response = await $fetch<PRDListResponse>('/api/prd')
       prds.value = response.data.prds
     } catch (err: any) {
       error.value = err.message || '获取 PRD 列表失败'
@@ -27,7 +37,7 @@ export const usePrdStore = defineStore('prd', () => {
     error.value = null
 
     try {
-      const response = await $fetch(`/api/prd/${id}`) as any
+      const response = await $fetch<PRDDetailResponse>(`/api/prd/${id}`)
       currentPrd.value = response.data
       return response.data
     } catch (err: any) {

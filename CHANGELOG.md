@@ -11,6 +11,56 @@
 
 ---
 
+## [0.2.1] - 2026-02-26
+
+本版本为 v0.2.0 发布后的系统性代码 Review 修复版，涵盖安全加固、稳定性修复和数据库兼容性修复。
+
+### 安全 (Security)
+
+- **工作区权限隔离** (`server/utils/auth-helpers.ts`): 新增 `requireWorkspaceMember()` 辅助函数，验证当前用户是否属于目标工作区。6 个工作区 API 端点从仅校验登录状态升级为同时校验成员身份和角色权限：
+  - `GET /api/v1/workspaces/:id` — 要求 member
+  - `PATCH /api/v1/workspaces/:id` — 要求 admin
+  - `DELETE /api/v1/workspaces/:id` — 要求 owner
+  - `GET /api/v1/workspaces/:id/members` — 要求 member
+  - `POST /api/v1/workspaces/:id/members/invite` — 要求 admin
+  - `DELETE /api/v1/workspaces/:id/members/:userId` — 要求 admin
+- **JWT 弱默认密钥修复** (`server/utils/jwt.ts`): 生产环境（`NODE_ENV=production`）未设置 `JWT_SECRET` 时启动即报错退出，防止使用可预测的默认密钥签发 Token
+- **API Key 加密密钥修复** (`lib/db/dao/user-api-config-dao.ts`): 生产环境未设置 `API_KEY_ENCRYPTION_SECRET` 时启动即报错退出，开发环境打印明确警告
+- **PRD 内容 XSS 修复** (`pages/projects/[id].vue`): `v-html` 渲染前通过 DOMPurify 净化 `marked()` 输出，仅允许安全的 HTML 标签与属性
+
+### 修复 (Fixed)
+
+- **统计接口用户隔离** (`server/api/v1/stats/index.get.ts`): 向量数统计从全系统聚合改为按当前用户隔离，避免泄露其他用户的文档数量
+- **分享令牌日志脱敏** (`server/api/v1/share/[token].get.ts`): 访问日志只记录令牌前 8 位，防止完整令牌写入日志文件
+- **分页参数无上限** (`server/api/v1/documents/index.get.ts`): `limit` 参数增加 `max(100)` 限制，防止单次拉取过多数据
+- **邀请接口速率限制** (`server/middleware/02.rate-limit.ts`): 为 `/api/v1/invitations/*` 端点单独配置 5 次/分钟限流，防止令牌暴力枚举
+- **AI 适配器空 choices 崩溃** (`lib/ai/adapters/openai.ts`、`deepseek.ts`、`glm.ts`、`qwen.ts`、`ollama.ts`): 所有适配器在 `generateText` 和 `generateStream` 中对空 `choices` 数组做防护，抛出明确错误而非 TypeError
+- **ModelManager 初始化竞态** (`lib/ai/manager.ts`): `getModelManager()` 有配置变更时原子替换实例，消除 `clear()` 与填充之间的中间状态
+- **localStorage 数据损坏崩溃** (`composables/useConversation.ts`): `loadFromStorage` 增加 `try-catch`，损坏数据自动清除并继续正常工作
+- **localStorage 写入配额溢出** (`composables/useConversation.ts`、`composables/useWorkspace.ts`、`components/chat/MessageInput.vue`): `setItem` 调用增加 try-catch，存储满时打印警告而非静默失败
+- **RAG Switch 控件无响应** (`pages/projects/[id].vue`): `Switch` 组件绑定从 `:checked` / `@update:checked` 更正为 `:model-value` / `@update:model-value`
+- **PRD 索引缺失数据库表** (`scripts/init-db.ts`、新增 `migrations/add-prd-chunks-table.sql`): `prd_chunks` 表已编码但从未创建，导致"直接索引"功能报 `relation "prd_chunks" does not exist` 错误
+- **PRD 向量写入外键约束冲突** (`migrations/drop-document-embeddings-chunk-fk.sql`): `document_embeddings.chunk_id` 的外键约束只允许引用 `document_chunks(id)`，导致 PRD 向量化写入 `prd_chunks.id` 时报 FK 违约；删除该约束，`chunk_id` 改为无约束 UUID，同时支持文档块和 PRD 块两种来源
+
+### 改进 (Changed)
+
+- **向量批次维度一致性校验** (`lib/db/dao/vector-dao.ts`): 批量插入向量时检查所有 chunk 的 `dimensions` 字段是否一致，不一致时提前抛出明确错误
+- **`stores/prd.ts` 类型安全**: 移除 `as any` 强转，定义 `PRDListResponse` / `PRDDetailResponse` 接口，修正 API 路径为 `/api/v1/prd`
+
+### 数据库迁移
+
+现有数据库需按顺序执行以下迁移脚本：
+
+```bash
+# 1. 创建 prd_chunks 表（PRD 知识库分块存储）
+npx tsx scripts/migrate-add-prd-chunks.ts
+
+# 2. 移除 document_embeddings 外键约束（兼容 PRD 向量）
+psql $DATABASE_URL -f migrations/drop-document-embeddings-chunk-fk.sql
+```
+
+---
+
 ## [0.2.0] - 2026-02-25
 
 ### 新增
@@ -274,19 +324,26 @@
 
 ## 版本规划
 
-### [0.2.0] - 计划中
+### [0.2.0] - 已完成 ✅
 
 #### 新增
-- [ ] 混合搜索优化 (重排序机制)
-- [ ] Redis 缓存层
-- [ ] API 版本控制 (v1)
-- [ ] 监控和告警 (Sentry)
-- [ ] 审计日志
+- [x] 混合搜索优化 (RRF 重排序)
+- [x] API 版本控制 (v1)
+- [x] 监控和告警 (Sentry)
+- [x] 审计日志
 
 #### 改进
-- [ ] 测试覆盖率提升至 60%+
-- [ ] 性能优化 (数据库查询)
-- [ ] 安全加固 (CSRF, Rate Limiting)
+- [x] 测试覆盖率提升至 89%
+- [x] 安全加固 (CSRF, Rate Limiting)
+
+### [0.2.1] - 已完成 ✅
+
+- [x] 工作区权限隔离（6 个 API 端点）
+- [x] JWT / API Key 弱密钥生产环境强制检查
+- [x] PRD 内容 XSS 防护
+- [x] PRD 知识库索引功能修复（prd_chunks 表 + FK 约束）
+- [x] AI 适配器空 choices 崩溃修复
+- [x] localStorage 健壮性修复
 
 ### [0.3.0] - 计划中
 
@@ -332,4 +389,4 @@
 
 ---
 
-*最后更新: 2026-02-24*
+*最后更新: 2026-02-26*
