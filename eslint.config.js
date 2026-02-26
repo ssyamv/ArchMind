@@ -11,6 +11,7 @@ export default [
       '.nuxt',
       'dist',
       '.output',
+      '.vercel',
       'build',
       'coverage'
     ]
