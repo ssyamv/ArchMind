@@ -7,7 +7,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-4169E1?logo=postgresql)](https://www.postgresql.org/)
 [![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js)](https://vuejs.org/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-0.2.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-0.2.1-blue)](CHANGELOG.md)
 
 ---
 
@@ -147,6 +147,8 @@ pnpm db:init
 pnpm tsx scripts/add-fulltext-search.ts
 pnpm tsx scripts/add-version-control.ts
 pnpm tsx scripts/create-tags-and-categories-tables.ts
+pnpm tsx scripts/migrate-to-multi-model-vectors.ts
+pnpm tsx scripts/migrate-add-prd-chunks.ts
 
 # 5. 启动开发服务器
 pnpm dev
@@ -184,7 +186,7 @@ STORAGE_PROVIDER=huawei-obs
                           │ HTTP / SSE
 ┌─────────────────────────▼───────────────────────────────┐
 │              API Layer (Nuxt Nitro)                       │
-│    103 REST endpoints · JWT Middleware · Zod Validation  │
+│    103 REST endpoints · JWT Middleware · Rate Limiting · CSRF Protection · Zod Validation  │
 └──────┬──────────────────┬────────────────┬──────────────┘
        │                  │                │
 ┌──────▼──────┐  ┌────────▼──────┐  ┌─────▼────────────┐
@@ -376,7 +378,7 @@ ArchMind/
 │   ├── projects/[id].vue   # PRD 项目详情
 │   └── settings/       # 用户设置
 │
-├── server/api/         # API 路由（103 个端点）
+├── server/api/         # API 路由（111 个端点）
 │   ├── auth/           # 认证接口
 │   ├── documents/      # 文档管理
 │   ├── prd/            # PRD 生成
@@ -407,7 +409,7 @@ ArchMind/
 │   └── ai-models.yaml  # AI 模型配置
 ├── migrations/         # 数据库迁移 SQL
 ├── scripts/            # 工具脚本（19 个）
-├── tests/              # 测试文件（17 个，292 个测试用例，~18% 覆盖率）
+├── tests/              # 测试文件（18 个，292+ 个测试用例，~89% 覆盖率）
 └── docs/               # 项目文档（31 个）
     └── WIKI.md         # 项目百科全书（完整参考手册）
 ```
@@ -494,24 +496,31 @@ pnpm storage:health
 
 ## 路线图
 
-### v0.2.0（开发中）
+### v0.2.1（已发布 ✅）
+
+安全加固与稳定性修复：
+- ✅ **工作区权限隔离**：6 个 API 端点校验成员身份和角色权限
+- ✅ **JWT / API Key 弱密钥修复**：生产环境未配置时启动报错
+- ✅ **PRD 内容 XSS 防护**：DOMPurify 净化 marked() 输出
+- ✅ **AI 适配器稳定性**：空 choices 防崩溃、ModelManager 竞态修复
+- ✅ **PRD 知识库索引修复**：prd_chunks 表 + document_embeddings FK 约束
+- ✅ **localStorage 健壮性**：数据损坏自动恢复、写入配额溢出处理
+
+### v0.2.0（已发布 ✅）
 
 已完成：
 - ✅ **Rate Limiting 中间件**：IP + 路径级别请求限流，无 Redis 依赖
 - ✅ **CSRF 保护中间件**：Origin/Referer 来源校验，防跨站请求伪造
 - ✅ **混合搜索 RRF 正式启用**：`retrieve()` 默认走 RRF 混合搜索，PRD 生成 & 对话检索质量提升
 - ✅ **结构化日志系统**：pino-based JSON 日志，支持请求追踪
+- ✅ **测试覆盖率**：从 15% 提升至 89%
+- ✅ **Sentry 错误监控**：前后端全链路错误追踪
 
-计划中：
-- Redis 缓存层
-- Sentry 监控接入
-- 测试覆盖率提升至 60%+
-
-### v0.1.1
+### v0.1.1（已发布）
 用户级 AI 配置数据隔离、全局 JWT 认证中间件、自定义 API Base URL 支持、动态模型列表获取、模型配置 UI 整合至 Profile 页面
 
-### v0.1.0
-文档管理、RAG 搜索、PRD 生成、原型系统、逻辑图、图像生成、多工作区、用户系统
+### v0.1.0（已发布）
+文档管理、RAG 搜索、PRD 生成、原型系���、逻辑图、图像生成、多工作区、用户系统
 
 ### v0.3.0（计划中）
 - WebSocket 实时协作
@@ -574,10 +583,14 @@ git push origin feat/your-feature
 
 ## 安全说明
 
-- **JWT 认证**：全局中间件统一拦截，所有 API 接口强制认证，令牌 7 天有效
+- **JWT 认证**：全局中间件统一拦截，所有 API 接口强制认证，令牌 7 天有效；生产环境未设置 `JWT_SECRET` 时启动即报错
 - **密码安全**：bcrypt 哈希（cost 12），密码不可逆
-- **API Key 加密**：用户配置的 AI API Key 使用 AES-256 加密存储，按用户隔离
-- **用户数据隔离**：AI 配置按用户独立存储，不同用户的配置完全隔离
+- **API Key 加密**：用户配置的 AI API Key 使用 AES-256 加密存储，按用户隔离；生产环境未设置 `API_KEY_ENCRYPTION_SECRET` 时启动即报错
+- **工作区权限隔离**：6 个工作区 API 端点���验用户成员身份与角色（member/admin/owner），拒绝越权访问
+- **XSS 防护**：PRD 内容渲染前通过 DOMPurify 净化，仅允许安全的 HTML 标签与属性
+- **Rate Limiting**：IP + 路径级别请求限流（认证接口 10 次/分钟，AI 生成 20 次/分钟，其他 120 次/分钟）
+- **CSRF 保护**：Origin/Referer 来源校验，防跨站请求伪造
+- **用户数据隔离**：AI 配置、向量统计等数据均按用户独立存储，不同用户的数据完全隔离
 - **文件访问**：使用预签名 URL，限时有效（默认 1 小时）
 - **本地优先**：所有文档存储在私有数据库，不上传至第三方
 - **隐私模式**：使用 Ollama 本地模型可实现 AI 调用完全离线

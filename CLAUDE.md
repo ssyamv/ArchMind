@@ -17,8 +17,8 @@
 | 版本 | 0.2.1 |
 | 框架 | Nuxt 3.21 + Vue 3.5 + TypeScript 5.9 |
 | 数据库 | PostgreSQL 14+ + pgvector |
-| 组件 | 209 个 (30+ shadcn/ui) |
-| API 端点 | 103 个 |
+| 组件 | 181 个 (30+ shadcn/ui) |
+| API 端点 | 111 个 |
 | 测试覆盖率 | ~89% (292+ 个测试用例) |
 
 ---
@@ -253,7 +253,7 @@ ArchMind/
 │   └── profile/             # 用户设置
 │
 ├── server/                   # Nuxt 3 服务端
-│   ├── api/                 # API 路由（103 个文件）
+│   ├── api/                 # API 路由（111 个文件）
 │   │   ├── documents/       # 文档管理 API
 │   │   ├── prd/             # PRD 生成 API
 │   │   ├── chat/            # 对话 API
@@ -449,6 +449,19 @@ pnpm db:seed          # 添加测试数据
 ---
 
 ## 环境变量
+
+### 文件位置
+
+| 文件 | 用途 | 是否提交 git |
+|------|------|------------|
+| `.env` | 本地开发环境变量 | ❌ gitignored |
+| `.env.example` | 变量模板（无真实值）| ✅ 已提交 |
+| `.vercel/.env.development.local` | `vercel env pull` 自动生成，含线上变量 | ❌ gitignored |
+| `.vercel/.env.production.local` | 手动维护的线上完整配置（含 DB、密钥等）| ❌ gitignored |
+
+> **线上环境变量统一放在 `.vercel/` 目录**，本地开发只需修改根目录的 `.env`。
+
+### 变量清单
 
 ```bash
 # 数据库
