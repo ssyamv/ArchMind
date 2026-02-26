@@ -327,7 +327,7 @@ export class PRDGenerator {
       if (references.length > 0) {
         await PRDDAO.addReferencesWithClient(client, created.id, references).catch((err) => {
           logger.error({ err, prdId: created.id }, 'Failed to save PRD references')
-          throw err
+          // 引用保存失败不影响已完成的流式输出，静默处理
         })
       }
       return created
