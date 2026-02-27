@@ -20,6 +20,10 @@ setup('authenticate', async ({ page, request }) => {
       password: testPassword,
       username: testUsername,
       fullName: 'E2E Test User'
+    },
+    headers: {
+      'Origin': process.env.BASE_URL || 'http://localhost:3000',
+      'Referer': `${process.env.BASE_URL || 'http://localhost:3000'}/register`
     }
   })
   // 允许 400（用户已存在）或 200（注册成功）
