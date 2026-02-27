@@ -838,6 +838,38 @@
     "prdDoesNotExist": "PRD does not exist",
     "conversationPrdIdMissing": "Missing prdId parameter",
     "conversationNotFound": "Conversation not found",
-    "conversationUpdatedSuccess": "Conversation updated successfully"
+    "conversationUpdatedSuccess": "Conversation updated successfully",
+    "webhookNotFound": "Webhook not found",
+    "webhookCreatedSuccess": "Webhook created successfully",
+    "webhookUpdatedSuccess": "Webhook updated successfully",
+    "webhookDeletedSuccess": "Webhook deleted successfully"
+  },
+  "webhook": {
+    "title": "Webhooks",
+    "description": "Configure webhooks to receive HTTP notifications when business events occur",
+    "create": "Create Webhook",
+    "edit": "Edit Webhook",
+    "delete": "Delete Webhook",
+    "name": "Name",
+    "url": "Target URL",
+    "events": "Subscribed Events",
+    "active": "Active",
+    "inactive": "Inactive",
+    "secret": "Signing Secret",
+    "secretHint": "The secret is only shown once at creation. Please save it securely.",
+    "headers": "Custom Headers",
+    "deliveries": "Delivery History",
+    "deliveryStatus": "Status",
+    "deliveryTime": "Delivered At",
+    "deliveryDuration": "Duration",
+    "noWebhooks": "No webhooks yet. Click \"Create Webhook\" to add one.",
+    "noDeliveries": "No delivery records yet",
+    "eventTypes": {
+      "document.uploaded": "Document Uploaded",
+      "document.completed": "Document Processing Completed",
+      "document.failed": "Document Processing Failed",
+      "prd.generated": "PRD Generated",
+      "comment.created": "Comment Created"
+    }
   }
 }
