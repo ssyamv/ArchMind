@@ -357,7 +357,7 @@ psql $DATABASE_URL -f migrations/drop-document-embeddings-chunk-fk.sql
 #### 改进
 - [x] E2E 测试覆盖（修复 3 个 CI 失败用例）
 - [x] CI/CD 流程
-- [ ] Docker Compose 生产配置
+- [x] Docker Compose 生产配置（`docker-compose.prod.yml`：预构建镜像、端口隔离、资源限制、Redis AOF 持久化）
 
 ### [1.0.0] - 计划中
 

@@ -1,0 +1,85 @@
+# ArchMind AI - 生产环境 Docker Compose Override
+#
+# 用法：
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# 此文件覆盖 docker-compose.yml 中的开发配置，适用于生产部署。
+# ���要变更：
+#   - 应用使用预构建镜像（而非本地 build）
+#   - postgres / redis 不对外暴露端口（仅内网通信）
+#   - 资源限制（防止单容器耗尽宿主机资源）
+#   - 启用 nginx profile（生产环境必须使用反向代理）
+
+services:
+  archmind:
+    # 生产环境使用预构建镜像（由 CI/CD 推送到镜像仓库）
+    build: !reset null
+    image: ${ARCHMIND_IMAGE:-ghcr.io/ssyamv/archmind:latest}
+    # 不直接暴露应用端口，通过 nginx 代理
+    ports: !reset []
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://archmind:${DB_PASSWORD}@postgres:5432/archmind
+      - REDIS_URL=redis://redis:6379
+      - APP_URL=${APP_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - API_KEY_ENCRYPTION_SECRET=${API_KEY_ENCRYPTION_SECRET}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - GLM_API_KEY=${GLM_API_KEY:-}
+      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY:-}
+      - BAIDU_API_KEY=${BAIDU_API_KEY:-}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - STORAGE_PROVIDER=${STORAGE_PROVIDER:-huawei-obs}
+      - HUAWEI_OBS_REGION=${HUAWEI_OBS_REGION:-}
+      - HUAWEI_OBS_ACCESS_KEY=${HUAWEI_OBS_ACCESS_KEY:-}
+      - HUAWEI_OBS_SECRET_KEY=${HUAWEI_OBS_SECRET_KEY:-}
+      - HUAWEI_OBS_BUCKET=${HUAWEI_OBS_BUCKET:-}
+    restart: always
+
+  postgres:
+    # 生产环境不对外暴露数据库端口
+    ports: !reset []
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    restart: always
+
+  redis:
+    # 生产环境不对外暴露 Redis 端口
+    ports: !reset []
+    # 生产环境启用持久化（AOF）
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru --appendonly yes
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    restart: always
+
+  nginx:
+    # 生产环境强制启用 nginx（覆盖 profiles 限制）
+    profiles: !reset []
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 256M
+    restart: always

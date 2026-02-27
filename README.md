@@ -431,15 +431,28 @@ ArchMind/
 ### Docker Compose 部署（推荐）
 
 ```bash
-# 生产环境部署（含 Nginx 反向代理）
-docker compose --profile production up -d
+# 开发/测试环境（本地构建，暴露所有端口）
+docker compose up -d
+
+# 生产环境部署（预构建镜像 + Nginx 反向代理 + 端口隔离 + 资源限制）
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 # 查看运行状态
 docker compose ps
 
 # 查看应用日志
-docker compose logs -f app
+docker compose logs -f archmind
 ```
+
+**生产环境与开发环境的差异（`docker-compose.prod.yml`）：**
+
+| 配置项 | 开发环境 | 生产环境 |
+|--------|---------|---------|
+| 应用来源 | 本地 build | 预构建镜像 (`ARCHMIND_IMAGE`) |
+| 端口暴露 | 3000/5432/6379 | 仅 80/443（通过 nginx） |
+| nginx | 可选 profile | 强制启用 |
+| Redis 持久化 | 无 | AOF 持久化 |
+| 资源限制 | 无 | app: 2C/2G，db: 2C/4G |
 
 ### 手动部署
 
