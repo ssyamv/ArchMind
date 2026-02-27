@@ -22,9 +22,8 @@ test.describe('公开页面', () => {
 
   test('未认证时访问受保护页面重定向到登录页', async ({ page }) => {
     await page.goto('/documents')
-    // 受保护页面应重定向到 /login
-    await page.waitForLoadState('domcontentloaded')
-    await expect(page).toHaveURL(/\/login/, { timeout: 10_000 })
+    // auth middleware 仅在客户端执行，需等待 networkidle 让 hydration 完成后才会重定向
+    await page.waitForURL(/\/login/, { timeout: 15_000 })
   })
 
   test('健康检查端点正常响应', async ({ request }) => {

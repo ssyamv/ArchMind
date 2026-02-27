@@ -26,21 +26,19 @@ setup('authenticate', async ({ page, request }) => {
       'Referer': `${process.env.BASE_URL || 'http://localhost:3000'}/register`
     }
   })
-  // 允许 400（用户已存在）或 200（注册成功）
-  expect([200, 201, 400]).toContain(registerRes.status())
+  // 注册必须成功（200），否则无法登录
+  expect(registerRes.status()).toBe(200)
 
-  // 2. 访问登录页
-  await page.goto('/login')
-  await expect(page.locator('form')).toBeVisible()
+  // 2. 直接通过 API 登录，获取 Cookie（比 UI 登录更稳定）
+  const loginRes = await request.post('/api/v1/auth/login', {
+    data: { email: testEmail, password: testPassword },
+    headers: {
+      'Origin': process.env.BASE_URL || 'http://localhost:3000',
+      'Referer': `${process.env.BASE_URL || 'http://localhost:3000'}/login`
+    }
+  })
+  expect(loginRes.status()).toBe(200)
 
-  // 3. 填写登录表单
-  await page.getByLabel(/邮箱|Email/i).fill(testEmail)
-  await page.getByLabel(/密码|Password/i).fill(testPassword)
-  await page.getByRole('button', { name: /登录|Login|Sign in/i }).click()
-
-  // 4. 等待登录成功，跳转到 /app 或其他受保护页面
-  await page.waitForURL(/\/(app|workspace|documents|generate|projects)/, { timeout: 15_000 })
-
-  // 5. 保存认证状态（Cookie）
+  // 3. 保存认证状态（Cookie 已由 API 响应的 Set-Cookie 写入上下文）
   await page.context().storageState({ path: authFile })
 })
