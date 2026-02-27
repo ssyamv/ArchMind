@@ -5,6 +5,7 @@ import YAML from 'js-yaml'
 import { PRDGenerator } from '~/lib/prd/generator'
 import { getModelManager } from '~/lib/ai/manager'
 import { EmbeddingServiceFactory } from '~/lib/rag/embedding-adapter'
+import { triggerWebhooks } from '~/server/utils/webhook-trigger'
 import type { PRDGenerateRequest } from '~/types/prd'
 
 export default defineEventHandler(async (event) => {
@@ -150,6 +151,16 @@ export default defineEventHandler(async (event) => {
 
     // 发送完成信号
     write({ chunk: '', done: true })
+
+    // 触发 Webhook（异步，失败不影响响应）
+    if (body.workspaceId) {
+      triggerWebhooks(body.workspaceId, 'prd.generated', {
+        userInput: body.userInput,
+        modelId,
+        useRAG: enableRAG,
+        userId
+      })
+    }
 
     function write(data: string | { chunk: string; done: boolean }) {
       if (typeof data === 'string') {

@@ -14,7 +14,8 @@ const PUBLIC_PATH_PREFIXES = [
   '/api/v1/auth/forgot-password',
   '/api/v1/auth/reset-password',
   '/api/v1/health',
-  '/api/v1/share/'
+  '/api/v1/share/',
+  '/api/v1/openapi'
 ]
 
 // 仅 GET 方法公开的路径前缀（如邀请详情查询）

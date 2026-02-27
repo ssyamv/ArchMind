@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { CommentDAO } from '~/lib/db/dao/comment-dao'
 import { ActivityLogDAO } from '~/lib/db/dao/activity-log-dao'
 import { requireWorkspaceMember } from '~/server/utils/auth-helpers'
+import { triggerWebhooks } from '~/server/utils/webhook-trigger'
 
 const BodySchema = z.object({
   workspaceId: z.string().uuid(),
@@ -37,6 +38,15 @@ export default defineEventHandler(async (event) => {
     resourceType: body.targetType,
     resourceId: body.targetId,
     metadata: { commentId: comment.id, mentionCount: body.mentions.length }
+  })
+
+  // 触发 Webhook（异步，失败不影响响应）
+  triggerWebhooks(body.workspaceId, 'comment.created', {
+    commentId: comment.id,
+    targetType: body.targetType,
+    targetId: body.targetId,
+    userId,
+    mentionCount: body.mentions.length
   })
 
   return { success: true, data: comment }

@@ -420,3 +420,44 @@ export const activityLogs = pgTable('activity_logs', {
   createdAtIdx: index('idx_activity_logs_created_at').on(table.createdAt),
   actionIdx: index('idx_activity_logs_action').on(table.action)
 }))
+
+// ============================================
+// Webhook 表（v0.3.0）
+// ============================================
+export const webhooks = pgTable('webhooks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  url: text('url').notNull(),
+  events: jsonb('events').default(sql`'[]'::jsonb`).notNull(), // ['document.uploaded', 'prd.generated', ...]
+  active: boolean('active').default(true).notNull(),
+  secret: varchar('secret', { length: 255 }).notNull(), // HMAC-SHA256 签名密钥
+  headers: jsonb('headers').default(sql`'{}'::jsonb`).notNull(), // 自定义请求头
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
+}, (table) => ({
+  workspaceIdx: index('idx_webhooks_workspace').on(table.workspaceId),
+  activeIdx: index('idx_webhooks_active').on(table.workspaceId, table.active),
+  userIdx: index('idx_webhooks_user').on(table.userId)
+}))
+
+// ============================================
+// Webhook 投递日志表（v0.3.0）
+// ============================================
+export const webhookDeliveries = pgTable('webhook_deliveries', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  webhookId: uuid('webhook_id').references(() => webhooks.id, { onDelete: 'cascade' }).notNull(),
+  event: varchar('event', { length: 100 }).notNull(),
+  payload: jsonb('payload').default(sql`'{}'::jsonb`).notNull(),
+  statusCode: integer('status_code'),
+  responseBody: text('response_body'),
+  durationMs: integer('duration_ms'),
+  success: boolean('success').default(false).notNull(),
+  error: text('error'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+}, (table) => ({
+  webhookIdx: index('idx_webhook_deliveries_webhook').on(table.webhookId),
+  createdAtIdx: index('idx_webhook_deliveries_created').on(table.createdAt),
+  successIdx: index('idx_webhook_deliveries_success').on(table.webhookId, table.success)
+}))
