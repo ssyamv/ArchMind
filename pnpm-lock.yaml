@@ -240,15 +240,9 @@ importers:
       '@nuxtjs/eslint-config-typescript':
         specifier: ^12.1.0
         version: 12.1.0(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3)
-<<<<<<< HEAD
-      '@playwright/test':
-        specifier: ^1.58.2
-        version: 1.58.2
-=======
       '@scalar/nuxt':
         specifier: ^0.5.84
         version: 0.5.84(magicast@0.5.2)(tailwindcss@3.4.19(tsx@4.21.0)(yaml@2.8.2))(typescript@5.9.3)
->>>>>>> origin/develop
       '@tailwindcss/typography':
         specifier: ^0.5.19
         version: 0.5.19(tailwindcss@3.4.19(tsx@4.21.0)(yaml@2.8.2))
@@ -13937,6 +13931,7 @@ snapshots:
   '@playwright/test@1.58.2':
     dependencies:
       playwright: 1.58.2
+    optional: true
 
   '@polka/url@1.0.0-next.29': {}
 
@@ -20573,13 +20568,15 @@ snapshots:
       exsolve: 1.0.8
       pathe: 2.0.3
 
-  playwright-core@1.58.2: {}
+  playwright-core@1.58.2:
+    optional: true
 
   playwright@1.58.2:
     dependencies:
       playwright-core: 1.58.2
     optionalDependencies:
       fsevents: 2.3.2
+    optional: true
 
   pluralize@8.0.0: {}
 

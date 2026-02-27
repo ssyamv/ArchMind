@@ -64,8 +64,3 @@ next-env.d.ts
 *.csv
 *.pem
 *.key
-
-# Playwright E2E
-/playwright-report/
-/test-results/
-/tests/e2e/.auth/
