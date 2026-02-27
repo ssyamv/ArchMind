@@ -2,7 +2,7 @@ name: Generate OpenAPI Docs
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - 'server/api/**'
       - 'scripts/generate-openapi.ts'
