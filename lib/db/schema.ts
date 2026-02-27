@@ -376,3 +376,47 @@ export const prdAssets = pgTable('prd_assets', {
   assetIdIdx: index('idx_prd_assets_asset_id').on(table.assetId),
   uniquePrdAsset: uniqueIndex('unique_prd_asset').on(table.prdId, table.assetId)
 }))
+
+// ============================================
+// 评论表（团队协作）
+// ============================================
+export const comments = pgTable('comments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
+  targetType: varchar('target_type', { length: 20 }).notNull(), // 'document' | 'prd' | 'prototype'
+  targetId: uuid('target_id').notNull(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  content: text('content').notNull(),
+  mentions: jsonb('mentions').default(sql`'[]'::jsonb`), // 被 @提及的用户 ID 数组
+  resolved: boolean('resolved').default(false).notNull(),
+  resolvedBy: uuid('resolved_by').references(() => users.id, { onDelete: 'set null' }),
+  resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
+}, (table) => ({
+  workspaceIdx: index('idx_comments_workspace').on(table.workspaceId),
+  targetIdx: index('idx_comments_target').on(table.targetType, table.targetId),
+  userIdx: index('idx_comments_user').on(table.userId),
+  resolvedIdx: index('idx_comments_resolved').on(table.resolved),
+  createdAtIdx: index('idx_comments_created_at').on(table.createdAt)
+}))
+
+// ============================================
+// 活动日志表（工作区动态流，面向用户展示）
+// ============================================
+export const activityLogs = pgTable('activity_logs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  action: varchar('action', { length: 50 }).notNull(), // e.g. 'uploaded_document', 'generated_prd'
+  resourceType: varchar('resource_type', { length: 20 }),
+  resourceId: uuid('resource_id'),
+  resourceName: varchar('resource_name', { length: 500 }),
+  metadata: jsonb('metadata').default(sql`'{}'::jsonb`),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+}, (table) => ({
+  workspaceIdx: index('idx_activity_logs_workspace').on(table.workspaceId),
+  userIdx: index('idx_activity_logs_user').on(table.userId),
+  createdAtIdx: index('idx_activity_logs_created_at').on(table.createdAt),
+  actionIdx: index('idx_activity_logs_action').on(table.action)
+}))
