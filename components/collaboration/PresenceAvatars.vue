@@ -11,6 +11,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Avatar, AvatarFallback, AvatarImage } from '~/components/ui/avatar'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip'
+import { useWebSocket } from '~/composables/useWebSocket'
 
 interface PresenceUser {
   userId: string
@@ -35,14 +36,10 @@ const onlineUsers = computed(() =>
 const visibleUsers = computed(() => onlineUsers.value.slice(0, props.maxVisible))
 const overflowCount = computed(() => Math.max(0, onlineUsers.value.length - props.maxVisible))
 
-// WebSocket 集成将在 feature/46 合并后启用
-// 当前通过动态导入做兼容处理
 let cleanupFns: (() => void)[] = []
 
 onMounted(async () => {
   try {
-    // @ts-expect-error — useWebSocket 由 feature/46 提供，合并后可去除此注解
-    const { useWebSocket } = await import('~/composables/useWebSocket')
     const { joinWorkspace, leaveWorkspace, on } = useWebSocket()
 
     const offList = on('presence_list', (msg: any) => {
