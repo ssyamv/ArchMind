@@ -6,7 +6,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-4169E1?logo=postgresql)](https://www.postgresql.org/)
 [![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js)](https://vuejs.org/)
-[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![License](https://img.shields.io/badge/License-GPL--3.0-blue)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-0.2.1-blue)](CHANGELOG.md)
 
 ---
@@ -520,14 +520,14 @@ pnpm storage:health
 用户级 AI 配置数据隔离、全局 JWT 认证中间件、自定义 API Base URL 支持、动态模型列表获取、模型配置 UI 整合至 Profile 页面
 
 ### v0.1.0（已发布）
-文档管理、RAG 搜索、PRD 生成、原型系���、逻辑图、图像生成、多工作区、用户系统
+文档管理、RAG 搜索、PRD 生成、原型系统、逻辑图、图像生成、多工作区、用户系统
 
-### v0.3.0（计划中）
-- WebSocket 实时协作
-- 团队成员管理
-- OpenAPI 文档自动生成
-- E2E 测试（Playwright）
-- CI/CD 流水线
+### v0.3.0（开发中 🚧）
+- ✅ **WebSocket 实时通信**：Nitro 原生 WebSocket，支持鉴权、工作区房间、心跳保活
+- 🔄 **团队协作**：评论系统、@提及、活动日志、成员在线状态
+- 🔄 **OpenAPI 文档 UI**：@scalar/nuxt 集成，内置交互式 API 文档
+- 🔄 **Docker 生产配置**：资源限制、日志轮转、Nginx WebSocket 代理、备份脚本
+- 🔄 **E2E 测试（Playwright）**：核心用户流程浏览器自动化���试
 
 ### v1.0.0（计划中）
 - RBAC 权限系统
@@ -607,7 +607,7 @@ git push origin feat/your-feature
 
 ## License
 
-[MIT](LICENSE)
+[GPL-3.0](LICENSE)
 
 ---
 
