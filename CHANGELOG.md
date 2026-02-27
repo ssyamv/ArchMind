@@ -348,15 +348,15 @@ psql $DATABASE_URL -f migrations/drop-document-embeddings-chunk-fk.sql
 ### [0.3.0] - 计划中
 
 #### 新增
-- [ ] WebSocket 实时通信
-- [ ] 团队协作功能
-- [ ] Webhook 支持
-- [ ] OpenAPI 文档自动生成
-- [ ] 国际化 (i18n) 完善
+- [x] WebSocket 实时通信
+- [x] 团队协作功能
+- [x] Webhook 支持（HMAC-SHA256 签名、投递日志、5 个 REST 端点）
+- [x] OpenAPI 文档自动生成
+- [x] 国际化 (i18n) 完善（补全 7 个英文缺失键，zh-CN 与 en 完全对齐）
 
 #### 改进
-- [ ] E2E 测试覆盖
-- [ ] CI/CD 流程
+- [x] E2E 测试覆盖（修复 3 个 CI 失败用例）
+- [x] CI/CD 流程
 - [ ] Docker Compose 生产配置
 
 ### [1.0.0] - 计划中

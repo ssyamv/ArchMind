@@ -518,7 +518,14 @@
     "sources": {
       "EXTERNAL": "External",
       "GENERATED": "Generated"
-    }
+    },
+    "loadFailed": "Failed to load resources",
+    "deleteSuccess": "Resource deleted successfully",
+    "downloadNotSupported": "Only document type supports download",
+    "clearCacheSuccess": "Vector cache cleared",
+    "clearCacheFailed": "Failed to clear cache",
+    "reindexSuccess": "Re-indexing task started",
+    "reindexFailed": "Failed to re-index"
   },
   "prototype": {
     "title": "Prototype",
