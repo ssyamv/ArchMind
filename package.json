@@ -34,7 +34,8 @@
 		"test:e2e:headed": "playwright test --headed",
 		"test:e2e:debug": "playwright test --debug",
 		"test:e2e:report": "playwright show-report",
-		"docs:api": "tsx scripts/generate-openapi.ts"
+		"docs:api": "tsx scripts/generate-openapi.ts",
+		"db:migrate-webhooks": "tsx scripts/migrate-add-webhooks.ts"
 	},
 	"dependencies": {
 		"@aivue/chatbot": "^2.5.5",

@@ -9,6 +9,7 @@ import { createHash } from 'crypto'
 import { DocumentDAO } from '~/lib/db/dao/document-dao'
 import { processDocumentAsync } from '~/server/utils/document-processing'
 import { getStorageClient, generateObjectKey } from '~/lib/storage/storage-factory'
+import { triggerWebhooks } from '~/server/utils/webhook-trigger'
 import type { Document } from '~/types/document'
 
 // 文件类型映射
@@ -210,6 +211,17 @@ export default defineEventHandler(async (event) => {
     if (content) {
       processDocumentAsync(createdDoc.id, content).catch((error) => {
         console.error('文档处理管道失败:', error)
+      })
+    }
+
+    // 触发 Webhook（异步，失败不影响响应）
+    if (workspaceId) {
+      triggerWebhooks(workspaceId, 'document.uploaded', {
+        documentId: createdDoc.id,
+        title: createdDoc.title,
+        fileType: createdDoc.fileType,
+        fileSize: createdDoc.fileSize,
+        userId
       })
     }
 

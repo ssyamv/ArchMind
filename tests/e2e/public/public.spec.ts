@@ -20,14 +20,10 @@ test.describe('公开页面', () => {
     await expect(page.locator('form, [data-testid="login-form"]')).toBeVisible({ timeout: 10_000 })
   })
 
-  test('未认证时访问首页重定向到登录页', async ({ page }) => {
-    await page.goto('/')
-    // 未认证时应重定向到 /login 或显示登录入口
-    await page.waitForLoadState('domcontentloaded')
-    const url = page.url()
-    const hasLoginForm = await page.locator('form').isVisible().catch(() => false)
-    // 要么 URL 包含 /login，要么页面有表单
-    expect(url.includes('/login') || hasLoginForm).toBe(true)
+  test('未认证时访问受保护页面重定向到登录页', async ({ page }) => {
+    await page.goto('/documents')
+    // auth middleware 仅在客户端执行，需等待 networkidle 让 hydration 完成后才会重定向
+    await page.waitForURL(/\/login/, { timeout: 15_000 })
   })
 
   test('健康检查端点正常响应', async ({ request }) => {
@@ -42,14 +38,13 @@ test.describe('公开页面', () => {
   test('OpenAPI 文档端点返回合法 JSON', async ({ request }) => {
     const res = await request.get('/api/v1/openapi')
 
-    // openapi.json 文件需存在（通过 pnpm docs:api 生成）
     if (res.status() === 200) {
       const body = await res.json()
       expect(body).toHaveProperty('openapi')
       expect(body).toHaveProperty('paths')
       expect(body.info.title).toContain('ArchMind')
     } else {
-      // 如果文档未生成，返回 404 也可接受
+      // 文档未生成时返回 404
       expect([200, 404]).toContain(res.status())
     }
   })

@@ -845,6 +845,38 @@
     "prdDoesNotExist": "PRD 不存在",
     "conversationPrdIdMissing": "缺少 prdId 参数",
     "conversationNotFound": "对话不存在",
-    "conversationUpdatedSuccess": "对话更新成功"
+    "conversationUpdatedSuccess": "对话更新成功",
+    "webhookNotFound": "Webhook 未找到",
+    "webhookCreatedSuccess": "Webhook 创建成功",
+    "webhookUpdatedSuccess": "Webhook 更新成功",
+    "webhookDeletedSuccess": "Webhook 删除成功"
+  },
+  "webhook": {
+    "title": "Webhook",
+    "description": "配置 Webhook 以在业务事件发生时接收 HTTP 通知",
+    "create": "创建 Webhook",
+    "edit": "编辑 Webhook",
+    "delete": "删除 Webhook",
+    "name": "名称",
+    "url": "目标 URL",
+    "events": "订阅事件",
+    "active": "启用",
+    "inactive": "停用",
+    "secret": "签名密钥",
+    "secretHint": "密钥仅在创建时显示一次，请妥善保存",
+    "headers": "自定义请求头",
+    "deliveries": "投递历史",
+    "deliveryStatus": "状态",
+    "deliveryTime": "投递时间",
+    "deliveryDuration": "耗时",
+    "noWebhooks": "暂无 Webhook，点击「创建 Webhook」添加",
+    "noDeliveries": "暂无投递记录",
+    "eventTypes": {
+      "document.uploaded": "文档上传",
+      "document.completed": "文档处理完成",
+      "document.failed": "文档处理失败",
+      "prd.generated": "PRD 生成完成",
+      "comment.created": "新增评论"
+    }
   }
 }
