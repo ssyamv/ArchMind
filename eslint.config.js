@@ -13,7 +13,10 @@ export default [
       '.output',
       '.vercel',
       'build',
-      'coverage'
+      'coverage',
+      'tests/e2e/**',
+      'playwright-report/**',
+      'test-results/**'
     ]
   },
   {
