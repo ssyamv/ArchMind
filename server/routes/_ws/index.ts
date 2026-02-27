@@ -8,11 +8,8 @@
  * 3. 服务端通过 peer.publish() 广播工作区事件（presence / comment / activity）
  */
 
-// crossws 是 h3/nitro 的内部依赖，通过路径引用其类型
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// crossws 是 h3/nitro 的内部依赖，用 any 暂代其 Peer 类型
 type Peer = any
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Message = any
 import { verifyToken } from '~/server/utils/jwt'
 import { wsConnectionManager } from '~/server/utils/ws-connection-manager'
 import { dbClient } from '~/lib/db/client'
@@ -74,15 +71,6 @@ async function fetchUserInfo(userId: string): Promise<{ username: string; avatar
     }
   } catch {
     return null
-  }
-}
-
-/** 向工作区所有成员（除 excludePeerId 外）广播消息 */
-function broadcastToWorkspace(peer: Peer, workspaceId: string, msg: WSServerMessage, excludeSelf = false): void {
-  peer.publish(`workspace:${workspaceId}`, JSON.stringify(msg))
-  // 如果不排除自己，同时发给自己
-  if (!excludeSelf) {
-    send(peer, msg)
   }
 }
 

@@ -9,7 +9,7 @@
  * - 连接状态响应式暴露
  */
 
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import type {
   WSClientMessage,
   WSServerMessage,
@@ -240,13 +240,6 @@ export function useWebSocket() {
     return () => {
       handlerMap.get(type)?.delete(handler as MessageHandler<any>)
     }
-  }
-
-  /**
-   * 组件卸载时自动清理（由调用方决定是否在 onUnmounted 时断开）
-   */
-  function cleanup(): void {
-    // 仅清理本 composable 实例注册的 handler（此简化版清理全部，实际可改为按实例跟踪）
   }
 
   return {
