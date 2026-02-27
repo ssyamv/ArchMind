@@ -22,8 +22,20 @@ export default defineNuxtConfig({
     '@pinia/nuxt',
     '@vueuse/nuxt',
     '@nuxtjs/i18n',
-    '@sentry/nuxt/module'
+    '@sentry/nuxt/module',
+    '@scalar/nuxt'
   ],
+
+  // Scalar API 文档配置
+  // 访问地址：http://localhost:3000/api-docs
+  scalar: {
+    pathRouting: {
+      basePath: '/api-docs'
+    },
+    spec: {
+      url: '/api/v1/openapi'
+    }
+  },
 
   // Sentry 错误监控配置
   // 仅在 SENTRY_DSN 环境变量存在时启用，本地开发默认关闭
