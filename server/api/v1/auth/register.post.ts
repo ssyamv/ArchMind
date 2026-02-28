@@ -8,6 +8,7 @@ import { UserDAO } from '~/lib/db/dao/user-dao'
 import { hashPassword } from '~/server/utils/password'
 import { generateToken } from '~/server/utils/jwt'
 import { getStorageClient } from '~/lib/storage/storage-factory'
+import { dbClient } from '~/lib/db/client'
 import type { RegisterRequest, AuthResponse } from '~/types/auth'
 
 // 预设头像背景色
@@ -52,6 +53,7 @@ function generateUsername(): string {
 }
 
 export default defineEventHandler(async (event): Promise<AuthResponse> => {
+  const t = useServerT(event)
   try {
     // 解析并验证请求体
     const body = await readBody<RegisterRequest>(event)
@@ -83,12 +85,48 @@ export default defineEventHandler(async (event): Promise<AuthResponse> => {
     // 哈希密码
     const passwordHash = await hashPassword(validatedData.password)
 
-    // 创建用户
-    const user = await UserDAO.create({
-      username,
-      email: validatedData.email,
-      passwordHash,
-      fullName: validatedData.fullName
+    // 在事务中原子性地创建用户、默认工作区和成员关系
+    const user = await dbClient.transaction(async (client) => {
+      const now = new Date().toISOString()
+      const userId = crypto.randomUUID()
+      const workspaceId = crypto.randomUUID()
+      const memberId = crypto.randomUUID()
+      const displayName = validatedData.fullName || username
+
+      // 1. 创建用户
+      const userResult = await client.query<any>(
+        `INSERT INTO users (id, email, username, password_hash, full_name, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING *`,
+        [userId, validatedData.email, username, passwordHash, validatedData.fullName || null, now, now]
+      )
+      const newUser = {
+        id: userResult.rows[0].id,
+        username: userResult.rows[0].username,
+        email: userResult.rows[0].email,
+        fullName: userResult.rows[0].full_name,
+        avatarUrl: userResult.rows[0].avatar_url,
+        isActive: userResult.rows[0].is_active,
+        createdAt: userResult.rows[0].created_at,
+        updatedAt: userResult.rows[0].updated_at
+      }
+
+      // 2. 创建个人默认工作区（名称根据用户语言动态生成）
+      const workspaceName = t('workspace.defaultWorkspaceName').replace('{name}', displayName)
+      await client.query(
+        `INSERT INTO workspaces (id, name, description, icon, color, is_default, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [workspaceId, workspaceName, '个人默认工作区', '🏠', '#3B82F6', false, now, now]
+      )
+
+      // 3. 将用户加入工作区（owner 角色）
+      await client.query(
+        `INSERT INTO workspace_members (id, workspace_id, user_id, role)
+         VALUES ($1, $2, $3, $4)`,
+        [memberId, workspaceId, userId, 'owner']
+      )
+
+      return newUser
     })
 
     // 生成默认头像（SVG 彩色字母头像）

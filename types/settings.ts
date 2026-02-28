@@ -37,6 +37,7 @@ export interface AvailableModelInfo {
   name: string;
   provider: string;
   description: string;
+  isUserModel?: boolean;
   capabilities: {
     maxContextLength: number;
     supportsStreaming: boolean;

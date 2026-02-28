@@ -29,7 +29,8 @@
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage",
 		"test:ui": "vitest --ui",
-		"docs:api": "tsx scripts/generate-openapi.ts"
+		"docs:api": "tsx scripts/generate-openapi.ts",
+		"db:migrate-webhooks": "tsx scripts/migrate-add-webhooks.ts"
 	},
 	"dependencies": {
 		"@aivue/chatbot": "^2.5.5",
@@ -111,6 +112,7 @@
 		"@nuxt/devtools": "^1.7.0",
 		"@nuxt/test-utils": "^4.0.0",
 		"@nuxtjs/eslint-config-typescript": "^12.1.0",
+"@scalar/nuxt": "^0.5.84",
 		"@tailwindcss/typography": "^0.5.19",
 		"@types/archiver": "^7.0.0",
 		"@types/bcrypt": "^6.0.0",

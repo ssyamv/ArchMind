@@ -85,7 +85,13 @@
             </SelectTrigger>
             <SelectContent>
               <SelectItem v-for="model in availableModels" :key="model.id" :value="model.id">
-                {{ model.label }}
+                <div class="flex items-center gap-1.5">
+                  <span>{{ model.label }}</span>
+                  <span
+                    v-if="model.isUserModel"
+                    class="text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 font-medium leading-none shrink-0"
+                  >我的</span>
+                </div>
               </SelectItem>
             </SelectContent>
           </Select>
@@ -149,7 +155,7 @@ const emit = defineEmits<{
 
 const props = defineProps<{
   isLoading?: boolean
-  availableModels: Array<{ id: string; label: string }>
+  availableModels: Array<{ id: string; label: string; isUserModel?: boolean }>
   workspaceId?: string
 }>()
 

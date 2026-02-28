@@ -35,7 +35,7 @@ const getIconClass = (variant?: string | null) => {
 </script>
 
 <template>
-  <ToastProvider>
+  <ToastProvider :duration="2500">
     <Toast v-for="toast in toasts" :key="toast.id" v-bind="toast">
       <div class="flex items-start gap-3">
         <component

@@ -122,7 +122,7 @@
                 <TableCell class="text-muted-foreground whitespace-nowrap">
                   {{ formatDate(resource.lastSync) }}
                 </TableCell>
-                <TableCell class="text-muted-foreground">
+                <TableCell class="text-muted-foreground whitespace-nowrap">
                   {{ formatSize(resource.size) }}
                 </TableCell>
               <TableCell>

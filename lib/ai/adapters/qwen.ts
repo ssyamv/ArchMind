@@ -33,7 +33,7 @@ export class QwenAdapter implements AIModelAdapter {
   async generateText (prompt: string, options?: GenerateOptions): Promise<string> {
     const response = await this.client.chat.completions.create({
       model: this.modelId,
-      max_tokens: options?.maxTokens || 8192,
+      max_tokens: Math.min(options?.maxTokens || 8192, 8192),
       messages: this.buildMessages(prompt, options),
       temperature: options?.temperature,
       top_p: options?.topP
@@ -53,7 +53,7 @@ export class QwenAdapter implements AIModelAdapter {
   async *generateStream (prompt: string, options?: GenerateOptions): AsyncGenerator<string> {
     const stream = await this.client.chat.completions.create({
       model: this.modelId,
-      max_tokens: options?.maxTokens || 8192,
+      max_tokens: Math.min(options?.maxTokens || 8192, 8192),
       messages: this.buildMessages(prompt, options),
       temperature: options?.temperature,
       top_p: options?.topP,

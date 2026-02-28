@@ -6,8 +6,8 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-4169E1?logo=postgresql)](https://www.postgresql.org/)
 [![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js)](https://vuejs.org/)
-[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-0.2.1-blue)](CHANGELOG.md)
+[![License](https://img.shields.io/badge/License-GPL--3.0-blue)](LICENSE)
+[![Version](https://img.shields.io/badge/Version-0.3.0-blue)](CHANGELOG.md)
 
 ---
 
@@ -89,6 +89,14 @@
 - **逻辑图生成**：自动生成 PRD 功能点的逻辑关系图
 - **覆盖率分析**：量化 PRD 对需求的覆盖程度
 
+### 实时协作（v0.3.0 新增）
+
+- **WebSocket 实时通信**：Nitro 原生 WebSocket，鉴权通过 HttpOnly Cookie 在服务端完成
+- **评论系统**：支持 @提及、评论解决、权限分级（作者/管理员）
+- **活动日志**：工作区内所有操作的完整历史记录
+- **成员在线状态**：实时显示谁在查看同一文档
+- **Webhook 集成**：订阅文档/PRD 事件，向外部系统推送 HMAC-SHA256 签名通知
+
 ### 企业级功能
 
 - **多工作区**：隔离不同项目的文档和 PRD
@@ -96,6 +104,7 @@
 - **AI 模型配置**：用户自行配置各 AI 提供商的 API Key
 - **图像生成**：AI 文生图，辅助产品原型设计
 - **数据安全**：本地部署，文档不离开私有环境
+- **国际化**：中英文双语界面，按浏览器语言自动切换
 
 ---
 
@@ -183,27 +192,28 @@ STORAGE_PROVIDER=huawei-obs
 │  Pages(15) · Components(181+) · Pinia Stores · i18n     │
 │         shadcn/ui + Tailwind CSS + vue-bits             │
 └─────────────────────────┬───────────────────────────────┘
-                          │ HTTP / SSE
+                          │ HTTP / SSE / WebSocket
 ┌─────────────────────────▼───────────────────────────────┐
 │              API Layer (Nuxt Nitro)                       │
-│    103 REST endpoints · JWT Middleware · Rate Limiting · CSRF Protection · Zod Validation  │
-└──────┬──────────────────┬────────────────┬──────────────┘
+│  111 REST endpoints · WebSocket (_ws) · JWT Middleware  │
+│  Rate Limiting · CSRF Protection · Zod Validation       │
+└──────┬───────��──────────┬────────────────┬──────────────┘
        │                  │                │
-┌──────▼──────┐  ┌────────▼──────┐  ┌─────▼────────────┐
-│  AI Service  │  │  RAG Engine   │  │  Business Logic   │
-│              │  │               │  │                    │
-│  8 Adapters  │  │  Pipeline     │  │  PRD Generator    │
-│  (Claude/GPT │  │  TextSplitter │  │  Chat Engine      │
-│   Gemini/GLM │  │  Embedding    │  │  Proto Generator  │
-│   Qwen/Wxin  │  │  Retriever    │  │  LogicMap Gen     │
-│   DeepSeek   │  │  RRF Fusion   │  │                    │
-│   Ollama)    │  │               │  │                    │
-└──────┬───────┘  └───────┬───────┘  └──────────┬────────┘
+┌──────▼──────┐  ┌────────▼──────┐  ┌─────▼────────────────┐
+│  AI Service  │  │  RAG Engine   │  │  Business Logic       │
+│              │  │               │  │                        │
+│  8 Adapters  │  │  Pipeline     │  │  PRD Generator        │
+│  (Claude/GPT │  │  TextSplitter │  │  Chat Engine          │
+│   Gemini/GLM │  │  Embedding    │  │  Proto Generator      │
+│   Qwen/Wxin  │  │  Retriever    │  │  LogicMap Gen         │
+│   DeepSeek   │  │  RRF Fusion   │  │  Comment System       │
+│   Ollama)    │  │               │  │  Webhook Trigger      │
+└──────┬───────┘  └───────┬───────┘  └──────────┬──────────┘
        │                  │                      │
 ┌──────▼──────────────────▼──────────────────────▼────────┐
 │                    Data Layer                             │
 │  PostgreSQL 14+ (pgvector) · Drizzle ORM · 17 DAOs      │
-│  Huawei OBS · 23+ Tables                                │
+│  Redis Cache · Huawei OBS · 25+ Tables                  │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -431,15 +441,28 @@ ArchMind/
 ### Docker Compose 部署（推荐）
 
 ```bash
-# 生产环境部署（含 Nginx 反向代理）
-docker compose --profile production up -d
+# 开发/测试环境（本地构建，暴露所有端口）
+docker compose up -d
+
+# 生产环境部署（预构建镜像 + Nginx 反向代理 + 端口隔离 + 资源限制）
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 # 查看运行状态
 docker compose ps
 
 # 查看应用日志
-docker compose logs -f app
+docker compose logs -f archmind
 ```
+
+**生产环境与开发环境的差异（`docker-compose.prod.yml`）：**
+
+| 配置项 | 开发环境 | 生产环境 |
+|--------|---------|---------|
+| 应用来源 | 本地 build | 预构建镜像 (`ARCHMIND_IMAGE`) |
+| 端口暴露 | 3000/5432/6379 | 仅 80/443（通过 nginx） |
+| nginx | 可选 profile | 强制启用 |
+| Redis 持久化 | 无 | AOF 持久化 |
+| 资源限制 | 无 | app: 2C/2G，db: 2C/4G |
 
 ### 手动部署
 
@@ -496,6 +519,18 @@ pnpm storage:health
 
 ## 路线图
 
+### v0.3.0（已发布 ✅）
+
+实时协作与系统集成：
+
+- ✅ **WebSocket 实时通信**：Nitro 原生 WebSocket，HttpOnly Cookie 服务端鉴权，工作区房间管理，心跳保活
+- ✅ **团队协作**：评论系统（@提及/解决/权限分级）、活动日志、成员在线状态实时展示
+- ✅ **Webhook 支持**：订阅文档/PRD 事件，HMAC-SHA256 签名，自定义 Header，投递日志记录
+- ✅ **OpenAPI 文档**：`@scalar/nuxt` 集成，交互式 API 文档（`/api-docs`），自动生成 `openapi.json`
+- ✅ **Docker 生产配置**：`docker-compose.prod.yml` 资源限制、Nginx WebSocket 代理、AOF 持久化、备份脚本
+- ✅ **国际化完善**：中英文切换，组件级 i18n
+- ✅ **安全修复（Review）**：WebSocket Cookie 鉴权修复、迁移文件 UUID 类型修复、评论权限加固、Webhook Header 顺序修复、Docker 弱密码移除、注册事务原子性
+
 ### v0.2.1（已发布 ✅）
 
 安全加固与稳定性修复：
@@ -520,14 +555,7 @@ pnpm storage:health
 用户级 AI 配置数据隔离、全局 JWT 认证中间件、自定义 API Base URL 支持、动态模型列表获取、模型配置 UI 整合至 Profile 页面
 
 ### v0.1.0（已发布）
-文档管理、RAG 搜索、PRD 生成、原型系���、逻辑图、图像生成、多工作区、用户系统
-
-### v0.3.0（计划中）
-- WebSocket 实时协作
-- 团队成员管理
-- OpenAPI 文档自动生成
-- E2E 测试（Playwright）
-- CI/CD 流水线
+文档管理、RAG 搜索、PRD 生成、原型系统、逻辑图、图像生成、多工作区、用户系统
 
 ### v1.0.0（计划中）
 - RBAC 权限系统
@@ -584,14 +612,17 @@ git push origin feat/your-feature
 ## 安全说明
 
 - **JWT 认证**：全局中间件统一拦截，所有 API 接口强制认证，令牌 7 天有效；生产环境未设置 `JWT_SECRET` 时启动即报错
+- **WebSocket 鉴权**：WS 连接建立时服务端从 HTTP 升级请求的 HttpOnly Cookie 中读取 JWT 完成鉴权，客户端无法篡改
 - **密码安全**：bcrypt 哈希（cost 12），密码不可逆
 - **API Key 加密**：用户配置的 AI API Key 使用 AES-256 加密存储，按用户隔离；生产环境未设置 `API_KEY_ENCRYPTION_SECRET` 时启动即报错
-- **工作区权限隔离**：6 个工作区 API 端点���验用户成员身份与角色（member/admin/owner），拒绝越权访问
+- **工作区权限隔离**：所有工作区 API 端点校验用户成员身份与角色（member/admin/owner），拒绝越权访问；评论修改/解决操作同样执行工作区成员校验
+- **Webhook 签名**：所有投递请求附带 HMAC-SHA256 签名，用户自定义 Header 不可覆盖系统安全 Header
 - **XSS 防护**：PRD 内容渲染前通过 DOMPurify 净化，仅允许安全的 HTML 标签与属性
-- **Rate Limiting**：IP + 路径级别请求限流（认证接口 10 次/分钟，AI 生成 20 次/分钟，其他 120 次/分钟）
+- **Rate Limiting**：IP + 路径级别请求限流（认证接口 10 次/分钟，AI 生成 20 次/分钟，邀请接口 5 次/分钟，其他 120 次/分钟）
 - **CSRF 保护**：Origin/Referer 来源校验，防跨站请求伪造
 - **用户数据隔离**：AI 配置、向量统计等数据均按用户独立存储，不同用户的数据完全隔离
 - **文件访问**：使用预签名 URL，限时有效（默认 1 小时）
+- **生产环境强制配置**：`DB_PASSWORD`、`JWT_SECRET`、`API_KEY_ENCRYPTION_SECRET` 均无默认值，未设置时 Docker Compose ��动即报错
 - **本地优先**：所有文档存储在私有数据库，不上传至第三方
 - **隐私模式**：使用 Ollama 本地模型可实现 AI 调用完全离线
 
@@ -607,7 +638,7 @@ git push origin feat/your-feature
 
 ## License
 
-[MIT](LICENSE)
+[GPL-3.0](LICENSE)
 
 ---
 

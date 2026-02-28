@@ -20,10 +20,18 @@ export default defineEventHandler(async (event) => {
     WorkspaceMemberDAO.getPendingInvitations(workspaceId)
   ])
 
+  // 将对象键格式的头像 URL 转换为代理 URL（与 /api/v1/auth/me 保持一致）
+  const resolvedMembers = members.map(member => ({
+    ...member,
+    userAvatarUrl: member.userAvatarUrl?.startsWith('avatars/')
+      ? `/api/v1/user/avatar/${member.userId}`
+      : member.userAvatarUrl
+  }))
+
   return {
     success: true,
     data: {
-      members,
+      members: resolvedMembers,
       pendingInvitations
     }
   }

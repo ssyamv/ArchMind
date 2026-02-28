@@ -59,6 +59,39 @@ jobs:
       - name: Run TypeScript check
         run: pnpm typecheck
 
+  # ─── 依赖安全扫描 ─────────────────────────────────────────────────────────────
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run security audit
+        # --audit-level=high 只在高危及以上漏洞时失败，忽略 low/moderate
+        run: pnpm audit --audit-level=high
+        continue-on-error: true  # 不阻塞 CI，但会在 Summary 中显示
+
+      - name: Security audit summary
+        if: always()
+        run: |
+          echo "## Security Audit" >> $GITHUB_STEP_SUMMARY
+          pnpm audit --audit-level=high 2>&1 | tail -20 >> $GITHUB_STEP_SUMMARY || true
+
   # ─── 单元测试 & 覆盖率 ───────────────────────────────────────────────────────
   test:
     name: Unit Tests
@@ -84,7 +117,6 @@ jobs:
       - name: Run tests with coverage
         run: pnpm test:coverage
         env:
-          # 测试环境变量（使用 mock，无需真实数据库）
           NODE_ENV: test
           JWT_SECRET: test-jwt-secret-for-ci
 
@@ -138,7 +170,6 @@ jobs:
         run: pnpm build
         env:
           NODE_ENV: production
-          # 构建时 AI/DB 相关环境变量使用占位符（构建阶段不调用）
           DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/archmind
           JWT_SECRET: placeholder-build-secret
 
@@ -146,6 +177,16 @@ jobs:
         run: |
           test -d .output && echo "✓ .output directory exists" || (echo "✗ Build failed: .output not found" && exit 1)
           test -f .output/server/index.mjs && echo "✓ server entry point exists" || (echo "✗ Build failed: server entry not found" && exit 1)
+
+      - name: Package build output
+        run: tar -czf nuxt-build.tar.gz .output/
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuxt-build-${{ github.sha }}
+          path: nuxt-build.tar.gz
+          retention-days: 3
 
   # ─── Docker 镜像构建（仅 main 分支）─────────────────────────────────────────
   docker:

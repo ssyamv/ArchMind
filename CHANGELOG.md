@@ -11,6 +11,61 @@
 
 ---
 
+## [0.3.0] - 2026-02-27
+
+本版本为 v0.3.0 功能发布版，包含实时协作、Webhook 集成、OpenAPI 文档、Docker 生产配置、国际化完善，以及系统性代码 Review 修复。
+
+### 新增 (Added)
+
+#### WebSocket 实时通信
+
+- **Nitro 原生 WebSocket** (`server/routes/_ws/index.ts`): 基于 crossws 的 WebSocket 服务端，支持工作区房间管理、成员在线状态广播、心跳保活机制
+- **useWebSocket Composable** (`composables/useWebSocket.ts`): 类型安全的客户端 WS 封装，指数退避自动重连，工作区订阅管理
+- **wsConnectionManager** (`server/utils/ws-connection-manager.ts`): 单进程连接注册表，支持用户-连接绑定、按工作区广播
+
+#### 团队协作
+
+- **评论系统**: `POST/GET /api/v1/comments` 完整 CRUD，支持 @提及（UUID 数组）、评论解决标记（`POST /api/v1/comments/:id/resolve`）
+- **评论权限**: 仅作者可修改评论内容；作者或工作区 admin/owner 可标记解决
+- **活动日志**: `POST /api/v1/activities`，记录工作区所有用户操作事件
+- **在线状态**: WebSocket `presence_update` / `presence_list` 消息类型，实时推送成员进入/离开工作区事件
+- **Webhook 支持**: `POST/GET /api/v1/webhooks` 完整管理 API，订阅 `document.uploaded`、`document.completed`、`prd.generated`、`comment.created` 等事件；HMAC-SHA256 签名，自定义 Header，10 秒超时，投递日志记录
+
+#### OpenAPI 文档
+
+- **`@scalar/nuxt` 集成**: 交互式 Scalar API 文档界面，访问 `/api-docs`
+- **openapi.json 生成**: `docs/api/openapi.json`，`GET /api/v1/openapi` 提供运行时访问
+- **文档生成脚本**: `pnpm docs:api` 自动生成/更新 OpenAPI 规范文件
+
+#### Docker 生产配置
+
+- **`docker-compose.prod.yml`**: 生产环境覆盖配置，资源限制（app 2C/2G，db 2C/4G），Nginx WebSocket 代理，Redis AOF 持久化，端口隔离（仅暴露 80/443）
+- **Nginx WebSocket 支持**: `docker/nginx.conf` 配置 `/_ws` 路径的 WebSocket 代理（`Upgrade`/`Connection` header 转发）
+- **备份脚本**: `docker/backup.sh` PostgreSQL 定时备份，保留最近 7 份
+
+#### 国际化（i18n）完善
+
+- **中英文双语**: 所有 UI 文本迁移至 `i18n/` 语言包，按浏览器语言自动切换
+- **组件级翻译**: 文档管理、PRD 生成、设置页面等核心组件完成国际化
+
+### 修复 (Fixed) — v0.3.0 代码 Review
+
+- **[Critical] WebSocket 鉴权修复** (`server/routes/_ws/index.ts`): `open()` 回调改为服务端直接读取 HTTP 升级请求的 HttpOnly Cookie（`peer.request.headers.get('cookie')`）完成鉴权，不再依赖客户端发送 `auth` 消息（原实现通过 `document.cookie` 读取 HttpOnly cookie 永远为 null）
+- **[High] 迁移文件 UUID 类型修复** (`migrations/add-workspace-members-invitations.sql`): `workspace_members` 和 `workspace_invitations` 表的 `workspace_id` 从 `TEXT` 改为 `UUID`，与 `workspaces.id` 类型匹配，修复外键约束执行失败问题
+- **[High] 评论解决权限修复** (`server/api/v1/comments/[id]/resolve.post.ts`): 新增 admin/owner 角色检查（`['admin', 'owner'].includes(role)`），普通成员不能解决他人评论，与代码注释语义一致
+- **[High] Webhook Header 顺序修复** (`server/utils/webhook-trigger.ts`): `...customHeaders` 移至系统安全 Header 之前，防止用户自定义 Header 覆盖 `X-ArchMind-Signature` 等关键安全头
+- **[Medium] Docker 弱默认密码移除** (`docker-compose.yml`): 移除 `DB_PASSWORD`、`JWT_SECRET`、`API_KEY_ENCRYPTION_SECRET` 的弱默认值（`archmind123`、`change-this-*`），未配置时容器启动即报错，顶部注释说明必填项
+- **[Medium] 评论更新工作区隔离** (`server/api/v1/comments/[id]/index.patch.ts`): `PATCH` 端点从 `requireAuth` 升级为 `requireWorkspaceMember`，确认用户是评论所属工作区的成员后才允许修改
+- **[Medium] 注册流程事务原子性** (`server/api/v1/auth/register.post.ts`): 用户创建、工作区创建、成员关联三步操作包裹在 `dbClient.transaction()` 中，任一步失败全部回滚，杜绝用户注册成功但无工作区的半完成状态
+
+### 变更 (Changed)
+
+- `composables/useWebSocket.ts`: 移除 `getAuthToken()` 函数和客户端 `auth` 消息发送逻辑；`WSConnectionStatus` 移除 `'authenticating'` 状态；连接建立后直接进入 `connected` 状态
+- `types/websocket.ts`: 从 `WSClientMessage` 联合类型中移除 `WSAuthMessage`；`WSMessageType` 移除 `'auth'`
+- `package.json` 版本号更新至 `0.3.0`
+
+---
+
 ## [0.2.1] - 2026-02-26
 
 本版本为 v0.2.0 发布后的系统性代码 Review 修复版，涵盖安全加固、稳定性修复和数据库兼容性修复。
@@ -348,16 +403,16 @@ psql $DATABASE_URL -f migrations/drop-document-embeddings-chunk-fk.sql
 ### [0.3.0] - 计划中
 
 #### 新增
-- [ ] WebSocket 实时通信
-- [ ] 团队协作功能
-- [ ] Webhook 支持
-- [ ] OpenAPI 文档自动生成
-- [ ] 国际化 (i18n) 完善
+- [x] WebSocket 实时通信
+- [x] 团队协作功能
+- [x] Webhook 支持（HMAC-SHA256 签名、投递日志、5 个 REST 端点）
+- [x] OpenAPI 文档自动生成
+- [x] 国际化 (i18n) 完善（补全 7 个英文缺失键，zh-CN 与 en 完全对齐）
 
 #### 改进
-- [ ] E2E 测试覆盖
-- [ ] CI/CD 流程
-- [ ] Docker Compose 生产配置
+- [x] E2E 测试覆盖（修复 3 个 CI 失败用例）
+- [x] CI/CD 流程
+- [x] Docker Compose 生产配置（`docker-compose.prod.yml`：预构建镜像、端口隔离、资源限制、Redis AOF 持久化）
 
 ### [1.0.0] - 计划中
 

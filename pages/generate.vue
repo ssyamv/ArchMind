@@ -357,15 +357,48 @@ onMounted(async () => {
 
   // 提前加载原型图数据，确保导出时可用（不依赖 PrototypeTab 的挂载）
   if (!isNewProject) {
-    prototypeState.loadFromStorage()
-    // 如果有 prdId 且 localStorage 中没有原型数据，尝试从服务端加载
     const prdId = loadPrdId || conversation.conversation.value.dbId
+    prototypeState.loadFromStorage()
+    // 验证 localStorage 加载的原型是否属于当前对话，不属于则清空
+    if (prototypeState.prototype.value && prototypeState.prototype.value.prdId !== prdId) {
+      prototypeState.reset()
+    }
+    // 如果有 prdId 且内存中没有原型数据，尝试从服务端加载
     if (prdId && prototypeState.pages.value.length === 0) {
       await prototypeState.loadByPrdId(prdId)
     }
   }
 
   await aiModels.fetchAvailableModels()
+})
+
+// 监听路由参数变化（路由复用时 onMounted 不会重新执行，需要 watch 处理）
+watch(() => route.query, async (newQuery) => {
+  const loadPrdId = newQuery.loadPrd as string
+  const isNewProject = newQuery.new === '1'
+
+  if (isNewProject) {
+    conversation.reset()
+    prototypeState.reset()
+    logicMapState.reset()
+    assetsState.reset()
+    previewVisible.value = false
+    activeTab.value = 'editor'
+  } else if (loadPrdId) {
+    const loaded = await conversation.loadFromDatabase(loadPrdId)
+    if (loaded) {
+      toast({
+        title: t('generate.loadSuccess.title'),
+        description: t('generate.loadSuccess.description'),
+        variant: 'success',
+      })
+    }
+    prototypeState.reset()
+    const prdId = loadPrdId
+    if (prdId) {
+      await prototypeState.loadByPrdId(prdId)
+    }
+  }
 })
 
 // Auto-show preview when PRD content is generated or user starts editing
@@ -376,7 +409,7 @@ watch(() => conversation.conversation.value.currentPrdContent, (newContent) => {
 })
 
 const availableModels = computed(() =>
-  aiModels.models.value?.map(m => ({ id: m.id, label: m.name })) || []
+  aiModels.models.value?.map(m => ({ id: m.id, label: m.name, isUserModel: m.isUserModel })) || []
 )
 
 // Expose conversation ref for template
@@ -445,6 +478,7 @@ async function handleSendMessage (
     if (!reader) throw new Error(t('generate.errors.noResponse'))
 
     let buffer = ''
+    let streamingPrdContent = '' // 实时累积的 PRD 内容
     while (true) {
       const { done, value } = await reader.read()
       if (done) {
@@ -466,11 +500,12 @@ async function handleSendMessage (
             if (data.chunk) {
               conversation.updateAIMessage(aiMessage.id, data.chunk)
             }
+            // 实时同步 PRD 内容到右侧编辑器
+            if (data.prdChunk) {
+              streamingPrdContent += data.prdChunk
+              conversationRef.value.currentPrdContent = streamingPrdContent
+            }
             if (data.done) {
-              // 如果返回了完整的PRD内容，更新到currentPrdContent
-              if (data.isPRD && data.fullContent) {
-                conversationRef.value.currentPrdContent = data.fullContent
-              }
               conversation.completeAIMessage(aiMessage.id)
               return
             }

@@ -279,9 +279,9 @@ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica N
 - 设置 \`lang="zh-CN"\`
 - 设置 viewport meta 标签
 
-✅ **引入 Tailwind CSS CDN**
+✅ **引入 Tailwind CSS CDN（必须使用以下地址，禁止使用 cdn.tailwindcss.com）**
 \`\`\`html
-<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 \`\`\`
 
 ✅ **所有样式使用 Tailwind utility classes**
@@ -291,6 +291,12 @@ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica N
 ✅ **所有 JS 内联**
 - 使用 \`<script>\` 标签
 - 不引用外部 JS 文件（Tailwind CDN 除外）
+
+❌ **禁止使用 Canvas API**
+- 不使用 \`<canvas>\` 元素和 \`getContext()\` 方法
+- 图表、进度条、数据可视化一律用纯 CSS + HTML 实现
+- 柱状图示例：用 \`<div class="bg-blue-500 h-16 w-1/3">\` 模拟
+- 圆形进度：用 CSS border-radius + clip 模拟
 
 ✅ **语义化 HTML 标签**
 - 使用 \`<header>\`, \`<main>\`, \`<nav>\`, \`<section>\`, \`<article>\`, \`<footer>\`
@@ -403,7 +409,7 @@ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica N
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>首页</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
 <body>
   ...完整的首页 HTML...
@@ -417,7 +423,7 @@ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica N
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>登录</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
 <body>
   ...完整的登录页 HTML...

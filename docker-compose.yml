@@ -1,5 +1,13 @@
 # ArchMind AI - Docker Compose 配置
 # 一键部署完整技术栈
+#
+# ⚠️  启动前必须先创建 .env 文件并设置以下必要变量：
+#   DB_PASSWORD         - 数据库密码（不能为空或使用默认值）
+#   JWT_SECRET          - JWT 签名密钥（建议 32 位以上随机字符串）
+#   API_KEY_ENCRYPTION_SECRET - API Key 加密密钥（必须为 32 位字符串）
+#
+# 可以运行以下命令生成安全的随机密钥：
+#   openssl rand -hex 32
 
 services:
   # ================================
@@ -17,7 +25,7 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://archmind:${DB_PASSWORD:-archmind123}@postgres:5432/archmind
+      - DATABASE_URL=postgresql://archmind:${DB_PASSWORD}@postgres:5432/archmind
       - APP_URL=${APP_URL:-http://localhost:3000}
       # Redis 缓存（不配置则降级为内存缓存）
       - REDIS_URL=redis://redis:6379
@@ -29,9 +37,9 @@ services:
       - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY:-}
       - BAIDU_API_KEY=${BAIDU_API_KEY:-}
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
-      # 安全配置
-      - API_KEY_ENCRYPTION_SECRET=${API_KEY_ENCRYPTION_SECRET:-change-this-to-a-32-char-secret-key}
-      - JWT_SECRET=${JWT_SECRET:-change-this-to-a-random-jwt-secret}
+      # 安全配置（必须在 .env 中设置，不能使用默认值）
+      - API_KEY_ENCRYPTION_SECRET=${API_KEY_ENCRYPTION_SECRET}
+      - JWT_SECRET=${JWT_SECRET}
       # 对象存储配置（华为云 OBS）
       - STORAGE_PROVIDER=${STORAGE_PROVIDER:-huawei-obs}
       - HUAWEI_OBS_REGION=${HUAWEI_OBS_REGION:-cn-north-4}
@@ -61,7 +69,7 @@ services:
     restart: unless-stopped
     environment:
       - POSTGRES_USER=archmind
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-archmind123}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=archmind
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:

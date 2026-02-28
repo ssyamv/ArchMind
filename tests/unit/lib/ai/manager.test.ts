@@ -170,7 +170,7 @@ describe('ModelManager', () => {
       })
 
       const models = manager.getAvailableModels()
-      expect(models).toContain('claude-opus-4-20250514')
+      expect(models).toContain('claude-opus-4-6')
       expect(models).toContain('gpt-4o')
     })
   })
@@ -178,7 +178,7 @@ describe('ModelManager', () => {
   describe('getAdapter', () => {
     it('should return adapter for existing model', () => {
       const manager = new ModelManager({ anthropicApiKey: 'test-key' })
-      const adapter = manager.getAdapter('claude-opus-4-20250514')
+      const adapter = manager.getAdapter('claude-opus-4-6')
       expect(adapter).toBeDefined()
       expect(adapter?.name).toBe('Claude')
     })
@@ -200,7 +200,7 @@ describe('ModelManager', () => {
 
       const models = manager.getAvailableModels()
       expect(models.length).toBeGreaterThanOrEqual(3)
-      expect(models).toContain('claude-opus-4-20250514')
+      expect(models).toContain('claude-opus-4-6')
       expect(models).toContain('gpt-4o')
       expect(models).toContain('gemini-2.0-flash')
     })
@@ -208,26 +208,26 @@ describe('ModelManager', () => {
 
   describe('selectModelByTask', () => {
     it('should select Claude for PRD generation', () => {
-      // selectModelByTask maps 'prd_generation' to 'claude-3.5-sonnet'
+      // selectModelByTask maps 'prd_generation' to 'claude-sonnet-4-6'
       // so we need to pass that model explicitly
       const manager = new ModelManager({
         anthropicApiKey: 'test-key',
-        anthropicModels: ['claude-3.5-sonnet']
+        anthropicModels: ['claude-sonnet-4-6']
       })
       const adapter = manager.selectModelByTask('prd_generation')
-      expect(adapter?.modelId).toBe('claude-3.5-sonnet')
+      expect(adapter?.modelId).toBe('claude-sonnet-4-6')
     })
 
     it('should select Gemini for large documents', () => {
       const manager = new ModelManager({ googleApiKey: 'test-key' })
       const adapter = manager.selectModelByTask('large_document')
-      expect(adapter?.modelId).toBe('gemini-1.5-pro')
+      expect(adapter?.modelId).toBe('gemini-2.5-pro')
     })
 
     it('should select GPT-4o for general tasks', () => {
       const manager = new ModelManager({ openaiApiKey: 'test-key' })
       const adapter = manager.selectModelByTask('general')
-      expect(adapter?.modelId).toBe('gpt-4o')
+      expect(adapter?.modelId).toBe('gpt-4.1')
     })
 
     it('未知任务类型回退到 claude-3.5-sonnet', () => {
@@ -250,9 +250,9 @@ describe('ModelManager', () => {
   describe('getModelInfo', () => {
     it('should return model info for existing model', () => {
       const manager = new ModelManager({ anthropicApiKey: 'test-key' })
-      const info = manager.getModelInfo('claude-opus-4-20250514')
+      const info = manager.getModelInfo('claude-opus-4-6')
       expect(info).toBeDefined()
-      expect(info?.modelId).toBe('claude-opus-4-20250514')
+      expect(info?.modelId).toBe('claude-opus-4-6')
       expect(info?.capabilities).toBeDefined()
     })
 
@@ -266,7 +266,7 @@ describe('ModelManager', () => {
   describe('estimateCost', () => {
     it('should return cost estimate for existing model', () => {
       const manager = new ModelManager({ anthropicApiKey: 'test-key' })
-      const cost = manager.estimateCost('claude-opus-4-20250514', 1000)
+      const cost = manager.estimateCost('claude-opus-4-6', 1000)
       expect(cost).toBeDefined()
       expect(cost?.inputCost).toBeTypeOf('number')
       expect(cost?.currency).toBe('USD')
@@ -290,14 +290,14 @@ describe('ModelManager', () => {
     it('should initialize Qwen adapter with Dashscope API key', () => {
       const manager = new ModelManager({ dashscopeApiKey: 'test-key' })
       const models = manager.getAvailableModels()
-      expect(models).toContain('qwen-max')
-      expect(models).toContain('qwen-plus')
+      expect(models).toContain('qwen3.5-plus')
+      expect(models).toContain('qwen3-max')
     })
 
     it('should initialize Ollama adapter with base URL', () => {
       const manager = new ModelManager({ ollamaBaseUrl: 'http://localhost:11434' })
       const models = manager.getAvailableModels()
-      expect(models).toContain('ollama-llama3.2')
+      expect(models).toContain('ollama-llama3.3')
     })
   })
 
@@ -389,7 +389,7 @@ describe('ModelManager', () => {
   describe('isModelAvailable', () => {
     it('模型存在且 isAvailable() 返回 true', async () => {
       const manager = new ModelManager({ anthropicApiKey: 'test-key' })
-      const available = await manager.isModelAvailable('claude-opus-4-20250514')
+      const available = await manager.isModelAvailable('claude-opus-4-6')
       expect(available).toBe(true)
     })
 
@@ -455,13 +455,13 @@ describe('getModelManager singleton', () => {
 
   it('已有实例时传入新配置会重新初始化适配器', () => {
     const instance1 = getModelManager({ anthropicApiKey: 'test' })
-    expect(instance1.getAvailableModels()).toContain('claude-opus-4-20250514')
+    expect(instance1.getAvailableModels()).toContain('claude-opus-4-6')
 
     // 传入新配置，清空旧适配器（无 anthropicApiKey）
     getModelManager({ openaiApiKey: 'test-openai' })
 
     // 同一实例，但适配器已更新
-    expect(instance1.getAvailableModels()).not.toContain('claude-opus-4-20250514')
+    expect(instance1.getAvailableModels()).not.toContain('claude-opus-4-6')
     expect(instance1.getAvailableModels()).toContain('gpt-4o')
   })
 
@@ -470,7 +470,7 @@ describe('getModelManager singleton', () => {
     const instance2 = getModelManager()
     expect(instance2).toBe(instance1)
     // 适配器未被清空
-    expect(instance2.getAvailableModels()).toContain('claude-opus-4-20250514')
+    expect(instance2.getAvailableModels()).toContain('claude-opus-4-6')
   })
 })
 

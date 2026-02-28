@@ -212,7 +212,8 @@ import WorkspaceSwitcher from '~/components/workspace/WorkspaceSwitcher.vue'
 
 const { t } = useI18n()
 const { toast } = useToast()
-const { currentWorkspaceId } = useWorkspace()
+const route = useRoute()
+const { currentWorkspaceId, loadWorkspaces, switchWorkspace } = useWorkspace()
 
 const MIGRATION_NOTICE_KEY = 'archmind_migration_notice_v011_dismissed'
 const showMigrationNotice = ref(false)
@@ -376,6 +377,19 @@ function handlePageChange(page: number) {
 }
 
 onMounted(async () => {
+  // 加载工作区列表（确保最新成员关系已同步）
+  await loadWorkspaces()
+
+  // 如果 URL 中携带了 workspaceId（如接受邀请后跳转），自动切换到该工作区
+  const targetWorkspaceId = route.query.workspaceId as string | undefined
+  if (targetWorkspaceId) {
+    try {
+      await switchWorkspace(targetWorkspaceId)
+    } catch {
+      // 工作区不存在或无权限时忽略，使用当前工作区
+    }
+  }
+
   await loadProjects()
 
   // 检查是否需要显示数据迁移一次性通知

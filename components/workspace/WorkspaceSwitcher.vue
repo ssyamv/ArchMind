@@ -211,8 +211,8 @@
         <!-- 成员管理 Tab -->
         <TabsContent value="members">
           <div class="py-4 space-y-4">
-            <!-- 邀请新成员 -->
-            <div class="space-y-2">
+            <!-- 邀请新成员（仅 owner/admin 可见） -->
+            <div v-if="canInvite" class="space-y-2">
               <h4 class="text-sm font-medium">{{ t('workspace.members.inviteTitle') }}</h4>
               <div class="flex gap-2">
                 <Input
@@ -221,13 +221,15 @@
                   :placeholder="t('workspace.members.emailPlaceholder')"
                   class="flex-1"
                 />
-                <select
-                  v-model="inviteRole"
-                  class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                >
-                  <option value="member">{{ t('workspace.members.roleMember') }}</option>
-                  <option value="admin">{{ t('workspace.members.roleAdmin') }}</option>
-                </select>
+                <Select v-model="inviteRole">
+                  <SelectTrigger class="w-[110px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="member">{{ t('workspace.members.roleMember') }}</SelectItem>
+                    <SelectItem value="admin">{{ t('workspace.members.roleAdmin') }}</SelectItem>
+                  </SelectContent>
+                </Select>
                 <Button
                   size="sm"
                   :disabled="!inviteEmail.trim() || inviting"
@@ -240,7 +242,7 @@
               </div>
             </div>
 
-            <Separator />
+            <Separator v-if="canInvite" />
 
             <!-- 现有成员列表 -->
             <div class="space-y-2">
@@ -250,52 +252,54 @@
                   <RefreshCw class="w-3 h-3" />
                 </Button>
               </div>
-              <div v-if="membersLoading" class="text-center py-4">
-                <Loader2 class="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
-              </div>
-              <div v-else-if="members.length === 0" class="text-center py-6 text-muted-foreground text-sm">
-                {{ t('workspace.members.noMembers') }}
-              </div>
-              <div v-else class="space-y-2 max-h-[200px] overflow-y-auto">
-                <div
-                  v-for="member in members"
-                  :key="member.id"
-                  class="flex items-center justify-between p-2 rounded-md hover:bg-muted/50"
-                >
-                  <div class="flex items-center gap-2">
-                    <Avatar class="w-8 h-8">
-                      <AvatarImage v-if="member.userAvatarUrl" :src="member.userAvatarUrl" />
-                      <AvatarFallback class="text-xs">
-                        {{ (member.userFullName || member.username || member.userEmail || '?')[0].toUpperCase() }}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p class="text-sm font-medium leading-none">
-                        {{ member.userFullName || member.username || member.userEmail }}
-                      </p>
-                      <p v-if="member.userEmail" class="text-xs text-muted-foreground mt-0.5">{{ member.userEmail }}</p>
+              <div class="min-h-[200px] flex flex-col">
+                <div v-if="membersLoading" class="flex-1 flex items-center justify-center">
+                  <Loader2 class="w-5 h-5 animate-spin text-muted-foreground" />
+                </div>
+                <div v-else-if="members.length === 0" class="flex-1 flex items-center justify-center text-muted-foreground text-sm">
+                  {{ t('workspace.members.noMembers') }}
+                </div>
+                <div v-else class="space-y-2 max-h-[200px] overflow-y-auto">
+                  <div
+                    v-for="member in members"
+                    :key="member.id"
+                    class="flex items-center justify-between p-2 rounded-md hover:bg-muted/50"
+                  >
+                    <div class="flex items-center gap-2">
+                      <Avatar class="w-8 h-8">
+                        <AvatarImage v-if="member.userAvatarUrl" :src="member.userAvatarUrl" />
+                        <AvatarFallback class="text-xs">
+                          {{ (member.userFullName || member.username || member.userEmail || '?')[0].toUpperCase() }}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p class="text-sm font-medium leading-none">
+                          {{ member.userFullName || member.username || member.userEmail }}
+                        </p>
+                        <p v-if="member.userEmail" class="text-xs text-muted-foreground mt-0.5">{{ member.userEmail }}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <Badge variant="secondary" class="text-xs">
-                      {{ member.role === 'owner' ? t('workspace.members.roleOwner') : member.role === 'admin' ? t('workspace.members.roleAdmin') : t('workspace.members.roleMember') }}
-                    </Badge>
-                    <Button
-                      v-if="member.role !== 'owner'"
-                      variant="ghost"
-                      size="sm"
-                      class="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                      @click="handleRemoveMember(member)"
-                    >
-                      <UserMinus class="w-3.5 h-3.5" />
-                    </Button>
+                    <div class="flex items-center gap-2">
+                      <Badge variant="secondary" class="text-xs">
+                        {{ member.role === 'owner' ? t('workspace.members.roleOwner') : member.role === 'admin' ? t('workspace.members.roleAdmin') : t('workspace.members.roleMember') }}
+                      </Badge>
+                      <Button
+                        v-if="member.role !== 'owner'"
+                        variant="ghost"
+                        size="sm"
+                        class="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                        @click="handleRemoveMember(member)"
+                      >
+                        <UserMinus class="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- 待处理邀请列表 -->
-            <div v-if="pendingInvitations.length > 0" class="space-y-2">
+            <!-- 待处理邀请列表（仅 owner/admin 可见） -->
+            <div v-if="canInvite && pendingInvitations.length > 0" class="space-y-2">
               <Separator />
               <h4 class="text-sm font-medium text-muted-foreground">{{ t('workspace.members.pendingInvitations') }}</h4>
               <div class="space-y-1">
@@ -305,9 +309,22 @@
                   class="flex items-center justify-between p-2 rounded-md bg-muted/30 text-sm"
                 >
                   <span class="text-muted-foreground">{{ inv.email }}</span>
-                  <Badge variant="outline" class="text-xs">
-                    {{ t('workspace.members.pending') }}
-                  </Badge>
+                  <div class="flex items-center gap-2">
+                    <Badge variant="outline" class="text-xs">
+                      {{ t('workspace.members.pending') }}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      class="h-6 w-6 text-muted-foreground hover:text-destructive"
+                      :disabled="cancellingInvitationId === inv.id"
+                      :title="t('workspace.members.cancelInvite')"
+                      @click="handleCancelInvitation(inv)"
+                    >
+                      <Loader2 v-if="cancellingInvitationId === inv.id" class="w-3.5 h-3.5 animate-spin" />
+                      <X v-else class="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -473,11 +490,29 @@
       </DialogFooter>
     </DialogContent>
   </Dialog>
+
+  <!-- 移除成员确认对话框 -->
+  <AlertDialog :open="!!memberToRemove" @update:open="(v) => { if (!v) memberToRemove = null }">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>{{ t('workspace.members.confirmRemoveTitle') }}</AlertDialogTitle>
+        <AlertDialogDescription>
+          {{ t('workspace.members.confirmRemoveDesc', { name: memberToRemove?.userFullName || memberToRemove?.userEmail || '' }) }}
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
+        <AlertDialogAction class="bg-destructive hover:bg-destructive/90" @click="confirmRemoveMember">
+          {{ t('workspace.members.removeConfirm') }}
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { ChevronsUpDown, Plus, Settings, MoreVertical, Star, Trash2, Loader2, Pencil, Info, UserPlus, UserMinus, RefreshCw } from 'lucide-vue-next'
+import { ref, computed, watch } from 'vue'
+import { ChevronsUpDown, Plus, Settings, MoreVertical, Star, Trash2, Loader2, Pencil, Info, UserPlus, UserMinus, RefreshCw, X } from 'lucide-vue-next'
 import { useWorkspace, type Workspace, type WorkspaceMember, type WorkspaceInvitation } from '~/composables/useWorkspace'
 import { useToast } from '~/components/ui/toast/use-toast'
 import { Button } from '~/components/ui/button'
@@ -487,6 +522,7 @@ import { Separator } from '~/components/ui/separator'
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
 import { Textarea } from '~/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { Avatar, AvatarFallback, AvatarImage } from '~/components/ui/avatar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs'
 import {
@@ -507,6 +543,16 @@ import {
   DialogHeader,
   DialogTitle
 } from '~/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '~/components/ui/alert-dialog'
 
 const { t } = useI18n()
 const { toast } = useToast()
@@ -515,7 +561,6 @@ const {
   workspaces,
   currentWorkspace,
   currentWorkspaceId,
-  loadWorkspaces,
   switchWorkspace,
   createWorkspace,
   updateWorkspace,
@@ -523,7 +568,8 @@ const {
   setDefaultWorkspace,
   fetchMembers,
   inviteMember,
-  removeMember
+  removeMember,
+  cancelInvitation
 } = useWorkspace()
 
 const showCreateDialog = ref(false)
@@ -562,17 +608,32 @@ const membersLoading = ref(false)
 const inviteEmail = ref('')
 const inviteRole = ref<'admin' | 'member'>('member')
 const inviting = ref(false)
+const cancellingInvitationId = ref<string | null>(null)
+const memberToRemove = ref<WorkspaceMember | null>(null)
 
-onMounted(async () => {
-  try {
-    await loadWorkspaces()
-  } catch (error) {
-    console.error('Failed to load workspaces:', error)
-    toast({
-      title: t('workspace.loadError'),
-      description: error instanceof Error ? error.message : undefined,
-      variant: 'destructive'
-    })
+// owner 和 admin 可以邀请成员（直接从工作区列表数据中读取，无需等待成员列表加载）
+const canInvite = computed(() => {
+  const role = currentWorkspace.value?.currentUserRole
+  return role === 'owner' || role === 'admin'
+})
+
+// 打开管理对话框时，若当前在成员 tab 则自动加载
+watch(showManageDialog, (open) => {
+  if (open && manageTab.value === 'members') {
+    onMembersTabClick()
+  }
+  if (!open) {
+    // 关闭时清空成员数据，并重置 tab，避免下次打开时显示旧数据
+    members.value = []
+    pendingInvitations.value = []
+    manageTab.value = 'workspaces'
+  }
+})
+
+// 切换到成员 tab 时自动加载
+watch(manageTab, (tab) => {
+  if (tab === 'members' && showManageDialog.value) {
+    onMembersTabClick()
   }
 })
 
@@ -777,8 +838,14 @@ async function handleInvite () {
   }
 }
 
-async function handleRemoveMember (member: WorkspaceMember) {
-  if (!currentWorkspaceId.value) return
+function handleRemoveMember (member: WorkspaceMember) {
+  memberToRemove.value = member
+}
+
+async function confirmRemoveMember () {
+  const member = memberToRemove.value
+  memberToRemove.value = null
+  if (!member || !currentWorkspaceId.value) return
   try {
     await removeMember(currentWorkspaceId.value, member.userId)
     members.value = members.value.filter(m => m.id !== member.id)
@@ -789,6 +856,24 @@ async function handleRemoveMember (member: WorkspaceMember) {
       description: error?.data?.message || error?.message,
       variant: 'destructive'
     })
+  }
+}
+
+async function handleCancelInvitation (invitation: WorkspaceInvitation) {
+  if (!currentWorkspaceId.value) return
+  cancellingInvitationId.value = invitation.id
+  try {
+    await cancelInvitation(currentWorkspaceId.value, invitation.id)
+    pendingInvitations.value = pendingInvitations.value.filter(inv => inv.id !== invitation.id)
+    toast({ title: t('workspace.members.cancelInviteSuccess') })
+  } catch (error: any) {
+    toast({
+      title: t('workspace.members.cancelInviteError'),
+      description: error?.data?.message || error?.message,
+      variant: 'destructive'
+    })
+  } finally {
+    cancellingInvitationId.value = null
   }
 }
 </script>
