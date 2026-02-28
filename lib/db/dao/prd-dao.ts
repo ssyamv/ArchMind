@@ -81,7 +81,13 @@ export class PRDDAO {
     const params: any[] = []
     let paramIndex = 1
 
-    if (userId) {
+    if (workspaceId) {
+      // 查询指定工作区的 PRD（权限由 API 层校验），不限制 user_id
+      whereConditions.push(`workspace_id = $${paramIndex}`)
+      params.push(workspaceId)
+      paramIndex++
+    } else if (userId) {
+      // 未指定工作区时，退回到按用户过滤
       whereConditions.push(`(user_id = $${paramIndex} OR user_id IS NULL)`)
       params.push(userId)
       paramIndex++
@@ -89,12 +95,6 @@ export class PRDDAO {
 
     if (onlyWithContent) {
       whereConditions.push("content IS NOT NULL AND content != '' AND (metadata->>'hasPrdContent')::boolean = true")
-    }
-
-    if (workspaceId) {
-      whereConditions.push(`workspace_id = $${paramIndex}`)
-      params.push(workspaceId)
-      paramIndex++
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''
@@ -310,7 +310,13 @@ export class PRDDAO {
     const params: any[] = []
     let paramIndex = 1
 
-    if (userId) {
+    if (workspaceId) {
+      // 查询指定工作区的 PRD（权限由 API 层校验），不限制 user_id
+      whereConditions.push(`workspace_id = $${paramIndex}`)
+      params.push(workspaceId)
+      paramIndex++
+    } else if (userId) {
+      // 未指定工作区时，退回到按用户过滤
       whereConditions.push(`(user_id = $${paramIndex} OR user_id IS NULL)`)
       params.push(userId)
       paramIndex++
@@ -318,12 +324,6 @@ export class PRDDAO {
 
     if (onlyWithContent) {
       whereConditions.push("content IS NOT NULL AND content != '' AND (metadata->>'hasPrdContent')::boolean = true")
-    }
-
-    if (workspaceId) {
-      whereConditions.push(`workspace_id = $${paramIndex}`)
-      params.push(workspaceId)
-      paramIndex++
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''

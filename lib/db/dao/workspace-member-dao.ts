@@ -175,6 +175,49 @@ export class WorkspaceMemberDAO {
   }
 
   /**
+   * 原子事务：添加成员 + 更新邀请状态
+   */
+  static async acceptInvitation (workspaceId: string, userId: string, role: 'admin' | 'member', token: string): Promise<WorkspaceMember> {
+    return dbClient.transaction(async (client) => {
+      const id = crypto.randomUUID()
+      const insertSql = `
+        INSERT INTO workspace_members (id, workspace_id, user_id, role)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (workspace_id, user_id) DO NOTHING
+        RETURNING *
+      `
+      const insertResult = await client.query<any>(insertSql, [id, workspaceId, userId, role])
+      let member
+      if (insertResult.rows.length === 0) {
+        const existing = await client.query<any>(
+          'SELECT * FROM workspace_members WHERE workspace_id = $1 AND user_id = $2',
+          [workspaceId, userId]
+        )
+        member = existing.rows[0]
+      } else {
+        member = insertResult.rows[0]
+      }
+      await client.query(
+        'UPDATE workspace_invitations SET status = $1 WHERE token = $2',
+        ['accepted', token]
+      )
+      return this.mapRowToMember(member)
+    })
+  }
+
+  /**
+   * 取消邀请（将状态设置为 expired，或直接删除记录）
+   */
+  static async cancelInvitation (invitationId: string, workspaceId: string): Promise<boolean> {
+    const sql = `
+      DELETE FROM workspace_invitations
+      WHERE id = $1 AND workspace_id = $2 AND status = 'pending'
+    `
+    const result = await dbClient.query(sql, [invitationId, workspaceId])
+    return result.rowCount! > 0
+  }
+
+  /**
    * 检查邮箱是否有待处理邀请
    */
   static async hasPendingInvitation (workspaceId: string, email: string): Promise<boolean> {

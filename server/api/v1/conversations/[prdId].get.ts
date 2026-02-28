@@ -2,6 +2,7 @@ import { dbClient } from '~/lib/db/client'
 import { conversations, conversationMessages, prdDocuments } from '~/lib/db/schema'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { eq } from 'drizzle-orm'
+import { WorkspaceMemberDAO } from '~/lib/db/dao/workspace-member-dao'
 
 interface PRDMetadata {
   conversationId?: string
@@ -42,8 +43,16 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // PRD 归属校验
-    requireResourceOwner({ userId: prd.userId }, userId)
+    // PRD 归属校验：工作区成员均可访问，无工作区时仅本人可访问
+    if (prd.workspaceId) {
+      const isMember = await WorkspaceMemberDAO.isMember(prd.workspaceId, userId)
+      if (!isMember) {
+        setResponseStatus(event, 403)
+        return { success: false, message: '无权访问该工作区' }
+      }
+    } else {
+      requireResourceOwner({ userId: prd.userId }, userId)
+    }
 
     // 从 metadata 中获取 conversationDbId
     const conversationDbId = (prd.metadata as PRDMetadata)?.conversationDbId

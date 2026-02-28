@@ -13,6 +13,7 @@ export interface Workspace {
   isDefault: boolean
   createdAt: string
   updatedAt: string
+  currentUserRole?: 'owner' | 'admin' | 'member'
 }
 
 export interface CreateWorkspaceInput {
@@ -45,11 +46,11 @@ export class WorkspaceDAO {
   }
 
   /**
-   * 获取用户所属的工作区（通过 workspace_members 过滤）
+   * 获取用户所属的工作区（通过 workspace_members 过滤，含当前用户角色）
    */
   static async getByUserId (userId: string): Promise<Workspace[]> {
     const sql = `
-      SELECT w.*
+      SELECT w.*, wm.role as current_user_role
       FROM workspaces w
       JOIN workspace_members wm ON wm.workspace_id = w.id
       WHERE wm.user_id = $1
@@ -265,7 +266,8 @@ export class WorkspaceDAO {
       color: row.color,
       isDefault: row.is_default,
       createdAt: row.created_at,
-      updatedAt: row.updated_at
+      updatedAt: row.updated_at,
+      ...(row.current_user_role ? { currentUserRole: row.current_user_role } : {})
     }
   }
 }

@@ -33,13 +33,8 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
           )
         "
         v-bind="forwarded"
-        @pointer-down-outside="(event) => {
-          const originalEvent = event.detail.originalEvent;
-          const target = originalEvent.target as HTMLElement;
-          if (originalEvent.offsetX > target.clientWidth || originalEvent.offsetY > target.clientHeight) {
-            event.preventDefault();
-          }
-        }"
+        @pointer-down-outside="(event) => event.preventDefault()"
+        @interact-outside="(event) => event.preventDefault()"
       >
         <slot />
 

@@ -55,12 +55,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 409, message: '您已经是该工作区成员' })
   }
 
-  // 添加成员并更新邀请状态
+  // 添加成员并更新邀请状态（原子事务）
   const role = invitation.role as 'admin' | 'member'
-  const [member] = await Promise.all([
-    WorkspaceMemberDAO.addMember(invitation.workspaceId, userId, role),
-    WorkspaceMemberDAO.updateInvitationStatus(token, 'accepted')
-  ])
+  const member = await WorkspaceMemberDAO.acceptInvitation(invitation.workspaceId, userId, role, token)
 
   return {
     success: true,

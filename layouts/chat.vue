@@ -24,6 +24,7 @@ import { Toaster } from '~/components/ui/toast'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 onMounted(async () => {
@@ -31,6 +32,13 @@ onMounted(async () => {
 })
 
 function goBack() {
-  router.back()
+  const loadPrdId = route.query.loadPrd as string | undefined
+  if (loadPrdId) {
+    router.push(`/projects/${loadPrdId}`)
+  } else if (window.history.length > 1) {
+    router.back()
+  } else {
+    router.push('/app')
+  }
 }
 </script>

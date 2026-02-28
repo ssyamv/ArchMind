@@ -53,6 +53,7 @@ function generateUsername(): string {
 }
 
 export default defineEventHandler(async (event): Promise<AuthResponse> => {
+  const t = useServerT(event)
   try {
     // 解析并验证请求体
     const body = await readBody<RegisterRequest>(event)
@@ -110,11 +111,12 @@ export default defineEventHandler(async (event): Promise<AuthResponse> => {
         updatedAt: userResult.rows[0].updated_at
       }
 
-      // 2. 创建个人默认工作区
+      // 2. 创建个人默认工作区（名称根据用户语言动态生成）
+      const workspaceName = t('workspace.defaultWorkspaceName').replace('{name}', displayName)
       await client.query(
         `INSERT INTO workspaces (id, name, description, icon, color, is_default, created_at, updated_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [workspaceId, `${displayName} 的工作区`, '个人默认工作区', '🏠', '#3B82F6', false, now, now]
+        [workspaceId, workspaceName, '个人默认工作区', '🏠', '#3B82F6', false, now, now]
       )
 
       // 3. 将用户加入工作区（owner 角色）

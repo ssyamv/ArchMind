@@ -37,9 +37,18 @@ export default defineEventHandler(async (event) => {
     data: {
       workspaceName: invitation.workspaceName,
       inviterName: invitation.inviterName,
-      email: invitation.email,
+      email: maskEmail(invitation.email),
       role: invitation.role,
       expiresAt: invitation.expiresAt
     }
   }
 })
+
+function maskEmail (email: string): string {
+  const [local, domain] = email.split('@')
+  if (!domain) return email
+  const masked = local.length <= 2
+    ? local[0] + '***'
+    : local[0] + '***' + local[local.length - 1]
+  return `${masked}@${domain}`
+}

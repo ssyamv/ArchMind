@@ -71,9 +71,67 @@ const iframeStyle = computed(() => {
   }
 })
 
+/**
+ * 对 AI 生成的 HTML 进行后处理，修复常见兼容性问题
+ * 不论使用哪个模型生成，都能确保原型正常显示
+ */
+function sanitizeHtml(html: string): string {
+  let result = html
+
+  // 1. 替换旧版/不可用的 Tailwind CDN 为稳定 CDN
+  result = result.replace(
+    /https:\/\/cdn\.tailwindcss\.com[^\s"']*/g,
+    'https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4'
+  )
+  result = result.replace(
+    /https:\/\/unpkg\.com\/tailwindcss@[^\s"']*/g,
+    'https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4'
+  )
+
+  // 2. 移除 Canvas API 调用，替换为提示占位符
+  // 匹配 <canvas ...> 标签，替换为占位 div（保留 id 以防 JS 引用）
+  result = result.replace(
+    /<canvas([^>]*)>/gi,
+    (match, attrs) => {
+      const idMatch = attrs.match(/id=["']([^"']+)["']/i)
+      const idAttr = idMatch ? ` id="${idMatch[1]}"` : ''
+      const widthMatch = attrs.match(/width=["']?(\d+)["']?/i)
+      const heightMatch = attrs.match(/height=["']?(\d+)["']?/i)
+      const w = widthMatch ? widthMatch[1] + 'px' : '100%'
+      const h = heightMatch ? heightMatch[1] + 'px' : '120px'
+      return `<div${idAttr} style="width:${w};height:${h};background:#f3f4f6;border:1px dashed #d1d5db;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:12px;">`
+    }
+  )
+  result = result.replace(/<\/canvas>/gi, '</div>')
+
+  // 3. 包裹不安全的内联 JS（防止 canvas/chart 相关异常导致整页崩溃）
+  result = result.replace(
+    /<script(\s[^>]*)?>(\s*)([\s\S]*?)(<\/script>)/gi,
+    (_, attrs, space, code, closing) => {
+      const attrsStr = attrs || ''
+      // 跳过：外部脚本、空脚本、已有 try-catch 的、注入的 polyfill
+      if (
+        attrsStr.includes(' src=') ||
+        attrsStr.includes(" src='") ||
+        !code.trim() ||
+        code.includes('try {') ||
+        code.includes('getContext = function')
+      ) {
+        return `<script${attrsStr}>${space}${code}${closing}`
+      }
+      return `<script>${space}try {\n${code}\n} catch(e) { console.warn('[Prototype] Script error suppressed:', e && e.message); }${closing}`
+    }
+  )
+
+  return result
+}
+
 // 注入 CSS 禁用原型内的交互，防止点击产生错误效果
 const disableInteractionHtml = computed(() => {
   if (!props.html) return ''
+
+  // 先对原始 HTML 进行后处理修复
+  const sanitized = sanitizeHtml(props.html)
 
   const injectedHead = `
     <script>
@@ -83,6 +141,46 @@ const disableInteractionHtml = computed(() => {
         console.warn = function() {
           if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].indexOf('cdn.tailwindcss.com') !== -1) return;
           _warn.apply(console, arguments);
+        };
+      })();
+      // Tailwind CDN 加载失败时自动切换备用 CDN
+      (function() {
+        var cdns = [
+          'https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4',
+          'https://unpkg.com/tailwindcss-cdn@3.4.16/tailwindcss.js'
+        ];
+        function tryLoadCdn(index) {
+          if (index >= cdns.length) return;
+          var s = document.createElement('script');
+          s.src = cdns[index];
+          s.onerror = function() { tryLoadCdn(index + 1); };
+          document.head.appendChild(s);
+        }
+        // 仅当页面未引入 tailwind 时才注入
+        window.addEventListener('DOMContentLoaded', function() {
+          var hasTailwind = Array.from(document.scripts).some(function(s) {
+            return s.src && (s.src.indexOf('tailwindcss') !== -1 || s.src.indexOf('tailwind') !== -1);
+          });
+          if (!hasTailwind) { tryLoadCdn(0); }
+        });
+      })();
+      // 拦截 getContext 防止 canvas 替换后 JS 报错
+      (function() {
+        var _getElementById = document.getElementById.bind(document);
+        document.getElementById = function(id) {
+          var el = _getElementById(id);
+          if (el && el.tagName !== 'CANVAS' && !el.getContext) {
+            el.getContext = function() { return null; };
+          }
+          return el;
+        };
+        var _querySelector = document.querySelector.bind(document);
+        document.querySelector = function(sel) {
+          var el = _querySelector(sel);
+          if (el && el.tagName !== 'CANVAS' && !el.getContext) {
+            el.getContext = function() { return null; };
+          }
+          return el;
         };
       })();
     <\/script>
@@ -101,12 +199,12 @@ const disableInteractionHtml = computed(() => {
   `
 
   // 在 </head> 或 <html> 后注入样式
-  if (props.html.includes('</head>')) {
-    return props.html.replace('</head>', `${injectedHead}</head>`)
-  } else if (props.html.includes('<html')) {
-    return props.html.replace(/<html[^>]*>/, `$&${injectedHead}`)
+  if (sanitized.includes('</head>')) {
+    return sanitized.replace('</head>', `${injectedHead}</head>`)
+  } else if (sanitized.includes('<html')) {
+    return sanitized.replace(/<html[^>]*>/, `$&${injectedHead}`)
   } else {
-    return injectedHead + props.html
+    return injectedHead + sanitized
   }
 })
 </script>

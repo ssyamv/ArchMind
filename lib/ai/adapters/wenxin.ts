@@ -111,7 +111,7 @@ export class WenxinAdapter implements AIModelAdapter {
           messages: this.buildMessages(prompt, options),
           temperature: options?.temperature,
           top_p: options?.topP,
-          max_output_tokens: options?.maxTokens || 2048
+          max_output_tokens: Math.min(options?.maxTokens || 2048, 2000)
         })
       }
     )
@@ -137,7 +137,7 @@ export class WenxinAdapter implements AIModelAdapter {
           messages: this.buildMessages(prompt, options),
           temperature: options?.temperature,
           top_p: options?.topP,
-          max_output_tokens: options?.maxTokens || 2048,
+          max_output_tokens: Math.min(options?.maxTokens || 2048, 2000),
           stream: true
         })
       }

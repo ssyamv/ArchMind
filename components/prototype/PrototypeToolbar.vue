@@ -1,6 +1,38 @@
 <template>
   <div class="flex-shrink-0 px-4 py-2 border-b border-border flex items-center justify-between bg-muted/20">
     <div class="flex items-center gap-2">
+      <!-- 模型选择器（有 PRD 且未生成时显示） -->
+      <div v-if="hasPrd && !hasPrototype && availableModels.length > 0" class="flex items-center gap-1.5">
+        <Select
+          :model-value="selectedModelId"
+          @update:model-value="handleModelChange"
+        >
+          <SelectTrigger class="h-7 w-auto max-w-[160px] text-xs gap-1">
+            <Bot class="w-3 h-3 flex-shrink-0" />
+            <SelectValue :placeholder="$t('prototype.selectModel')" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem
+              v-for="model in availableModels"
+              :key="model.id"
+              :value="model.id"
+            >
+              <div class="flex items-center gap-2">
+                <span class="text-xs">{{ model.label }}</span>
+                <span
+                  v-if="model.recommended"
+                  class="text-[9px] px-1 py-0.5 rounded bg-primary/10 text-primary font-medium leading-none"
+                >{{ $t('prototype.modelRecommended') }}</span>
+                <span
+                  v-if="model.isUserModel"
+                  class="text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 font-medium leading-none"
+                >我的</span>
+              </div>
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <!-- 从 PRD 生成按钮 -->
       <Button
         v-if="hasPrd"
@@ -134,7 +166,7 @@
 </template>
 
 <script setup lang="ts">
-import { Eye, Code, Columns2, Wand2, Save, Maximize2, Monitor, Tablet, Smartphone, Layout } from 'lucide-vue-next'
+import { Eye, Code, Columns2, Wand2, Save, Maximize2, Monitor, Tablet, Smartphone, Layout, Bot } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
 import { Separator } from '~/components/ui/separator'
 import {
@@ -152,6 +184,8 @@ defineProps<{
   isGenerating: boolean
   activeView: 'preview' | 'code' | 'split'
   selectedDeviceType: DeviceType
+  availableModels: Array<{ id: string; label: string; recommended?: boolean; isUserModel?: boolean }>
+  selectedModelId: string
 }>()
 
 const emit = defineEmits<{
@@ -160,9 +194,14 @@ const emit = defineEmits<{
   openFullscreen: []
   save: []
   'update:deviceType': [deviceType: DeviceType]
+  'update:modelId': [modelId: string]
 }>()
 
 function handleDeviceTypeChange(value: unknown) {
   emit('update:deviceType', value as DeviceType)
+}
+
+function handleModelChange(value: unknown) {
+  emit('update:modelId', value as string)
 }
 </script>

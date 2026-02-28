@@ -141,9 +141,9 @@ export default defineEventHandler(async (event) => {
     // ── 4. 合并：用户模型与系统模型同 ID 时加 "user:" 前缀和 "(我的)" 后缀 ──
     const processedUserModels: AvailableModelInfo[] = rawUserModels.map(m => {
       if (sysModelIds.has(m.id)) {
-        return { ...m, id: `user:${m.id}`, name: `${m.name} (我的)` }
+        return { ...m, id: `user:${m.id}`, name: `${m.name} (我的)`, isUserModel: true }
       }
-      return m
+      return { ...m, isUserModel: true }
     })
 
     const availableModels: AvailableModelInfo[] = [
