@@ -85,13 +85,14 @@
                 v-model="email"
                 type="email"
                 :placeholder="$t('auth.emailPlaceholder')"
-                :disabled="authStore.loading"
+                :disabled="authStore.loading || isEmailLocked"
                 required
                 @focus="focusedField = 'email'"
                 @blur="focusedField = ''"
               />
               <div class="input-border"></div>
             </div>
+            <p v-if="isEmailLocked" class="input-hint">{{ $t('auth.emailLockedByInvitation') }}</p>
           </div>
 
           <!-- Full Name Field (Optional) -->
@@ -219,10 +220,15 @@ const authStore = useAuthStore()
 // Clear error on page load
 onMounted(() => {
   authStore.clearError()
+  // 从邀请链接带来的邮箱预填
+  if (route.query.email) {
+    email.value = route.query.email as string
+  }
 })
 
 // Form state
 const email = ref('')
+const isEmailLocked = computed(() => !!route.query.email)
 const password = ref('')
 const confirmPassword = ref('')
 const fullName = ref('')
@@ -257,7 +263,10 @@ const handleSubmit = async (e: Event) => {
   })
 
   if (success) {
-    const redirect = route.query.redirect as string || '/app'
+    const rawRedirect = route.query.redirect as string
+    const redirect = rawRedirect && rawRedirect.startsWith('/') && !rawRedirect.includes('://')
+      ? rawRedirect
+      : '/app'
     router.push(redirect)
   }
 }

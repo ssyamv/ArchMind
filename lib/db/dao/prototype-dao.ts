@@ -60,26 +60,25 @@ export class PrototypeDAO {
     const params: any[] = []
     let paramIndex = 1
 
-    if (userId) {
-      whereConditions.push(`(p.user_id = $${paramIndex} OR p.user_id IS NULL)`)
-      params.push(userId)
-      paramIndex++
-    }
-
     if (workspaceId) {
-      // 通过 JOIN prd_documents 间接过滤工作区
-      const whereClause = whereConditions.length > 0 ? `AND ${whereConditions.join(' AND ')}` : ''
+      // 通过 JOIN prd_documents 按工作区过滤（权限由 API 层校验），不限制 user_id
       params.push(workspaceId, limit, offset)
       const sql = `
         SELECT p.* FROM prototypes p
         LEFT JOIN prd_documents prd ON p.prd_id = prd.id
-        WHERE (prd.workspace_id = $${paramIndex} OR (p.prd_id IS NULL AND $${paramIndex} = 'default'))
-        ${whereClause}
+        WHERE prd.workspace_id = $${paramIndex}
         ORDER BY p.${orderBy} ${order}
         LIMIT $${paramIndex + 1} OFFSET $${paramIndex + 2}
       `
       const result = await dbClient.query<any>(sql, params)
       return result.rows.map(row => this.mapRow(row))
+    }
+
+    if (userId) {
+      // 未指定工作区时，退回到按用户过滤
+      whereConditions.push(`(p.user_id = $${paramIndex} OR p.user_id IS NULL)`)
+      params.push(userId)
+      paramIndex++
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''
@@ -129,23 +128,23 @@ export class PrototypeDAO {
     const params: any[] = []
     let paramIndex = 1
 
-    if (userId) {
-      whereConditions.push(`(p.user_id = $${paramIndex} OR p.user_id IS NULL)`)
-      params.push(userId)
-      paramIndex++
-    }
-
     if (workspaceId) {
-      const whereClause = whereConditions.length > 0 ? `AND ${whereConditions.join(' AND ')}` : ''
+      // 通过 JOIN prd_documents 按工作区过滤（权限由 API 层校验），不限制 user_id
       params.push(workspaceId)
       const sql = `
         SELECT COUNT(*) as count FROM prototypes p
         LEFT JOIN prd_documents prd ON p.prd_id = prd.id
-        WHERE (prd.workspace_id = $${paramIndex} OR (p.prd_id IS NULL AND $${paramIndex} = 'default'))
-        ${whereClause}
+        WHERE prd.workspace_id = $${paramIndex}
       `
       const result = await dbClient.query<{ count: string }>(sql, params)
       return parseInt(result.rows[0].count, 10)
+    }
+
+    if (userId) {
+      // 未指定工作区时，退回到按用户过滤
+      whereConditions.push(`(p.user_id = $${paramIndex} OR p.user_id IS NULL)`)
+      params.push(userId)
+      paramIndex++
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''

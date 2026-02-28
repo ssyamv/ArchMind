@@ -7,11 +7,14 @@
       :is-generating="prototypeState.isGenerating.value"
       :active-view="activeView"
       :selected-device-type="selectedDeviceType"
+      :available-models="modelsWithRecommendation"
+      :selected-model-id="localModelId"
       @generate-from-prd="handleGenerateFromPRD"
       @toggle-view="activeView = $event"
       @open-fullscreen="navigateToFullscreen"
       @save="handleSave"
       @update:device-type="selectedDeviceType = $event"
+      @update:model-id="localModelId = $event"
     />
 
     <!-- 生成进度指示器 -->
@@ -180,10 +183,13 @@ import PrototypeToolbar from './PrototypeToolbar.vue'
 import { usePrototype } from '~/composables/usePrototype'
 import type { DeviceType } from '~/types/prototype'
 
+// GLM 系列是推荐的原型生成模型（效果更好、更稳定）
+const RECOMMENDED_MODEL_PREFIXES = ['glm-']
+
 const props = defineProps<{
   prdContent: string
   prdId?: string
-  availableModels: Array<{ id: string; label: string }>
+  availableModels: Array<{ id: string; label: string; isUserModel?: boolean }>
   selectedModelId?: string
 }>()
 
@@ -201,6 +207,40 @@ const showAddPageDialog = ref(false)
 const newPageName = ref('')
 const newPageSlug = ref('')
 const selectedDeviceType = ref<DeviceType>('responsive')
+
+// 本地模型选择状态：优先用 prop 传入的，其次取推荐模型，最后取第一个
+const localModelId = ref('')
+
+// 带推荐标记的模型列表
+const modelsWithRecommendation = computed(() =>
+  props.availableModels.map(m => ({
+    ...m,
+    recommended: RECOMMENDED_MODEL_PREFIXES.some(prefix => m.id.startsWith(prefix))
+  }))
+)
+
+// 当父组件模型列表变化时，初始化本地选择
+watch(() => props.availableModels, (models) => {
+  if (!localModelId.value && models.length > 0) {
+    // 优先使用父组件传入的 selectedModelId
+    if (props.selectedModelId && models.some(m => m.id === props.selectedModelId)) {
+      localModelId.value = props.selectedModelId
+      return
+    }
+    // 其次选推荐模型
+    const recommended = models.find(m =>
+      RECOMMENDED_MODEL_PREFIXES.some(prefix => m.id.startsWith(prefix))
+    )
+    localModelId.value = recommended?.id || models[0].id
+  }
+}, { immediate: true })
+
+// 父组件切换模型时同步到本地
+watch(() => props.selectedModelId, (id) => {
+  if (id && props.availableModels.some(m => m.id === id)) {
+    localModelId.value = id
+  }
+})
 
 const effectivePages = computed(() => prototypeState.effectivePages.value)
 
@@ -271,13 +311,24 @@ const stageProgress = computed(() => {
 const streamingPageCount = computed(() => prototypeState.streamingPages.value.length)
 
 onMounted(() => {
-  prototypeState.loadFromStorage()
+  // loadFromStorage 由 generate.vue 统一管理，此处不重复加载
+  // 避免新建项目时加载到上一个项目的原型数据
 })
 
-// 当有 prdId 时，尝试加载关联的原型
+// 当有 prdId 时，验证当前原型是否属于该 prd，若不属于则清空并重新加载
 watch(() => props.prdId, async (newPrdId) => {
-  if (newPrdId && !prototypeState.prototype.value) {
-    await prototypeState.loadByPrdId(newPrdId)
+  if (newPrdId) {
+    // 如果当前原型不属于这个 prdId（切换项目或新建项目后 prdId 变了），先清空
+    if (prototypeState.prototype.value && prototypeState.prototype.value.prdId !== newPrdId) {
+      prototypeState.reset()
+    }
+    // 内存中没有原型时，尝试从服务端加载（新建项目时新 prdId 无原型会返回 false）
+    if (!prototypeState.prototype.value) {
+      await prototypeState.loadByPrdId(newPrdId)
+    }
+  } else {
+    // prdId 变为空（新建项目 reset 后），清空原型状态
+    prototypeState.reset()
   }
 }, { immediate: true })
 
@@ -305,7 +356,7 @@ async function handleGenerateFromPRD () {
     return
   }
 
-  const modelId = props.selectedModelId || props.availableModels[0]?.id
+  const modelId = localModelId.value || props.availableModels[0]?.id
   if (!modelId) {
     toast({
       title: t('prototype.noModel'),

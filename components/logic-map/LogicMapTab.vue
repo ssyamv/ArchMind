@@ -266,7 +266,7 @@ import type { Node, Edge } from '@vue-flow/core'
 const props = defineProps<{
   prdContent: string
   prdId?: string
-  availableModels: Array<{ id: string; label: string }>
+  availableModels: Array<{ id: string; label: string; isUserModel?: boolean }>
   selectedModelId?: string
 }>()
 

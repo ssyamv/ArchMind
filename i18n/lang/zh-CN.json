@@ -109,6 +109,7 @@
     "logout": "退出登录",
     "email": "邮箱",
     "emailPlaceholder": "请输入邮箱地址",
+    "emailLockedByInvitation": "该邮箱由邀请链接自动填入，注册后将自动加入对应工作区",
     "password": "密码",
     "passwordPlaceholder": "请输入密码",
     "passwordHint": "密码至少需要 8 个字符",
@@ -729,7 +730,9 @@
     "aiAssistantHint": "描述你想要的修改，AI 会帮你编辑原型",
     "send": "发送",
     "collapse": "收起",
-    "expand": "展开"
+    "expand": "展开",
+    "selectModel": "选择模型",
+    "modelRecommended": "推荐"
   },
   "logicMap": {
     "title": "逻辑图谱",
@@ -810,6 +813,7 @@
     "documents": "文档",
     "manage": "管理工作区",
     "create": "创建工作区",
+    "defaultWorkspaceName": "{name} 的工作区",
     "createTitle": "创建新工作区",
     "createDescription": "创建一个新的工作区来组织您的项目和文档",
     "name": "工作区名称",
@@ -868,8 +872,14 @@
       "pending": "待接受",
       "removeSuccess": "成员已移除",
       "removeError": "移除成员失败",
+      "confirmRemoveTitle": "确认移除成员",
+      "confirmRemoveDesc": "确定要将 {name} 从工作区移除吗？此操作不可撤销。",
+      "removeConfirm": "确认移除",
       "inviteSuccess": "邀请已发送",
-      "inviteError": "发送邀请失败"
+      "inviteError": "发送邀请失败",
+      "cancelInvite": "取消邀请",
+      "cancelInviteSuccess": "邀请已取消",
+      "cancelInviteError": "取消邀请失败"
     },
     "invitation": {
       "loading": "正在加载邀请信息...",
@@ -889,7 +899,10 @@
       "acceptError": "接受邀请失败",
       "acceptedTitle": "已成功加入",
       "acceptedDescription": "您已成功加入工作区 {workspace}",
-      "goToWorkspace": "进入工作区"
+      "goToWorkspace": "进入工作区",
+      "emailMismatchTitle": "账号邮箱与邀请不匹配",
+      "emailMismatchDesc": "当前登录账号（{current}）与邀请邮箱（{invited}）不一致，请切换到被邀请的账号后再接受。",
+      "switchAccount": "退出并切换账号"
     }
   },
   "defaults": {

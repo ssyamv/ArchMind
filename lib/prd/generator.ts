@@ -77,6 +77,56 @@ export class PRDGenerator {
   }
 
   /**
+   * 清理 AI 在 PRD 末尾附加的闲聊性总结语
+   * 策略：找到最后一个标准 PRD 章节（附录/参考）的结束位置，截断后续多余内容
+   */
+  private cleanTrailingChatter (content: string): string {
+    // 匹配"附录与参考"章节标题（支持不同编号和写法）
+    const appendixPattern = /^#{1,3}\s*(?:\d+[\.\s]*)?(?:附录|附录与参考|Appendix|References?)/m
+    const match = content.match(appendixPattern)
+
+    if (!match || match.index === undefined) {
+      // 没有附录章节，尝试直接去掉末尾的闲聊段落
+      return this.stripTrailingChatter(content)
+    }
+
+    // 从附录章节开始，找到附录章节的内容结束位置
+    // 如果附录后还有其他"##"级别章节，说明是PRD正文，保留；否则截断
+    const afterAppendix = content.slice(match.index)
+    const nextTopSectionMatch = afterAppendix.match(/\n#{1,2}\s+(?!\s*(?:\d+[\.\s]*)?(?:附录|参考|Appendix|References?))/)
+
+    if (nextTopSectionMatch && nextTopSectionMatch.index !== undefined) {
+      // 附录后还有非附录的顶级章节，说明确实有多余内容，截断
+      return content.slice(0, match.index + nextTopSectionMatch.index).trimEnd()
+    }
+
+    // 附录后没有其他章节，但可能有闲聊段落（无标题的纯文本）
+    // 在附录内容之后，寻找空行后跟非列表、非标题的段落
+    return this.stripTrailingChatter(content)
+  }
+
+  /**
+   * 去掉内容末尾的闲聊性段落
+   * 识别特征：句子以"您"开头、或包含"随时"/"告诉我"/"如有"等客套词
+   */
+  private stripTrailingChatter (content: string): string {
+    const chatterPatterns = [
+      /\n+(?:这份|此份|以上|以下)?(?:PRD|文档|需求文档|产品需求).{0,30}(?:为您|提供了|框架|设计|概述|完整).+$/ms,
+      /\n+您可以根据.+$/ms,
+      /\n+如果您.{0,20}(?:问题|需要|希望|想要).+$/ms,
+      /\n+如有(?:任何)?(?:问题|疑问|需要).+$/ms,
+      /\n+请随时.+$/ms,
+      /\n+希望(?:这份|此)?(?:PRD|文档|内容).+$/ms
+    ]
+
+    let cleaned = content
+    for (const pattern of chatterPatterns) {
+      cleaned = cleaned.replace(pattern, '')
+    }
+    return cleaned.trimEnd()
+  }
+
+  /**
    * 智能上下文压缩
    */
   private compressContext (context: string, maxTokens: number = 4000): string {
@@ -180,11 +230,14 @@ export class PRDGenerator {
     const fullPrompt = buildPRDPrompt(userInput, backgroundContext)
 
     // 调用 AI 模型生成
-    const content = await modelAdapter.generateText(fullPrompt, {
+    const rawContent = await modelAdapter.generateText(fullPrompt, {
       temperature,
       maxTokens,
       systemPrompt: undefined
     })
+
+    // 清理末尾闲聊性内容
+    const content = this.cleanTrailingChatter(rawContent)
 
     // 估算成本（简化计算）
     const estimatedTokens = Math.ceil((userInput.length + backgroundContext.length + content.length) / 4)
@@ -303,14 +356,16 @@ export class PRDGenerator {
 
     // 异步保存到数据库（不阻塞流式响应）
     const generationTime = Date.now() - startTime
-    const estimatedTokens = Math.ceil((userInput.length + backgroundContext.length + content.length) / 4)
+    // 清理末尾闲聊性内容后再存库（不影响已发送给前端的流式内容）
+    const cleanedContent = this.cleanTrailingChatter(content)
+    const estimatedTokens = Math.ceil((userInput.length + backgroundContext.length + cleanedContent.length) / 4)
     const costEstimate = this.modelManager.estimateCost(modelId, estimatedTokens)
 
     const prd: Omit<PRDDocument, 'id' | 'createdAt' | 'updatedAt'> = {
       userId: options?.userId,
       workspaceId: options?.workspaceId,
       title: `PRD - ${new Date().toISOString().split('T')[0]}`,
-      content,
+      content: cleanedContent,
       userInput,
       modelUsed: modelId,
       generationTime,

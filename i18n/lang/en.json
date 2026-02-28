@@ -109,6 +109,7 @@
     "logout": "Logout",
     "email": "Email",
     "emailPlaceholder": "Enter your email",
+    "emailLockedByInvitation": "This email was pre-filled from your invitation link. You'll join the workspace automatically after registering.",
     "password": "Password",
     "passwordPlaceholder": "Enter your password",
     "passwordHint": "Password must be at least 8 characters",
@@ -716,7 +717,9 @@
     "aiAssistantHint": "Describe your changes, AI will help edit the prototype",
     "send": "Send",
     "collapse": "Collapse",
-    "expand": "Expand"
+    "expand": "Expand",
+    "selectModel": "Select Model",
+    "modelRecommended": "Recommended"
   },
   "logicMap": {
     "title": "Logic Map",
@@ -797,6 +800,7 @@
     "documents": "documents",
     "manage": "Manage Workspaces",
     "create": "Create Workspace",
+    "defaultWorkspaceName": "{name}'s Workspace",
     "createTitle": "Create New Workspace",
     "createDescription": "Create a new workspace to organize your projects and documents",
     "name": "Workspace Name",
@@ -855,8 +859,14 @@
       "pending": "Pending",
       "removeSuccess": "Member removed",
       "removeError": "Failed to remove member",
+      "confirmRemoveTitle": "Remove Member",
+      "confirmRemoveDesc": "Are you sure you want to remove {name} from this workspace? This action cannot be undone.",
+      "removeConfirm": "Remove",
       "inviteSuccess": "Invitation sent",
-      "inviteError": "Failed to send invitation"
+      "inviteError": "Failed to send invitation",
+      "cancelInvite": "Cancel invitation",
+      "cancelInviteSuccess": "Invitation cancelled",
+      "cancelInviteError": "Failed to cancel invitation"
     },
     "invitation": {
       "loading": "Loading invitation...",
@@ -876,7 +886,10 @@
       "acceptError": "Failed to accept invitation",
       "acceptedTitle": "Successfully Joined",
       "acceptedDescription": "You have successfully joined workspace {workspace}",
-      "goToWorkspace": "Go to Workspace"
+      "goToWorkspace": "Go to Workspace",
+      "emailMismatchTitle": "Account email does not match invitation",
+      "emailMismatchDesc": "You are logged in as {current}, but this invitation was sent to {invited}. Please switch to the invited account.",
+      "switchAccount": "Sign out and switch account"
     }
   },
   "defaults": {

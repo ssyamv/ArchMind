@@ -194,7 +194,10 @@ const handleSubmit = async (e: Event) => {
   authStore.clearError()
   const success = await authStore.login(email.value, password.value)
   if (success) {
-    const redirect = route.query.redirect as string || '/app'
+  const rawRedirect = route.query.redirect as string
+    const redirect = rawRedirect && rawRedirect.startsWith('/') && !rawRedirect.includes('://')
+      ? rawRedirect
+      : '/app'
     router.push(redirect)
   }
 }

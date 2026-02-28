@@ -13,6 +13,7 @@ export interface Workspace {
   isDefault: boolean
   createdAt: string
   updatedAt: string
+  currentUserRole?: 'owner' | 'admin' | 'member'
   stats?: {
     documentCount: number
     prdCount: number
@@ -322,6 +323,15 @@ export function useWorkspace () {
     })
   }
 
+  /**
+   * 取消邀请
+   */
+  async function cancelInvitation (workspaceId: string, invitationId: string) {
+    await $fetch(`/api/v1/workspaces/${workspaceId}/members/invitations/${invitationId}`, {
+      method: 'DELETE'
+    })
+  }
+
   // 初始化时从 localStorage 加载
   if (process.client) {
     loadFromLocalStorage()
@@ -345,6 +355,7 @@ export function useWorkspace () {
     refreshStats,
     fetchMembers,
     inviteMember,
-    removeMember
+    removeMember,
+    cancelInvitation
   }
 }

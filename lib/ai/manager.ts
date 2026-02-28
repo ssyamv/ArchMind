@@ -11,23 +11,23 @@ import { ClaudeAdapter } from './adapters/claude'
 // 内嵌默认配置，当 yaml 文件在 Vercel 等环境中不可访问时作为降级
 const DEFAULT_MODEL_CONFIG: AIModelsConfig = {
   default: 'glm-4.7',
-  fallback: ['glm-4.5-air', 'gpt-4o', 'claude-3.5-sonnet'],
+  fallback: ['glm-4.5-air', 'qwen3-max', 'claude-sonnet-4-6'],
   preferences: {
-    prd_generation: ['claude-3.5-sonnet', 'gpt-4o', 'glm-4.7'],
-    chinese_content: ['glm-4.7', 'glm-4.5-air', 'qwen-max', 'ernie-4.0-8k'],
-    large_document: ['gemini-1.5-pro', 'claude-3.5-sonnet'],
-    cost_sensitive: ['glm-4.5-air', 'deepseek-chat', 'qwen-turbo'],
+    prd_generation: ['claude-sonnet-4-6', 'gpt-4.1', 'glm-4.7'],
+    chinese_content: ['glm-4.7', 'qwen3-max', 'qwen3.5-plus', 'ernie-4.0-8k'],
+    large_document: ['gemini-2.5-pro', 'gemini-2.0-flash', 'claude-sonnet-4-6'],
+    cost_sensitive: ['glm-4.5-air', 'deepseek-chat', 'qwen3-max'],
     privacy_mode: ['ollama-llama3', 'ollama-qwen']
   },
   models: {
-    'glm-4.7': { enabled: true, name: 'GLM 4.7', provider: 'Zhipu AI', description: '最新推理模型，支持思考模式，适合复杂逻辑分析和 PRD 生成', api_key_env: 'GLM_API_KEY', capabilities: { maxContextLength: 128000, supportsStreaming: true, supportsStructuredOutput: true, supportsVision: false, supportedLanguages: ['zh', 'en'] }, costEstimate: { input: '¥0.0001/token', output: '¥0.0001/token' } },
-    'glm-4.5-air': { enabled: true, name: 'GLM 4.5 Air', provider: 'Zhipu AI', description: '经济版模型，最低成本，适合快速原型和成本敏感场景', api_key_env: 'GLM_API_KEY', capabilities: { maxContextLength: 128000, supportsStreaming: true, supportsStructuredOutput: true, supportsVision: false, supportedLanguages: ['zh', 'en'] }, costEstimate: { input: '¥0.00002/token', output: '¥0.00006/token' } },
-    'claude-3.5-sonnet': { enabled: false, name: 'Claude 3.5 Sonnet', provider: 'Anthropic', description: '企业级推理能力，支持 200K 上下文', api_key_env: 'ANTHROPIC_API_KEY', capabilities: { maxContextLength: 200000, supportsStreaming: true, supportsStructuredOutput: true, supportsVision: true, supportedLanguages: ['zh', 'en'] }, costEstimate: { input: '¥0.003/1K tokens', output: '¥0.015/1K tokens' } },
-    'gpt-4o': { enabled: false, name: 'GPT-4o', provider: 'OpenAI', description: '多模态 AI，图片理解能力强', api_key_env: 'OPENAI_API_KEY', capabilities: { maxContextLength: 128000, supportsStreaming: true, supportsStructuredOutput: true, supportsVision: true, supportedLanguages: ['zh', 'en'] }, costEstimate: { input: '¥0.005/1K tokens', output: '¥0.015/1K tokens' } },
-    'gemini-1.5-pro': { enabled: false, name: 'Gemini 1.5 Pro', provider: 'Google', description: '超大上下文窗口 (100K+)', api_key_env: 'GOOGLE_API_KEY', capabilities: { maxContextLength: 1000000, supportsStreaming: true, supportsStructuredOutput: true, supportsVision: true, supportedLanguages: ['zh', 'en'] }, costEstimate: { input: '¥0.0013/1K tokens', output: '¥0.0053/1K tokens' } },
-    'qwen-max': { enabled: false, name: '通义千问 Qwen Max', provider: 'Alibaba', description: '旗舰模型，中文理解能力最强', api_key_env: 'DASHSCOPE_API_KEY', capabilities: { maxContextLength: 32000, supportsStreaming: true, supportsStructuredOutput: true, supportsVision: false, supportedLanguages: ['zh', 'en'] }, costEstimate: { input: '¥0.02/1K tokens', output: '¥0.06/1K tokens' } },
-    'deepseek-chat': { enabled: false, name: 'DeepSeek Chat', provider: 'DeepSeek', description: '高性价比通用对话模型', api_key_env: 'DEEPSEEK_API_KEY', capabilities: { maxContextLength: 128000, supportsStreaming: true, supportsStructuredOutput: true, supportsVision: false, supportedLanguages: ['zh', 'en'] }, costEstimate: { input: '¥0.001/1K tokens', output: '¥0.002/1K tokens' } },
-    'ernie-4.0-8k': { enabled: false, name: '文心一言 ERNIE 4.0', provider: 'Baidu', description: '百度旗舰大模型', api_key_env: 'BAIDU_API_KEY', capabilities: { maxContextLength: 8192, supportsStreaming: true, supportsStructuredOutput: false, supportsVision: false, supportedLanguages: ['zh', 'en'] }, costEstimate: { input: '¥0.03/1K tokens', output: '¥0.09/1K tokens' } }
+    'glm-4.7': { enabled: true, name: 'GLM-4.7', provider: 'Zhipu AI', description: '旗舰推理模型，355B MoE，200K 上下文，编码能力对标 Claude Sonnet 4.5，支持思考模式', api_key_env: 'GLM_API_KEY', capabilities: { maxContextLength: 200000, supportsStreaming: true, supportsStructuredOutput: true, supportsVision: false, supportedLanguages: ['zh', 'en'] }, costEstimate: { input: '¥0.1 / 1M tokens', output: '¥0.1 / 1M tokens' } },
+    'glm-4.5-air': { enabled: true, name: 'GLM-4.5 Air', provider: 'Zhipu AI', description: '高性价比轻量模型，适合高并发低成本场景', api_key_env: 'GLM_API_KEY', capabilities: { maxContextLength: 128000, supportsStreaming: true, supportsStructuredOutput: true, supportsVision: false, supportedLanguages: ['zh', 'en'] }, costEstimate: { input: '¥0.05 / 1M tokens', output: '¥0.05 / 1M tokens' } },
+    'claude-sonnet-4-6': { enabled: false, name: 'Claude Sonnet 4.6', provider: 'Anthropic', description: '最新平衡版，接近 Opus 4.6 的编码能力，1/5 的价格', api_key_env: 'ANTHROPIC_API_KEY', capabilities: { maxContextLength: 200000, supportsStreaming: true, supportsStructuredOutput: true, supportsVision: true, supportedLanguages: ['zh', 'en'] }, costEstimate: { input: '$3 / 1M tokens', output: '$15 / 1M tokens' } },
+    'gpt-4.1': { enabled: false, name: 'GPT-4.1', provider: 'OpenAI', description: '编码专项优化，100 万 tokens 上下文', api_key_env: 'OPENAI_API_KEY', capabilities: { maxContextLength: 1000000, supportsStreaming: true, supportsStructuredOutput: true, supportsVision: true, supportedLanguages: ['zh', 'en'] }, costEstimate: { input: '$2 / 1M tokens', output: '$8 / 1M tokens' } },
+    'gemini-2.5-pro': { enabled: false, name: 'Gemini 2.5 Pro', provider: 'Google', description: '最新思维旗舰，100 万 tokens 上下文，Deep Think 增强推理', api_key_env: 'GOOGLE_API_KEY', capabilities: { maxContextLength: 1000000, supportsStreaming: true, supportsStructuredOutput: true, supportsVision: true, supportedLanguages: ['zh', 'en'] }, costEstimate: { input: '$1.25 / 1M tokens', output: '$10 / 1M tokens' } },
+    'qwen3-max': { enabled: false, name: 'Qwen3-Max', provider: 'Alibaba', description: '千问3系旗舰，原生 search/code agent，思考与非思考模式', api_key_env: 'DASHSCOPE_API_KEY', capabilities: { maxContextLength: 131072, supportsStreaming: true, supportsStructuredOutput: true, supportsVision: false, supportedLanguages: ['zh', 'en'] }, costEstimate: { input: '¥24 / 1M tokens', output: '¥72 / 1M tokens' } },
+    'deepseek-chat': { enabled: false, name: 'DeepSeek V3.2', provider: 'DeepSeek', description: '最新通用模型，工具调用集成思考，高性价比', api_key_env: 'DEEPSEEK_API_KEY', capabilities: { maxContextLength: 128000, supportsStreaming: true, supportsStructuredOutput: true, supportsVision: false, supportedLanguages: ['zh', 'en'] }, costEstimate: { input: '¥0.5 / 1M tokens', output: '¥2 / 1M tokens' } },
+    'ernie-4.0-8k': { enabled: false, name: '文心 ERNIE 4.0', provider: 'Baidu', description: '百度旗舰大模型，中文理解深度强', api_key_env: 'BAIDU_API_KEY', capabilities: { maxContextLength: 8192, supportsStreaming: true, supportsStructuredOutput: false, supportsVision: false, supportedLanguages: ['zh', 'en'] }, costEstimate: { input: '¥30 / 1M tokens', output: '¥60 / 1M tokens' } }
   }
 }
 import { OpenAIAdapter } from './adapters/openai'
@@ -124,7 +124,7 @@ export class ModelManager {
       const baseUrl = config.anthropicBaseUrl as string | undefined
       const userModels: string[] = config.anthropicModels?.length
         ? config.anthropicModels
-        : ['claude-opus-4-20250514', 'claude-sonnet-4-20250514', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022']
+        : ['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-sonnet-4-5', 'claude-haiku-4-5']
       for (const modelId of userModels) {
         const claude = new ClaudeAdapter(config.anthropicApiKey as string, modelId, baseUrl)
         newAdapters.set(modelId, claude)
@@ -136,7 +136,7 @@ export class ModelManager {
       const baseUrl = config.openaiBaseUrl as string | undefined
       const userModels: string[] = config.openaiModels?.length
         ? config.openaiModels
-        : ['gpt-4o', 'gpt-4o-mini', 'o3-mini']
+        : ['gpt-4.1', 'gpt-4.1-mini', 'gpt-4o', 'o3', 'o4-mini', 'o3-mini']
       for (const modelId of userModels) {
         const openai = new OpenAIAdapter(config.openaiApiKey as string, modelId, baseUrl)
         newAdapters.set(modelId, openai)
@@ -147,7 +147,7 @@ export class ModelManager {
     if (config.googleApiKey) {
       const userModels: string[] = config.googleModels?.length
         ? config.googleModels
-        : ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash']
+        : ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro']
       for (const modelId of userModels) {
         const gemini = new GeminiAdapter(config.googleApiKey as string, modelId)
         newAdapters.set(modelId, gemini)
@@ -159,7 +159,7 @@ export class ModelManager {
       const baseUrl = config.glmBaseUrl as string | undefined
       const userModels: string[] = config.glmModels?.length
         ? config.glmModels
-        : ['glm-4-plus', 'glm-4-air', 'glm-4-flash']
+        : ['glm-4.7', 'glm-4.6v', 'glm-4.5-air']
       for (const modelId of userModels) {
         const glm = new GLMAdapter(config.glmApiKey as string, modelId, baseUrl)
         newAdapters.set(modelId, glm)
@@ -182,7 +182,7 @@ export class ModelManager {
     if (config.dashscopeApiKey) {
       const userModels: string[] = config.qwenModels?.length
         ? config.qwenModels
-        : ['qwen-max', 'qwen-plus', 'qwen-turbo']
+        : ['qwen3.5-plus', 'qwen3-max']
       for (const modelId of userModels) {
         const qwen = new QwenAdapter(config.dashscopeApiKey as string, modelId)
         newAdapters.set(modelId, qwen)
@@ -204,7 +204,7 @@ export class ModelManager {
     if (config.ollamaBaseUrl) {
       const userModels: string[] = config.ollamaModels?.length
         ? config.ollamaModels
-        : ['llama3.2', 'qwen2.5', 'deepseek-r1']
+        : ['llama3.3', 'qwen3', 'qwen2.5', 'glm4', 'deepseek-r1']
       for (const modelId of userModels) {
         const ollama = new OllamaAdapter(config.ollamaBaseUrl as string, modelId)
         newAdapters.set(`ollama-${modelId}`, ollama)
@@ -247,13 +247,13 @@ export class ModelManager {
   selectModelByTask (taskType: string): AIModelAdapter | null {
     // 根据配置或策略选择模型
     const modelMap: Record<string, string> = {
-      prd_generation: 'claude-3.5-sonnet', // PRD 生成优先使用 Claude
+      prd_generation: 'claude-sonnet-4-6', // PRD 生成优先使用 Claude
       chinese_content: 'glm-4.7', // 中文内容优先使用 GLM（成本低廉）
-      large_document: 'gemini-1.5-pro', // 大文件优先使用 Gemini
-      general: 'gpt-4o' // 通用使用 GPT-4o
+      large_document: 'gemini-2.5-pro', // 大文件优先使用 Gemini
+      general: 'gpt-4.1' // 通用使用 GPT-4.1
     }
 
-    const modelId = modelMap[taskType] || 'claude-3.5-sonnet'
+    const modelId = modelMap[taskType] || 'claude-sonnet-4-6'
     return this.getAdapter(modelId)
   }
 

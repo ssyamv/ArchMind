@@ -18,9 +18,9 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
     supportsCustomUrl: true,
     models: [
       {
-        id: 'claude-opus-4-20250514',
-        name: 'Claude Opus 4',
-        description: '最新旗舰模型，最强推理能力，适合最复杂的任务',
+        id: 'claude-opus-4-6',
+        name: 'Claude Opus 4.6',
+        description: '最新旗舰，14.5h 任务时间地平线，适合最复杂的长程 Agent 任务（2026年2月）',
         capabilities: {
           maxContextLength: 200000,
           supportsStreaming: true,
@@ -34,9 +34,9 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
         }
       },
       {
-        id: 'claude-sonnet-4-20250514',
-        name: 'Claude Sonnet 4',
-        description: '最新平衡版本，高性能与成本兼顾',
+        id: 'claude-sonnet-4-6',
+        name: 'Claude Sonnet 4.6',
+        description: '最新平衡版，接近 Opus 4.6 的编码能力，1/5 的价格，ARC-AGI-2 提升 4.3x（2026年2月）',
         capabilities: {
           maxContextLength: 200000,
           supportsStreaming: true,
@@ -50,9 +50,9 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
         }
       },
       {
-        id: 'claude-3-5-sonnet-20241022',
-        name: 'Claude 3.5 Sonnet',
-        description: '上一代主力模型，性价比高',
+        id: 'claude-sonnet-4-5',
+        name: 'Claude Sonnet 4.5',
+        description: 'Agent 和编码特化，上一代主力，性价比高（2025年9月）',
         capabilities: {
           maxContextLength: 200000,
           supportsStreaming: true,
@@ -66,9 +66,9 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
         }
       },
       {
-        id: 'claude-3-5-haiku-20241022',
-        name: 'Claude 3.5 Haiku',
-        description: '快速响应模型，适合简单任务和高并发场景',
+        id: 'claude-haiku-4-5',
+        name: 'Claude Haiku 4.5',
+        description: '最快轻量模型，适合高并发、低延迟场景',
         capabilities: {
           maxContextLength: 200000,
           supportsStreaming: true,
@@ -96,25 +96,41 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
     supportsCustomUrl: true,
     models: [
       {
-        id: 'gpt-4.5-preview',
-        name: 'GPT-4.5 Preview',
-        description: '最新预览版模型，更强的推理和创作能力',
+        id: 'gpt-4.1',
+        name: 'GPT-4.1',
+        description: '编码专项优化，指令遵循更精准，100 万 tokens 上下文，支持微调',
         capabilities: {
-          maxContextLength: 128000,
+          maxContextLength: 1000000,
           supportsStreaming: true,
           supportsStructuredOutput: true,
           supportsVision: true,
           supportedLanguages: ['zh', 'en', 'ja', 'es', 'fr', 'de']
         },
         costEstimate: {
-          input: '$75 / 1M tokens',
-          output: '$150 / 1M tokens'
+          input: '$2 / 1M tokens',
+          output: '$8 / 1M tokens'
+        }
+      },
+      {
+        id: 'gpt-4.1-mini',
+        name: 'GPT-4.1 Mini',
+        description: 'GPT-4.1 轻量版，成本更低，同样支持 100 万 tokens 上下文',
+        capabilities: {
+          maxContextLength: 1000000,
+          supportsStreaming: true,
+          supportsStructuredOutput: true,
+          supportsVision: true,
+          supportedLanguages: ['zh', 'en', 'ja', 'es', 'fr', 'de']
+        },
+        costEstimate: {
+          input: '$0.40 / 1M tokens',
+          output: '$1.60 / 1M tokens'
         }
       },
       {
         id: 'gpt-4o',
         name: 'GPT-4o',
-        description: '多模态旗舰模型，性能与成本平衡',
+        description: '多模态旗舰，图像理解能力强，性能与成本均衡',
         capabilities: {
           maxContextLength: 128000,
           supportsStreaming: true,
@@ -130,7 +146,7 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
       {
         id: 'gpt-4o-mini',
         name: 'GPT-4o Mini',
-        description: '轻量级模型，快速响应，成本极低',
+        description: '轻量级多模态，快速响应，成本极低',
         capabilities: {
           maxContextLength: 128000,
           supportsStreaming: true,
@@ -144,9 +160,9 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
         }
       },
       {
-        id: 'o1',
-        name: 'o1',
-        description: '深度推理模型，适合数学、编程和复杂分析',
+        id: 'o3',
+        name: 'o3',
+        description: '最强推理模型，编程/数学/科学 SOTA，支持工具调用和视觉',
         capabilities: {
           maxContextLength: 200000,
           supportsStreaming: true,
@@ -155,19 +171,19 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
           supportedLanguages: ['zh', 'en', 'ja', 'es', 'fr', 'de']
         },
         costEstimate: {
-          input: '$15 / 1M tokens',
-          output: '$60 / 1M tokens'
+          input: '$10 / 1M tokens',
+          output: '$40 / 1M tokens'
         }
       },
       {
-        id: 'o1-mini',
-        name: 'o1 Mini',
-        description: '轻量级推理模型，快速且经济',
+        id: 'o4-mini',
+        name: 'o4-mini',
+        description: '快速低成本推理，AIME 表现最佳，支持工具调用',
         capabilities: {
-          maxContextLength: 128000,
+          maxContextLength: 200000,
           supportsStreaming: true,
           supportsStructuredOutput: true,
-          supportsVision: false,
+          supportsVision: true,
           supportedLanguages: ['zh', 'en', 'ja', 'es', 'fr', 'de']
         },
         costEstimate: {
@@ -178,7 +194,7 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
       {
         id: 'o3-mini',
         name: 'o3 Mini',
-        description: '最新推理模型，性价比更高',
+        description: '性价比推理模型，数学和编码表现优秀',
         capabilities: {
           maxContextLength: 200000,
           supportsStreaming: true,
@@ -197,7 +213,7 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
   google: {
     id: 'google',
     name: 'Google (Gemini)',
-    description: 'Google 的 Gemini 模型，支持超大上下文窗口。',
+    description: 'Google 的 Gemini 模型，支持超大上下文窗口和思维推理能力。',
     website: 'https://aistudio.google.com/app/apikey',
     authType: 'both',
     apiKeyPlaceholder: 'AIza...',
@@ -206,9 +222,41 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
     supportsCustomUrl: true,
     models: [
       {
+        id: 'gemini-2.5-pro',
+        name: 'Gemini 2.5 Pro',
+        description: '最新思维旗舰，100 万 tokens 上下文，Deep Think 增强推理，编码/数学 SOTA（2025年3月）',
+        capabilities: {
+          maxContextLength: 1000000,
+          supportsStreaming: true,
+          supportsStructuredOutput: true,
+          supportsVision: true,
+          supportedLanguages: ['zh', 'en', 'ja', 'es', 'fr', 'de']
+        },
+        costEstimate: {
+          input: '$1.25 / 1M tokens (≤200K)',
+          output: '$10 / 1M tokens'
+        }
+      },
+      {
+        id: 'gemini-2.5-flash',
+        name: 'Gemini 2.5 Flash',
+        description: '快速思维模型，低延迟低成本，兼顾推理，1M tokens 上下文',
+        capabilities: {
+          maxContextLength: 1000000,
+          supportsStreaming: true,
+          supportsStructuredOutput: true,
+          supportsVision: true,
+          supportedLanguages: ['zh', 'en', 'ja', 'es', 'fr', 'de']
+        },
+        costEstimate: {
+          input: '$0.15 / 1M tokens',
+          output: '$0.60 / 1M tokens'
+        }
+      },
+      {
         id: 'gemini-2.0-flash',
         name: 'Gemini 2.0 Flash',
-        description: '最新快速模型，响应迅速，支持多模态',
+        description: '稳定快速多模态，1M tokens 上下文，适合高并发场景',
         capabilities: {
           maxContextLength: 1000000,
           supportsStreaming: true,
@@ -222,25 +270,9 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
         }
       },
       {
-        id: 'gemini-2.0-pro',
-        name: 'Gemini 2.0 Pro',
-        description: '最新旗舰模型，最强性能',
-        capabilities: {
-          maxContextLength: 1000000,
-          supportsStreaming: true,
-          supportsStructuredOutput: true,
-          supportsVision: true,
-          supportedLanguages: ['zh', 'en', 'ja', 'es', 'fr', 'de']
-        },
-        costEstimate: {
-          input: '$1.25 / 1M tokens (≤128K)',
-          output: '$5 / 1M tokens'
-        }
-      },
-      {
         id: 'gemini-1.5-pro',
         name: 'Gemini 1.5 Pro',
-        description: '超大上下文 (1M tokens)，适合长文档处理',
+        description: '超大上下文 (1M tokens)，适合超长文档处理，稳定版本',
         capabilities: {
           maxContextLength: 1000000,
           supportsStreaming: true,
@@ -251,22 +283,6 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
         costEstimate: {
           input: '$1.25 / 1M tokens (≤128K)',
           output: '$5 / 1M tokens'
-        }
-      },
-      {
-        id: 'gemini-1.5-flash',
-        name: 'Gemini 1.5 Flash',
-        description: '快速响应，适合高并发场景',
-        capabilities: {
-          maxContextLength: 1000000,
-          supportsStreaming: true,
-          supportsStructuredOutput: true,
-          supportsVision: true,
-          supportedLanguages: ['zh', 'en', 'ja', 'es', 'fr', 'de']
-        },
-        costEstimate: {
-          input: '$0.075 / 1M tokens',
-          output: '$0.30 / 1M tokens'
         }
       }
     ]
@@ -285,10 +301,10 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
     models: [
       {
         id: 'deepseek-chat',
-        name: 'DeepSeek V3',
-        description: '最新通用对话模型，适合日常对话和文本生成',
+        name: 'DeepSeek V3.2',
+        description: '最新通用模型，首个将思考集成到工具调用的模型，1800+ 环境 Agent 训练（2025年12月）',
         capabilities: {
-          maxContextLength: 64000,
+          maxContextLength: 128000,
           supportsStreaming: true,
           supportsStructuredOutput: true,
           supportsVision: false,
@@ -302,9 +318,9 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
       {
         id: 'deepseek-reasoner',
         name: 'DeepSeek R1',
-        description: '深度思考模型，适合复杂推理任务',
+        description: '深度思考推理模型，适合数学/科学/代码复杂逻辑分析',
         capabilities: {
-          maxContextLength: 64000,
+          maxContextLength: 128000,
           supportsStreaming: true,
           supportsStructuredOutput: true,
           supportsVision: false,
@@ -321,63 +337,47 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
   qwen: {
     id: 'qwen',
     name: '阿里云通义千问',
-    description: '阿里云开发的大语言模型，中文理解能力强。',
+    description: '阿里云开发的大语言模型，中文理解能力强，Qwen3.5 系列媲美 GPT-5.2。',
     website: 'https://dashscope.console.aliyun.com/apiKey',
     authType: 'api_key',
     apiKeyPlaceholder: 'sk-...',
     models: [
       {
-        id: 'qwen-max',
-        name: '通义千问 Max',
-        description: '最强版本，适合复杂任务',
+        id: 'qwen3.5-plus',
+        name: 'Qwen3.5-Plus',
+        description: '最新旗舰，397B MoE/17B激活，原生多模态（文字+图像+视频），媲美 GPT-5.2（2026年2月）',
         capabilities: {
-          maxContextLength: 30000,
+          maxContextLength: 131072,
           supportsStreaming: true,
-          supportsStructuredOutput: false,
+          supportsStructuredOutput: true,
           supportsVision: true,
           supportedLanguages: ['zh', 'en']
         },
         costEstimate: {
-          input: '¥20 / 1M tokens',
-          output: '¥60 / 1M tokens'
+          input: '¥24 / 1M tokens',
+          output: '¥72 / 1M tokens'
         }
       },
       {
-        id: 'qwen-plus',
-        name: '通义千问 Plus',
-        description: '平衡版本，性价比高',
+        id: 'qwen3-max',
+        name: 'Qwen3-Max',
+        description: '千问3系旗舰，原生 search/code agent，思考与非思考模式，性能超越 Qwen3.5-Plus 前代',
         capabilities: {
-          maxContextLength: 128000,
+          maxContextLength: 131072,
           supportsStreaming: true,
-          supportsStructuredOutput: false,
-          supportsVision: true,
+          supportsStructuredOutput: true,
+          supportsVision: false,
           supportedLanguages: ['zh', 'en']
         },
         costEstimate: {
-          input: '¥4 / 1M tokens',
-          output: '¥12 / 1M tokens'
-        }
-      },
-      {
-        id: 'qwen-turbo',
-        name: '通义千问 Turbo',
-        description: '快速响应，成本最低',
-        capabilities: {
-          maxContextLength: 128000,
-          supportsStreaming: true,
-          supportsStructuredOutput: false,
-          supportsVision: true,
-          supportedLanguages: ['zh', 'en']
-        },
-        costEstimate: {
-          input: '¥2 / 1M tokens',
-          output: '¥6 / 1M tokens'
+          input: '¥24 / 1M tokens',
+          output: '¥72 / 1M tokens'
         }
       },
       {
         id: 'qwen-long',
         name: '通义千问 Long',
-        description: '超长上下文，支持 1M tokens',
+        description: '超长上下文，支持 1M tokens，适合超大文档处理',
         capabilities: {
           maxContextLength: 1000000,
           supportsStreaming: true,
@@ -471,15 +471,31 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
   glm: {
     id: 'glm',
     name: '智谱 GLM',
-    description: '智谱 AI 开发的国产大模型，支持长上下文，成本极低。',
+    description: '智谱 AI 开发的国产大模型，GLM-4.7 编码能力媲美 Claude Sonnet 4.5，成本极低。',
     website: 'https://open.bigmodel.cn/api-keys',
     authType: 'api_key',
     apiKeyPlaceholder: '...',
     models: [
       {
-        id: 'glm-4-plus',
-        name: 'GLM-4 Plus',
-        description: '最新旗舰模型，综合能力最强',
+        id: 'glm-4.7',
+        name: 'GLM-4.7',
+        description: '旗舰推理模型，355B MoE，200K 上下文，SWE-bench 开源第一，支持思考模式（2025年12月）',
+        capabilities: {
+          maxContextLength: 200000,
+          supportsStreaming: true,
+          supportsStructuredOutput: true,
+          supportsVision: false,
+          supportedLanguages: ['zh', 'en']
+        },
+        costEstimate: {
+          input: '¥0.1 / 1M tokens',
+          output: '¥0.1 / 1M tokens'
+        }
+      },
+      {
+        id: 'glm-4.5-air',
+        name: 'GLM-4.5 Air',
+        description: '高性价比轻量模型，适合高并发低成本场景',
         capabilities: {
           maxContextLength: 128000,
           supportsStreaming: true,
@@ -488,56 +504,24 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
           supportedLanguages: ['zh', 'en']
         },
         costEstimate: {
-          input: '¥50 / 1M tokens',
-          output: '¥50 / 1M tokens'
+          input: '¥0.05 / 1M tokens',
+          output: '¥0.05 / 1M tokens'
         }
       },
       {
-        id: 'glm-4-air',
-        name: 'GLM-4 Air',
-        description: '平衡版本，性价比高',
+        id: 'glm-4.6v',
+        name: 'GLM-4.6V',
+        description: '多模态视觉模型，支持图像理解',
         capabilities: {
           maxContextLength: 128000,
-          supportsStreaming: true,
-          supportsStructuredOutput: true,
-          supportsVision: false,
-          supportedLanguages: ['zh', 'en']
-        },
-        costEstimate: {
-          input: '¥1 / 1M tokens',
-          output: '¥1 / 1M tokens'
-        }
-      },
-      {
-        id: 'glm-4-flash',
-        name: 'GLM-4 Flash',
-        description: '快速版本，免费使用',
-        capabilities: {
-          maxContextLength: 128000,
-          supportsStreaming: true,
-          supportsStructuredOutput: true,
-          supportsVision: false,
-          supportedLanguages: ['zh', 'en']
-        },
-        costEstimate: {
-          input: '免费',
-          output: '免费'
-        }
-      },
-      {
-        id: 'glm-4v-plus',
-        name: 'GLM-4V Plus',
-        description: '多模态模型，支持图像理解',
-        capabilities: {
-          maxContextLength: 8000,
           supportsStreaming: true,
           supportsStructuredOutput: true,
           supportsVision: true,
           supportedLanguages: ['zh', 'en']
         },
         costEstimate: {
-          input: '¥10 / 1M tokens',
-          output: '¥10 / 1M tokens'
+          input: '¥0.04 / 1M tokens',
+          output: '¥0.1 / 1M tokens'
         }
       }
     ]
@@ -555,7 +539,7 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
       {
         id: 'llama3.3',
         name: 'Llama 3.3 70B',
-        description: 'Meta 最新开源模型，70B 参数版本',
+        description: 'Meta 最新开源旗舰，70B 参数版本，英文能力强',
         capabilities: {
           maxContextLength: 128000,
           supportsStreaming: true,
@@ -569,15 +553,15 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
         }
       },
       {
-        id: 'llama3.2',
-        name: 'Llama 3.2',
-        description: 'Meta 轻量级模型，适合日常使用',
+        id: 'qwen3',
+        name: 'Qwen3',
+        description: '通义千问 3 本地版，中文支持最佳，支持思考模式',
         capabilities: {
           maxContextLength: 128000,
           supportsStreaming: true,
           supportsStructuredOutput: false,
-          supportsVision: true,
-          supportedLanguages: ['en']
+          supportsVision: false,
+          supportedLanguages: ['zh', 'en']
         },
         costEstimate: {
           input: '本地免费',
@@ -587,7 +571,23 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
       {
         id: 'qwen2.5',
         name: 'Qwen 2.5',
-        description: '通义千问开源版本，中文支持好',
+        description: '通义千问 2.5 本地版，中文支持好，稳定版本',
+        capabilities: {
+          maxContextLength: 128000,
+          supportsStreaming: true,
+          supportsStructuredOutput: false,
+          supportsVision: false,
+          supportedLanguages: ['zh', 'en']
+        },
+        costEstimate: {
+          input: '本地免费',
+          output: '本地免费'
+        }
+      },
+      {
+        id: 'glm4',
+        name: 'GLM-4',
+        description: '智谱 GLM-4 本地版，适合中文场景离线使用',
         capabilities: {
           maxContextLength: 128000,
           supportsStreaming: true,
@@ -603,7 +603,7 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
       {
         id: 'deepseek-r1',
         name: 'DeepSeek R1',
-        description: 'DeepSeek 推理模型本地版',
+        description: 'DeepSeek 推理模型本地版，适合离线复杂推理任务',
         capabilities: {
           maxContextLength: 128000,
           supportsStreaming: true,
@@ -619,7 +619,7 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
       {
         id: 'gemma3',
         name: 'Gemma 3',
-        description: 'Google 开源轻量模型',
+        description: 'Google 开源轻量模型，支持多模态',
         capabilities: {
           maxContextLength: 32000,
           supportsStreaming: true,

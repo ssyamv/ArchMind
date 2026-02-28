@@ -59,10 +59,29 @@
             <Button class="flex-1" @click="navigateTo(`/login?redirect=/invite/${token}`)">
               {{ t('auth.login') }}
             </Button>
-            <Button variant="outline" class="flex-1" @click="navigateTo(`/register?redirect=/invite/${token}`)">
+            <Button variant="outline" class="flex-1" @click="navigateTo(`/register?redirect=/invite/${token}&email=${encodeURIComponent(invitation.email)}`)">
               {{ t('auth.register') }}
             </Button>
           </div>
+        </div>
+
+        <!-- 已登录：邮箱不匹配提示 -->
+        <div v-else-if="isEmailMismatch" class="space-y-3">
+          <div class="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-2">
+            <div class="flex items-center gap-2 text-destructive">
+              <UserX class="w-4 h-4 shrink-0" />
+              <span class="text-sm font-medium">{{ t('workspace.invitation.emailMismatchTitle') }}</span>
+            </div>
+            <p class="text-sm text-muted-foreground">
+              {{ t('workspace.invitation.emailMismatchDesc', { current: authStore.user?.email, invited: invitation.email }) }}
+            </p>
+          </div>
+          <Button class="w-full" @click="handleSwitchAccount">
+            {{ t('workspace.invitation.switchAccount') }}
+          </Button>
+          <Button variant="outline" class="w-full" @click="navigateTo('/')">
+            {{ t('workspace.invitation.decline') }}
+          </Button>
         </div>
 
         <!-- 已登录：接受按钮 -->
@@ -82,15 +101,15 @@
         <CheckCircle2 class="w-12 h-12 mx-auto text-green-500" />
         <h2 class="text-xl font-semibold">{{ t('workspace.invitation.acceptedTitle') }}</h2>
         <p class="text-muted-foreground">{{ t('workspace.invitation.acceptedDescription', { workspace: acceptedWorkspaceName }) }}</p>
-        <Button @click="navigateTo('/')">{{ t('workspace.invitation.goToWorkspace') }}</Button>
+        <Button @click="navigateTo(`/app?workspaceId=${acceptedWorkspaceId}`)">{{ t('workspace.invitation.goToWorkspace') }}</Button>
       </Card>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { Loader2, Users, AlertCircle, CheckCircle2 } from 'lucide-vue-next'
+import { ref, onMounted, computed } from 'vue'
+import { Loader2, Users, AlertCircle, CheckCircle2, UserX } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/auth'
 import { Card } from '~/components/ui/card'
 import { Button } from '~/components/ui/button'
@@ -113,8 +132,14 @@ const accepting = ref(false)
 const error = ref<string | null>(null)
 const accepted = ref(false)
 const acceptedWorkspaceName = ref('')
+const acceptedWorkspaceId = ref('')
 
 const isAuthenticated = computed(() => authStore.isAuthenticated)
+const isEmailMismatch = computed(() =>
+  isAuthenticated.value &&
+  invitation.value !== null &&
+  authStore.user?.email !== invitation.value.email
+)
 
 interface InvitationDetail {
   workspaceName: string
@@ -145,14 +170,20 @@ async function loadInvitation () {
   }
 }
 
+async function handleSwitchAccount () {
+  await authStore.logout()
+  navigateTo(`/login?redirect=/invite/${token}`)
+}
+
 async function handleAccept () {
   accepting.value = true
   try {
-    const response = await $fetch<{ success: boolean; data: { workspaceName: string }; message: string }>(
+    const response = await $fetch<{ success: boolean; data: { workspaceName: string; workspaceId: string }; message: string }>(
       `/api/v1/invitations/${token}/accept`,
       { method: 'POST' }
     )
     acceptedWorkspaceName.value = response.data.workspaceName
+    acceptedWorkspaceId.value = response.data.workspaceId
     accepted.value = true
     invitation.value = null
     toast({

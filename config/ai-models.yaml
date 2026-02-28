@@ -5,39 +5,63 @@ ai_models:
   # 降级策略（按优先级排序）
   fallback:
     - glm-4.5-air
-    - gpt-4o
-    - claude-3.5-sonnet
+    - qwen3-max
+    - claude-sonnet-4-6
 
   # 任务类型偏好（选择模型时的优先级）
   preferences:
     prd_generation:
-      - claude-3.5-sonnet
-      - gpt-4o
+      - claude-sonnet-4-6
+      - gpt-4.1
       - glm-4.7
     chinese_content:
       - glm-4.7
-      - glm-4.5-air
-      - qwen-max
+      - qwen3-max
+      - qwen3.5-plus
       - ernie-4.0-8k
     large_document:
-      - gemini-1.5-pro
-      - claude-3.5-sonnet
+      - gemini-2.5-pro
+      - gemini-2.0-flash
+      - claude-sonnet-4-6
     cost_sensitive:
       - glm-4.5-air
       - deepseek-chat
-      - qwen-turbo
+      - qwen3-max
     privacy_mode:
       - ollama-llama3
       - ollama-qwen
 
   # 模型列表配置
   models:
-    # 智谱 GLM 4.7 (推理最强)
+    # ─── 智谱 GLM ───────────────────────────────────────────────────────────────
+    # GLM-4.7 旗舰推理模型 (2025年12月发布，355B MoE)
     glm-4.7:
       enabled: true
-      name: "GLM 4.7"
+      name: "GLM-4.7"
       provider: "Zhipu AI"
-      description: "最新推理模型，支持思考模式，适合复杂逻辑分析和 PRD 生成"
+      description: "旗舰推理模型，355B MoE 架构，200K 上下文，编码能力对标 Claude Sonnet 4.5，支持思考模式"
+      api_key_env: "GLM_API_KEY"
+      capabilities:
+        maxContextLength: 200000
+        supportsStreaming: true
+        supportsStructuredOutput: true
+        supportsVision: false
+        supportedLanguages: ["zh", "en"]
+      costEstimate:
+        input: "¥0.1 / 1M tokens"
+        output: "¥0.1 / 1M tokens"
+      embedding:
+        supported: true
+        provider: "glm"
+        model: "embedding-3"
+        dimensions: 2048
+
+    # GLM-4.5-Air 高性价比模型
+    glm-4.5-air:
+      enabled: true
+      name: "GLM-4.5 Air"
+      provider: "Zhipu AI"
+      description: "高性价比轻量模型，适合高并发低成本场景"
       api_key_env: "GLM_API_KEY"
       capabilities:
         maxContextLength: 128000
@@ -46,19 +70,20 @@ ai_models:
         supportsVision: false
         supportedLanguages: ["zh", "en"]
       costEstimate:
-        input: "¥0.0001/token"
-        output: "¥0.0001/token"
+        input: "¥0.05 / 1M tokens"
+        output: "¥0.05 / 1M tokens"
       embedding:
         supported: true
         provider: "glm"
         model: "embedding-3"
         dimensions: 2048
-    # 智谱 GLM 4.6v (图像理解)
+
+    # GLM-4.6V 多模态视觉模型
     glm-4.6v:
-      enabled: true
-      name: "GLM 4.6v"
+      enabled: false
+      name: "GLM-4.6V"
       provider: "Zhipu AI"
-      description: "多模态模型，支持图像理解，600万 tokens 额度"
+      description: "多模态视觉理解模型，支持图像输入"
       api_key_env: "GLM_API_KEY"
       capabilities:
         maxContextLength: 128000
@@ -67,42 +92,21 @@ ai_models:
         supportsVision: true
         supportedLanguages: ["zh", "en"]
       costEstimate:
-        input: "¥0.00004/token"
-        output: "¥0.0001/token"
+        input: "¥0.04 / 1M tokens"
+        output: "¥0.1 / 1M tokens"
       embedding:
         supported: true
         provider: "glm"
         model: "embedding-3"
         dimensions: 2048
 
-    # 智谱 GLM 4.5 Air (经济版)
-    glm-4.5-air:
-      enabled: true
-      name: "GLM 4.5 Air"
-      provider: "Zhipu AI"
-      description: "经济版模型，最低成本，适合快速原型和成本敏感场景，1200万 tokens 额度"
-      api_key_env: "GLM_API_KEY"
-      capabilities:
-        maxContextLength: 128000
-        supportsStreaming: true
-        supportsStructuredOutput: true
-        supportsVision: false
-        supportedLanguages: ["zh", "en"]
-      costEstimate:
-        input: "¥0.00002/token"
-        output: "¥0.00006/token"
-      embedding:
-        supported: true
-        provider: "glm"
-        model: "embedding-3"
-        dimensions: 2048
-
-    # Claude 3.5 Sonnet
-    claude-3.5-sonnet:
+    # ─── Anthropic Claude ────────────────────────────────────────────────────────
+    # Claude Opus 4.6 (2026年2月最新旗舰)
+    claude-opus-4-6:
       enabled: false
-      name: "Claude 3.5 Sonnet"
+      name: "Claude Opus 4.6"
       provider: "Anthropic"
-      description: "企业级推理能力，支持 200K 上下文，最适合复杂逻辑分析"
+      description: "最新旗舰模型，14.5h 任务时间地平线，适合最复杂的长程 Agent 任务"
       api_key_env: "ANTHROPIC_API_KEY"
       capabilities:
         maxContextLength: 200000
@@ -111,17 +115,116 @@ ai_models:
         supportsVision: true
         supportedLanguages: ["zh", "en", "ja", "es", "fr", "de"]
       costEstimate:
-        input: "¥0.003/1K tokens"
-        output: "¥0.015/1K tokens"
+        input: "$15 / 1M tokens"
+        output: "$75 / 1M tokens"
       embedding:
         supported: false
 
-    # OpenAI GPT-4o
+    # Claude Sonnet 4.6 (2026年2月，性价比旗舰)
+    claude-sonnet-4-6:
+      enabled: false
+      name: "Claude Sonnet 4.6"
+      provider: "Anthropic"
+      description: "最新平衡版，接近 Opus 4.6 的编码能力，1/5 的价格，ARC-AGI-2 提升 4.3x"
+      api_key_env: "ANTHROPIC_API_KEY"
+      capabilities:
+        maxContextLength: 200000
+        supportsStreaming: true
+        supportsStructuredOutput: true
+        supportsVision: true
+        supportedLanguages: ["zh", "en", "ja", "es", "fr", "de"]
+      costEstimate:
+        input: "$3 / 1M tokens"
+        output: "$15 / 1M tokens"
+      embedding:
+        supported: false
+
+    # Claude Sonnet 4.5 (上一代主力)
+    claude-sonnet-4-5:
+      enabled: false
+      name: "Claude Sonnet 4.5"
+      provider: "Anthropic"
+      description: "上一代主力模型，Agent 和编码场景表现优秀，性价比高"
+      api_key_env: "ANTHROPIC_API_KEY"
+      capabilities:
+        maxContextLength: 200000
+        supportsStreaming: true
+        supportsStructuredOutput: true
+        supportsVision: true
+        supportedLanguages: ["zh", "en", "ja", "es", "fr", "de"]
+      costEstimate:
+        input: "$3 / 1M tokens"
+        output: "$15 / 1M tokens"
+      embedding:
+        supported: false
+
+    # Claude Haiku 4.5 (最快轻量)
+    claude-haiku-4-5:
+      enabled: false
+      name: "Claude Haiku 4.5"
+      provider: "Anthropic"
+      description: "最快 Haiku 模型，适合高并发、低延迟场景"
+      api_key_env: "ANTHROPIC_API_KEY"
+      capabilities:
+        maxContextLength: 200000
+        supportsStreaming: true
+        supportsStructuredOutput: true
+        supportsVision: true
+        supportedLanguages: ["zh", "en", "ja", "es", "fr", "de"]
+      costEstimate:
+        input: "$0.80 / 1M tokens"
+        output: "$4 / 1M tokens"
+      embedding:
+        supported: false
+
+    # ─── OpenAI ─────────────────────────────────────────────────────────────────
+    # GPT-4.1 (编码专项，100K上下文)
+    gpt-4.1:
+      enabled: false
+      name: "GPT-4.1"
+      provider: "OpenAI"
+      description: "编码专项优化模型，指令遵循更精准，支持 100 万 tokens 上下文"
+      api_key_env: "OPENAI_API_KEY"
+      capabilities:
+        maxContextLength: 1000000
+        supportsStreaming: true
+        supportsStructuredOutput: true
+        supportsVision: true
+        supportedLanguages: ["zh", "en", "ja", "es", "fr", "de"]
+      costEstimate:
+        input: "$2 / 1M tokens"
+        output: "$8 / 1M tokens"
+      embedding:
+        supported: true
+        provider: "openai"
+        model: "text-embedding-3-small"
+        dimensions: 1536
+
+    # GPT-4.1 Mini (轻量版)
+    gpt-4.1-mini:
+      enabled: false
+      name: "GPT-4.1 Mini"
+      provider: "OpenAI"
+      description: "GPT-4.1 轻量版，成本更低，同样支持 100 万 tokens 上下文"
+      api_key_env: "OPENAI_API_KEY"
+      capabilities:
+        maxContextLength: 1000000
+        supportsStreaming: true
+        supportsStructuredOutput: true
+        supportsVision: true
+        supportedLanguages: ["zh", "en", "ja", "es", "fr", "de"]
+      costEstimate:
+        input: "$0.40 / 1M tokens"
+        output: "$1.60 / 1M tokens"
+      embedding:
+        supported: false
+
+    # GPT-4o (多模态主力)
     gpt-4o:
       enabled: false
       name: "GPT-4o"
       provider: "OpenAI"
-      description: "多模态 AI，图片理解能力强，适合需要图像分析的任务"
+      description: "多模态旗舰，图像理解能力强，性能与成本均衡"
       api_key_env: "OPENAI_API_KEY"
       capabilities:
         maxContextLength: 128000
@@ -130,20 +233,59 @@ ai_models:
         supportsVision: true
         supportedLanguages: ["zh", "en", "ja", "es", "fr", "de"]
       costEstimate:
-        input: "¥0.005/1K tokens"
-        output: "¥0.015/1K tokens"
+        input: "$2.50 / 1M tokens"
+        output: "$10 / 1M tokens"
       embedding:
         supported: true
         provider: "openai"
         model: "text-embedding-3-small"
         dimensions: 1536
 
-    # Google Gemini 1.5 Pro
-    gemini-1.5-pro:
+    # o3 (最强推理)
+    o3:
       enabled: false
-      name: "Gemini 1.5 Pro"
+      name: "o3"
+      provider: "OpenAI"
+      description: "最强推理模型，编程/数学/科学领域 SOTA，支持工具调用和视觉"
+      api_key_env: "OPENAI_API_KEY"
+      capabilities:
+        maxContextLength: 200000
+        supportsStreaming: true
+        supportsStructuredOutput: true
+        supportsVision: true
+        supportedLanguages: ["zh", "en", "ja", "es", "fr", "de"]
+      costEstimate:
+        input: "$10 / 1M tokens"
+        output: "$40 / 1M tokens"
+      embedding:
+        supported: false
+
+    # o4-mini (快速推理)
+    o4-mini:
+      enabled: false
+      name: "o4-mini"
+      provider: "OpenAI"
+      description: "快速低成本推理，AIME 表现最佳，支持工具调用"
+      api_key_env: "OPENAI_API_KEY"
+      capabilities:
+        maxContextLength: 200000
+        supportsStreaming: true
+        supportsStructuredOutput: true
+        supportsVision: true
+        supportedLanguages: ["zh", "en", "ja", "es", "fr", "de"]
+      costEstimate:
+        input: "$1.10 / 1M tokens"
+        output: "$4.40 / 1M tokens"
+      embedding:
+        supported: false
+
+    # ─── Google Gemini ───────────────────────────────────────────────────────────
+    # Gemini 2.5 Pro (最新思维旗舰)
+    gemini-2.5-pro:
+      enabled: false
+      name: "Gemini 2.5 Pro"
       provider: "Google"
-      description: "超大上下文窗口 (100K+)，适合处理大型文档"
+      description: "最新思维旗舰模型，超强推理与编码，100 万 tokens 上下文，Deep Think 增强推理"
       api_key_env: "GOOGLE_API_KEY"
       capabilities:
         maxContextLength: 1000000
@@ -152,72 +294,94 @@ ai_models:
         supportsVision: true
         supportedLanguages: ["zh", "en", "ja", "es", "fr", "de"]
       costEstimate:
-        input: "¥0.0013/1K tokens (first 128k)"
-        output: "¥0.0053/1K tokens"
+        input: "$1.25 / 1M tokens (≤200K)"
+        output: "$10 / 1M tokens"
       embedding:
         supported: false
 
-    # 阿里云通义千问
-    qwen-max:
+    # Gemini 2.5 Flash (快速思维模型)
+    gemini-2.5-flash:
       enabled: false
-      name: "通义千问 Qwen Max"
+      name: "Gemini 2.5 Flash"
+      provider: "Google"
+      description: "快速思维模型，低延迟低成本，兼顾推理能力，适合高并发场景"
+      api_key_env: "GOOGLE_API_KEY"
+      capabilities:
+        maxContextLength: 1000000
+        supportsStreaming: true
+        supportsStructuredOutput: true
+        supportsVision: true
+        supportedLanguages: ["zh", "en", "ja", "es", "fr", "de"]
+      costEstimate:
+        input: "$0.15 / 1M tokens"
+        output: "$0.60 / 1M tokens"
+      embedding:
+        supported: false
+
+    # Gemini 2.0 Flash (稳定多模态)
+    gemini-2.0-flash:
+      enabled: false
+      name: "Gemini 2.0 Flash"
+      provider: "Google"
+      description: "稳定快速多模态，响应迅速，100 万 tokens 上下文"
+      api_key_env: "GOOGLE_API_KEY"
+      capabilities:
+        maxContextLength: 1000000
+        supportsStreaming: true
+        supportsStructuredOutput: true
+        supportsVision: true
+        supportedLanguages: ["zh", "en", "ja", "es", "fr", "de"]
+      costEstimate:
+        input: "$0.10 / 1M tokens"
+        output: "$0.40 / 1M tokens"
+      embedding:
+        supported: false
+
+    # ─── 阿里云通义千问 ──────────────────────────────────────────────────────────
+    # Qwen3-Max (旗舰，支持 search agent)
+    qwen3-max:
+      enabled: false
+      name: "Qwen3-Max"
       provider: "Alibaba"
-      description: "旗舰模型，中文理解能力最强，适合复杂中文内容生成"
+      description: "千问3系旗舰，原生支持 search/code agent，思考与非思考模式双切换"
       api_key_env: "DASHSCOPE_API_KEY"
       capabilities:
-        maxContextLength: 32000
+        maxContextLength: 131072
+        supportsStreaming: true
+        supportsStructuredOutput: true
+        supportsVision: false
+        supportedLanguages: ["zh", "en"]
+      costEstimate:
+        input: "¥24 / 1M tokens"
+        output: "¥72 / 1M tokens"
+      embedding:
+        supported: false
+
+    # Qwen3.5-Plus (最新多模态旗舰，2026年2月)
+    qwen3.5-plus:
+      enabled: false
+      name: "Qwen3.5-Plus"
+      provider: "Alibaba"
+      description: "最新旗舰，397B MoE/17B激活，原生多模态（文字+图像+视频），媲美 GPT-5.2"
+      api_key_env: "DASHSCOPE_API_KEY"
+      capabilities:
+        maxContextLength: 131072
         supportsStreaming: true
         supportsStructuredOutput: true
         supportsVision: true
         supportedLanguages: ["zh", "en"]
       costEstimate:
-        input: "¥0.02/1K tokens"
-        output: "¥0.06/1K tokens"
+        input: "¥24 / 1M tokens"
+        output: "¥72 / 1M tokens"
       embedding:
         supported: false
 
-    qwen-plus:
-      enabled: false
-      name: "通义千问 Qwen Plus"
-      provider: "Alibaba"
-      description: "性能均衡模型，兼顾效果与成本"
-      api_key_env: "DASHSCOPE_API_KEY"
-      capabilities:
-        maxContextLength: 131072
-        supportsStreaming: true
-        supportsStructuredOutput: true
-        supportsVision: false
-        supportedLanguages: ["zh", "en"]
-      costEstimate:
-        input: "¥0.004/1K tokens"
-        output: "¥0.012/1K tokens"
-      embedding:
-        supported: false
-
-    qwen-turbo:
-      enabled: false
-      name: "通义千问 Qwen Turbo"
-      provider: "Alibaba"
-      description: "快速响应模型，最低成本，适合简单任务"
-      api_key_env: "DASHSCOPE_API_KEY"
-      capabilities:
-        maxContextLength: 131072
-        supportsStreaming: true
-        supportsStructuredOutput: true
-        supportsVision: false
-        supportedLanguages: ["zh", "en"]
-      costEstimate:
-        input: "¥0.002/1K tokens"
-        output: "¥0.006/1K tokens"
-      embedding:
-        supported: false
-
-    # 百度文心一言
+    # ─── 百度文心 ────────────────────────────────────────────────────────────────
     ernie-4.0-8k:
       enabled: false
-      name: "文心一言 ERNIE 4.0"
+      name: "文心 ERNIE 4.0"
       provider: "Baidu"
-      description: "百度旗舰大模型，中文理解深度最强"
+      description: "百度旗舰大模型，中文理解深度强"
       api_key_env: "BAIDU_API_KEY"
       capabilities:
         maxContextLength: 8192
@@ -226,16 +390,16 @@ ai_models:
         supportsVision: false
         supportedLanguages: ["zh", "en"]
       costEstimate:
-        input: "¥0.03/1K tokens"
-        output: "¥0.09/1K tokens"
+        input: "¥30 / 1M tokens"
+        output: "¥60 / 1M tokens"
       embedding:
         supported: false
 
-    ernie-3.5-8k:
+    ernie-4.0-turbo-8k:
       enabled: false
-      name: "文心一言 ERNIE 3.5"
+      name: "文心 ERNIE 4.0 Turbo"
       provider: "Baidu"
-      description: "百度经济版模型，性价比高"
+      description: "文心旗舰加速版，成本更低"
       api_key_env: "BAIDU_API_KEY"
       capabilities:
         maxContextLength: 8192
@@ -244,17 +408,18 @@ ai_models:
         supportsVision: false
         supportedLanguages: ["zh", "en"]
       costEstimate:
-        input: "¥0.008/1K tokens"
-        output: "¥0.008/1K tokens"
+        input: "¥12 / 1M tokens"
+        output: "¥12 / 1M tokens"
       embedding:
         supported: false
 
-    # DeepSeek
+    # ─── DeepSeek ────────────────────────────────────────────────────────────────
+    # DeepSeek-V3.2 (最新版，工具调用+思考模式)
     deepseek-chat:
       enabled: false
-      name: "DeepSeek Chat"
+      name: "DeepSeek V3.2"
       provider: "DeepSeek"
-      description: "高性价比通用对话模型，代码能力强"
+      description: "DeepSeek V3.2，首个将思考集成到工具调用的模型，1800+ 环境 Agent 训练"
       api_key_env: "DEEPSEEK_API_KEY"
       capabilities:
         maxContextLength: 128000
@@ -263,16 +428,17 @@ ai_models:
         supportsVision: false
         supportedLanguages: ["zh", "en"]
       costEstimate:
-        input: "¥0.001/1K tokens"
-        output: "¥0.002/1K tokens"
+        input: "¥0.5 / 1M tokens"
+        output: "¥2 / 1M tokens"
       embedding:
         supported: false
 
+    # DeepSeek-R1 (深度推理)
     deepseek-reasoner:
       enabled: false
-      name: "DeepSeek Reasoner"
+      name: "DeepSeek R1"
       provider: "DeepSeek"
-      description: "深度推理模型，适合复杂逻辑分析"
+      description: "深度思考推理模型，适合数学/科学/代码复杂逻辑分析"
       api_key_env: "DEEPSEEK_API_KEY"
       capabilities:
         maxContextLength: 128000
@@ -281,20 +447,20 @@ ai_models:
         supportsVision: false
         supportedLanguages: ["zh", "en"]
       costEstimate:
-        input: "¥0.004/1K tokens"
-        output: "¥0.016/1K tokens"
+        input: "¥4 / 1M tokens"
+        output: "¥16 / 1M tokens"
       embedding:
         supported: false
 
-    # Ollama 本地模型
+    # ─── Ollama 本地模型 ──────────────────────────────────────────────────────────
     ollama-llama3:
       enabled: false
-      name: "Llama 3 (本地)"
+      name: "Llama 3.3 70B (本地)"
       provider: "Meta (via Ollama)"
-      description: "完全本地运行，无隐私风险"
+      description: "Meta 最新开源旗舰，70B 参数，完全本地运行，无隐私风险"
       api_key_env: "OLLAMA_BASE_URL"
       capabilities:
-        maxContextLength: 8192
+        maxContextLength: 128000
         supportsStreaming: true
         supportsStructuredOutput: false
         supportsVision: false
@@ -307,12 +473,12 @@ ai_models:
 
     ollama-qwen:
       enabled: false
-      name: "通义千问 (本地)"
+      name: "Qwen3 (本地)"
       provider: "Alibaba (via Ollama)"
-      description: "本地运行的中文模型"
+      description: "通义千问 3 本地版，中文支持好，支持思考模式"
       api_key_env: "OLLAMA_BASE_URL"
       capabilities:
-        maxContextLength: 32000
+        maxContextLength: 128000
         supportsStreaming: true
         supportsStructuredOutput: false
         supportsVision: false
@@ -323,3 +489,20 @@ ai_models:
       embedding:
         supported: false
 
+    ollama-deepseek:
+      enabled: false
+      name: "DeepSeek R1 (本地)"
+      provider: "DeepSeek (via Ollama)"
+      description: "DeepSeek R1 本地推理版，适合离线复杂任务"
+      api_key_env: "OLLAMA_BASE_URL"
+      capabilities:
+        maxContextLength: 128000
+        supportsStreaming: true
+        supportsStructuredOutput: false
+        supportsVision: false
+        supportedLanguages: ["zh", "en"]
+      costEstimate:
+        input: "本地免费"
+        output: "本地免费"
+      embedding:
+        supported: false

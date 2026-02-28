@@ -57,7 +57,7 @@ export const useAuthStore = defineStore('auth', {
 
     /**
      * 获取用户头像 URL
-     * user.avatarUrl 已经是预签名 URL（由 /api/auth/me 处理）
+     * user.avatarUrl 已经是预签名 URL（由 /api/v1/auth/me 处理）
      */
     avatarUrl: (state): string => {
       if (state.user?.avatarUrl) {
@@ -81,7 +81,7 @@ export const useAuthStore = defineStore('auth', {
       this.error = null
 
       try {
-        const response = await $fetch<AuthResponse>('/api/auth/register', {
+        const response = await $fetch<AuthResponse>('/api/v1/auth/register', {
           method: 'POST',
           body: data,
           credentials: 'include'
@@ -111,7 +111,7 @@ export const useAuthStore = defineStore('auth', {
       this.error = null
 
       try {
-        const response = await $fetch<AuthResponse>('/api/auth/login', {
+        const response = await $fetch<AuthResponse>('/api/v1/auth/login', {
           method: 'POST',
           body: { email, password } as LoginRequest,
           credentials: 'include'
@@ -140,7 +140,7 @@ export const useAuthStore = defineStore('auth', {
       this.loading = true
 
       try {
-        await $fetch<AuthResponse>('/api/auth/logout', {
+        await $fetch<AuthResponse>('/api/v1/auth/logout', {
           method: 'POST',
           credentials: 'include'
         })
@@ -161,7 +161,7 @@ export const useAuthStore = defineStore('auth', {
       this.loading = true
 
       try {
-        const response = await $fetch<AuthResponse>('/api/auth/me', {
+        const response = await $fetch<AuthResponse>('/api/v1/auth/me', {
           credentials: 'include'
         })
 
@@ -222,7 +222,7 @@ export const useAuthStore = defineStore('auth', {
       const currentAvatarUrl = this.user?.avatarUrl
 
       try {
-        const response = await $fetch<UpdateUserResponse>('/api/user', {
+        const response = await $fetch<UpdateUserResponse>('/api/v1/user', {
           method: 'PUT',
           body: data,
           credentials: 'include'
@@ -259,7 +259,7 @@ export const useAuthStore = defineStore('auth', {
         const formData = new FormData()
         formData.append('avatar', file)
 
-        const response = await $fetch<AvatarResponse>('/api/user/avatar', {
+        const response = await $fetch<AvatarResponse>('/api/v1/user/avatar', {
           method: 'POST',
           body: formData,
           credentials: 'include'
@@ -292,7 +292,7 @@ export const useAuthStore = defineStore('auth', {
       this.error = null
 
       try {
-        const response = await $fetch<ChangePasswordResponse>('/api/user/password', {
+        const response = await $fetch<ChangePasswordResponse>('/api/v1/user/password', {
           method: 'PUT',
           body: { currentPassword, newPassword } as ChangePasswordRequest,
           credentials: 'include'
@@ -321,7 +321,7 @@ export const useAuthStore = defineStore('auth', {
       this.error = null
 
       try {
-        const response = await $fetch<ForgotPasswordResponse>('/api/auth/forgot-password', {
+        const response = await $fetch<ForgotPasswordResponse>('/api/v1/auth/forgot-password', {
           method: 'POST',
           body: { email } as ForgotPasswordRequest
         })
@@ -349,7 +349,7 @@ export const useAuthStore = defineStore('auth', {
       this.error = null
 
       try {
-        const response = await $fetch<ResetPasswordResponse>('/api/auth/reset-password', {
+        const response = await $fetch<ResetPasswordResponse>('/api/v1/auth/reset-password', {
           method: 'POST',
           body: { token, email, password, confirmPassword } as ResetPasswordRequest,
           credentials: 'include'
