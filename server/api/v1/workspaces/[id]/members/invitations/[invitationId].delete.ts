@@ -6,7 +6,6 @@
 import { WorkspaceMemberDAO } from '~/lib/db/dao/workspace-member-dao'
 
 export default defineEventHandler(async (event) => {
-  const userId = requireAuth(event)
   const workspaceId = getRouterParam(event, 'id')
   const invitationId = getRouterParam(event, 'invitationId')
 

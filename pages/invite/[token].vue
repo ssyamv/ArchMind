@@ -134,13 +134,6 @@ const accepted = ref(false)
 const acceptedWorkspaceName = ref('')
 const acceptedWorkspaceId = ref('')
 
-const isAuthenticated = computed(() => authStore.isAuthenticated)
-const isEmailMismatch = computed(() =>
-  isAuthenticated.value &&
-  invitation.value !== null &&
-  authStore.user?.email !== invitation.value.email
-)
-
 interface InvitationDetail {
   workspaceName: string
   inviterName: string
@@ -150,6 +143,13 @@ interface InvitationDetail {
 }
 
 const invitation = ref<InvitationDetail | null>(null)
+
+const isAuthenticated = computed(() => authStore.isAuthenticated)
+const isEmailMismatch = computed(() =>
+  isAuthenticated.value &&
+  invitation.value !== null &&
+  authStore.user?.email !== invitation.value.email
+)
 
 onMounted(async () => {
   await loadInvitation()

@@ -217,15 +217,6 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 
-// Clear error on page load
-onMounted(() => {
-  authStore.clearError()
-  // 从邀请链接带来的邮箱预填
-  if (route.query.email) {
-    email.value = route.query.email as string
-  }
-})
-
 // Form state
 const email = ref('')
 const isEmailLocked = computed(() => !!route.query.email)
@@ -235,6 +226,15 @@ const fullName = ref('')
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 const focusedField = ref('')
+
+// Clear error on page load
+onMounted(() => {
+  authStore.clearError()
+  // 从邀请链接带来的邮箱预填
+  if (route.query.email) {
+    email.value = route.query.email as string
+  }
+})
 
 // Submit handler
 const handleSubmit = async (e: Event) => {
