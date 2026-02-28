@@ -67,9 +67,17 @@ export function useWorkspace () {
       const response = await $fetch<{ success: boolean; data: Workspace[] }>('/api/v1/workspaces')
       workspaces.value = response.data
 
-      // 如果还没有设置当前工作区,使用默认工作区
+      // 校验 localStorage 中缓存的工作区 ID 是否仍然有效（用户可能被移除或工作区已删除）
+      if (currentWorkspaceId.value) {
+        const isValid = workspaces.value.some(w => w.id === currentWorkspaceId.value)
+        if (!isValid) {
+          currentWorkspaceId.value = null
+        }
+      }
+
+      // 如果还没有设置当前工作区，使用第一个可用工作区（优先选 isDefault）
       if (!currentWorkspaceId.value) {
-        const defaultWs = workspaces.value.find(w => w.isDefault)
+        const defaultWs = workspaces.value.find(w => w.isDefault) || workspaces.value[0]
         if (defaultWs) {
           currentWorkspaceId.value = defaultWs.id
           saveToLocalStorage()
