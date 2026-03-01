@@ -47,7 +47,7 @@ export class RAGRetrievalLogDAO {
     const sql = `
       INSERT INTO rag_retrieval_logs
         (workspace_id, user_id, query_hash, document_ids, similarity_scores, strategy, threshold, result_count)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8)
     `
     await dbClient.query(sql, [
       input.workspaceId ?? null,
@@ -76,7 +76,7 @@ export class RAGRetrievalLogDAO {
           ELSE NULL END
         )                                                                   AS avg_similarity
       FROM rag_retrieval_logs
-      WHERE workspace_id = $1
+      WHERE workspace_id = $1::uuid
         AND created_at >= NOW() - ($2 || ' days')::INTERVAL
     `
     const baseResult = await dbClient.query<any>(baseSql, [workspaceId, days])
@@ -91,7 +91,7 @@ export class RAGRetrievalLogDAO {
       SELECT COUNT(DISTINCT doc_id)::int AS unique_docs
       FROM rag_retrieval_logs,
            UNNEST(document_ids) AS doc_id
-      WHERE workspace_id = $1
+      WHERE workspace_id = $1::uuid
         AND created_at >= NOW() - ($2 || ' days')::INTERVAL
         AND document_ids IS NOT NULL
     `
@@ -111,7 +111,7 @@ export class RAGRetrievalLogDAO {
           (SELECT AVG(v) FROM UNNEST(rl.similarity_scores) AS v) AS avg_score
         FROM rag_retrieval_logs rl,
              UNNEST(rl.document_ids) AS doc_id
-        WHERE rl.workspace_id = $1
+        WHERE rl.workspace_id = $1::uuid
           AND rl.created_at >= NOW() - ($2 || ' days')::INTERVAL
           AND rl.document_ids IS NOT NULL
       ) sub
@@ -137,7 +137,7 @@ export class RAGRetrievalLogDAO {
           SELECT DISTINCT doc_id
           FROM rag_retrieval_logs,
                UNNEST(document_ids) AS doc_id
-          WHERE workspace_id = $1
+          WHERE workspace_id = $1::uuid
             AND created_at >= NOW() - ($2 || ' days')::INTERVAL
             AND document_ids IS NOT NULL
         )

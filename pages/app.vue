@@ -38,7 +38,21 @@
           </div>
         </div>
         <ClientOnly>
-          <WorkspaceSwitcher />
+          <div class="flex items-center gap-1">
+            <WorkspaceSwitcher />
+            <Button
+              v-if="currentWorkspaceId"
+              variant="ghost"
+              size="sm"
+              as-child
+              class="text-muted-foreground hover:text-foreground"
+            >
+              <NuxtLink :to="`/workspace/${currentWorkspaceId}/settings`">
+                <SlidersHorizontal class="w-4 h-4 mr-1.5" />
+                {{ t('workspace.settingsTitle') }}
+              </NuxtLink>
+            </Button>
+          </div>
           <template #fallback>
             <div class="min-w-[200px] h-10" />
           </template>
@@ -191,7 +205,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
-import { Search, Grid3x3, List, RefreshCw, FolderOpen, Plus, MessageSquare } from 'lucide-vue-next'
+import { Search, Grid3x3, List, RefreshCw, FolderOpen, Plus, MessageSquare, SlidersHorizontal } from 'lucide-vue-next'
 import { Input } from '~/components/ui/input'
 import { Button } from '~/components/ui/button'
 import {

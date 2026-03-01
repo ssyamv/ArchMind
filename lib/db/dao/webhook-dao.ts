@@ -5,6 +5,8 @@
 
 import { dbClient } from '../client'
 
+export type WebhookType = 'standard' | 'feishu' | 'dingtalk' | 'wecom' | 'slack' | 'discord'
+
 export interface Webhook {
   id: string
   workspaceId: string
@@ -15,6 +17,7 @@ export interface Webhook {
   active: boolean
   secret: string
   headers: Record<string, string>
+  type: WebhookType
   createdAt: string
   updatedAt: string
 }
@@ -27,6 +30,7 @@ export interface CreateWebhookInput {
   events: string[]
   secret: string
   headers?: Record<string, string>
+  type?: WebhookType
 }
 
 export interface UpdateWebhookInput {
@@ -35,6 +39,7 @@ export interface UpdateWebhookInput {
   events?: string[]
   active?: boolean
   headers?: Record<string, string>
+  type?: WebhookType
 }
 
 export class WebhookDAO {
@@ -44,8 +49,8 @@ export class WebhookDAO {
   static async create (input: CreateWebhookInput): Promise<Webhook> {
     const sql = `
       INSERT INTO webhooks
-        (workspace_id, user_id, name, url, events, secret, headers)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+        (workspace_id, user_id, name, url, events, secret, headers, type)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *
     `
     const result = await dbClient.query<any>(sql, [
@@ -55,7 +60,8 @@ export class WebhookDAO {
       input.url,
       JSON.stringify(input.events),
       input.secret,
-      JSON.stringify(input.headers ?? {})
+      JSON.stringify(input.headers ?? {}),
+      input.type ?? 'standard'
     ])
     return this.mapRow(result.rows[0])
   }
@@ -69,7 +75,7 @@ export class WebhookDAO {
   ): Promise<Omit<Webhook, 'secret'>[]> {
     const { limit = 50, offset = 0 } = options ?? {}
     const sql = `
-      SELECT id, workspace_id, user_id, name, url, events, active, headers, created_at, updated_at
+      SELECT id, workspace_id, user_id, name, url, events, active, headers, type, created_at, updated_at
       FROM webhooks
       WHERE workspace_id = $1
       ORDER BY created_at DESC
@@ -133,6 +139,10 @@ export class WebhookDAO {
       setClauses.push(`headers = $${idx++}`)
       params.push(JSON.stringify(input.headers))
     }
+    if (input.type !== undefined) {
+      setClauses.push(`type = $${idx++}`)
+      params.push(input.type)
+    }
 
     if (setClauses.length === 0) return this.findById(id, workspaceId)
 
@@ -183,6 +193,7 @@ export class WebhookDAO {
       active: row.active,
       secret: row.secret,
       headers: typeof row.headers === 'string' ? JSON.parse(row.headers) : (row.headers ?? {}),
+      type: (row.type as WebhookType) ?? 'standard',
       createdAt: row.created_at,
       updatedAt: row.updated_at
     }

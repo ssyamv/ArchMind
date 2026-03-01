@@ -288,6 +288,7 @@
     "download": "下载",
     "optional": "可选",
     "close": "关闭",
+    "loadMore": "加载更多",
     "duplicate": "复制",
     "open": "打开",
     "inProgress": "进行中",
@@ -620,7 +621,9 @@
     "actions": {
       "openInEditor": "在编辑器中打开",
       "download": "下载",
-      "delete": "删除"
+      "delete": "删除",
+      "enableIndex": "开启 RAG 索引",
+      "disableIndex": "关闭 RAG 索引"
     },
     "deleteConfirm": "确定要删除 \"{name}\" 吗?",
     "deleteFailed": "删除资源失败",
@@ -855,6 +858,16 @@
     "no": "否",
     "documentCount": "文档数量",
     "prdCount": "PRD 数量",
+    "settingsTitle": "工作区设置",
+    "settingsTabs": {
+      "general": "基本信息",
+      "members": "成员管理",
+      "webhooks": "Webhook"
+    },
+    "settingsGeneral": {
+      "title": "基本信息",
+      "description": "修改工作区的名称、描述、图标和颜色"
+    },
     "tab": {
       "workspaces": "工作区",
       "members": "成员管理"
@@ -1011,5 +1024,62 @@
     "conversationPrdIdMissing": "缺少 prdId 参数",
     "conversationNotFound": "对话不存在",
     "conversationUpdatedSuccess": "对话更新成功"
+  },
+  "webhook": {
+    "title": "Webhook 管理",
+    "description": "配置 Webhook，在事件发生时向外部系统发送 HTTP 通知",
+    "add": "新建 Webhook",
+    "noWebhooks": "暂无 Webhook",
+    "noWebhooksHint": "添加第一个 Webhook 开始接收事件通知",
+    "name": "名称",
+    "namePlaceholder": "例如：通知机器人",
+    "nameRequired": "名称为必填项",
+    "url": "推送 URL",
+    "urlInvalid": "请输入有效的 URL 地址",
+    "events": "订阅事件",
+    "eventsRequired": "请至少选择一个事件",
+    "eventsCount": "{n} 个事件",
+    "status": "状态",
+    "active": "启用",
+    "inactive": "停用",
+    "secretTitle": "签名密钥（请立即保存）",
+    "secretHint": "密钥仅在创建时显示一次，请妥善保存。后续无法再次查看。",
+    "createTitle": "创建 Webhook",
+    "editTitle": "编辑 Webhook",
+    "createSuccess": "Webhook 创建成功",
+    "createError": "Webhook 创建失败",
+    "updateSuccess": "Webhook 更新成功",
+    "updateError": "Webhook 更新失败",
+    "deleteSuccess": "Webhook 已删除",
+    "deleteError": "删除 Webhook 失败",
+    "deleteConfirmTitle": "确认删除 Webhook",
+    "deleteConfirmDesc": "确定要删除 Webhook「{name}」吗？删除后投递历史也将一并清除，此操作不可撤销。",
+    "deliveries": "投递历史",
+    "deliveriesTitle": "{name} 的投递历史",
+    "deliveriesLoadError": "加载投递历史失败",
+    "noDeliveries": "暂无投递记录",
+    "payload": "请求体",
+    "response": "响应内容",
+    "error": "错误信息",
+    "redeliver": "重新投递",
+    "redeliverSuccess": "重新投递成功",
+    "redeliverFailed": "重新投递失败（目标返回错误）",
+    "redeliverError": "重新投递请求失败",
+    "eventNames": {
+      "document_uploaded": "文档上传",
+      "document_completed": "文档处理完成",
+      "document_failed": "文档处理失败",
+      "prd_generated": "PRD 生成完成",
+      "comment_created": "评论创建"
+    },
+    "type": "推送平台",
+    "typeHints": {
+      "standard": "标准 HTTP Webhook，发送带 HMAC-SHA256 签名的 JSON 请求，适合自定义服务端接收",
+      "feishu": "飞书群机器人消息，粘贴飞书机器人 Webhook URL 即可直接在群里收到卡片通知",
+      "dingtalk": "钉钉自定义机器人，粘贴钉钉 Webhook URL 即可在钉钉群收到 Markdown 消息",
+      "wecom": "企业微信群机器人，粘贴企业微信 Webhook URL 即可在群里收到 Markdown 通知",
+      "slack": "Slack Incoming Webhook，粘贴 Slack 的 Webhook URL 即可在频道收到 Block Kit 消息",
+      "discord": "Discord Webhook，粘贴 Discord 的 Webhook URL 即可在频道收到 Embed 消息"
+    }
   }
 }

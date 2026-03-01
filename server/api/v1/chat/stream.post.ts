@@ -17,6 +17,7 @@ interface ChatStreamRequest {
   targetContext?: ConversationTargetContext
   documentIds?: string[]
   prdIds?: string[]
+  workspaceId?: string
 }
 
 export default defineEventHandler(async (event) => {
@@ -86,7 +87,8 @@ export default defineEventHandler(async (event) => {
       target: body.target || 'prd',
       targetContext: body.targetContext,
       documentIds: body.documentIds,
-      prdIds: body.prdIds
+      prdIds: body.prdIds,
+      workspaceId: body.workspaceId
     })
 
     // 流式生成
@@ -96,7 +98,8 @@ export default defineEventHandler(async (event) => {
       maxTokens: body.maxTokens,
       useRAG: body.useRAG === true && embeddingAdapter !== null,
       documentIds: body.documentIds,
-      prdIds: body.prdIds
+      prdIds: body.prdIds,
+      workspaceId: body.workspaceId
     })
 
     const MAX_CONTENT_LENGTH = 200_000 // 200K 字符上限，防止内存溢出

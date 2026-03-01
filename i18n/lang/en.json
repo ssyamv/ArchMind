@@ -288,6 +288,7 @@
     "download": "Download",
     "optional": "optional",
     "close": "Close",
+    "loadMore": "Load more",
     "duplicate": "Duplicate",
     "open": "Open",
     "inProgress": "In Progress",
@@ -607,7 +608,9 @@
     "actions": {
       "openInEditor": "Open in Editor",
       "download": "Download",
-      "delete": "Delete"
+      "delete": "Delete",
+      "enableIndex": "Enable RAG Index",
+      "disableIndex": "Disable RAG Index"
     },
     "deleteConfirm": "Are you sure you want to delete \"{name}\"?",
     "deleteFailed": "Failed to delete resource",
@@ -842,6 +845,16 @@
     "no": "No",
     "documentCount": "Documents",
     "prdCount": "PRDs",
+    "settingsTitle": "Workspace Settings",
+    "settingsTabs": {
+      "general": "General",
+      "members": "Members",
+      "webhooks": "Webhooks"
+    },
+    "settingsGeneral": {
+      "title": "General",
+      "description": "Update workspace name, description, icon, and color"
+    },
     "tab": {
       "workspaces": "Workspaces",
       "members": "Members"
@@ -998,5 +1011,62 @@
     "conversationPrdIdMissing": "Missing prdId parameter",
     "conversationNotFound": "Conversation not found",
     "conversationUpdatedSuccess": "Conversation updated successfully"
+  },
+  "webhook": {
+    "title": "Webhook Management",
+    "description": "Configure webhooks to send HTTP notifications to external systems when events occur",
+    "add": "New Webhook",
+    "noWebhooks": "No webhooks yet",
+    "noWebhooksHint": "Add your first webhook to start receiving event notifications",
+    "name": "Name",
+    "namePlaceholder": "e.g. Notification Bot",
+    "nameRequired": "Name is required",
+    "url": "Endpoint URL",
+    "urlInvalid": "Please enter a valid URL",
+    "events": "Subscribe to events",
+    "eventsRequired": "Please select at least one event",
+    "eventsCount": "{n} events",
+    "status": "Status",
+    "active": "Active",
+    "inactive": "Inactive",
+    "secretTitle": "Signing Secret (save now)",
+    "secretHint": "The secret is only shown once. Store it somewhere safe — you won't be able to see it again.",
+    "createTitle": "Create Webhook",
+    "editTitle": "Edit Webhook",
+    "createSuccess": "Webhook created successfully",
+    "createError": "Failed to create webhook",
+    "updateSuccess": "Webhook updated successfully",
+    "updateError": "Failed to update webhook",
+    "deleteSuccess": "Webhook deleted",
+    "deleteError": "Failed to delete webhook",
+    "deleteConfirmTitle": "Delete Webhook",
+    "deleteConfirmDesc": "Are you sure you want to delete webhook \"{name}\"? All delivery history will also be removed. This action cannot be undone.",
+    "deliveries": "Delivery History",
+    "deliveriesTitle": "Deliveries for {name}",
+    "deliveriesLoadError": "Failed to load delivery history",
+    "noDeliveries": "No deliveries yet",
+    "payload": "Request body",
+    "response": "Response body",
+    "error": "Error",
+    "redeliver": "Redeliver",
+    "redeliverSuccess": "Redelivered successfully",
+    "redeliverFailed": "Redeliver failed (remote returned error)",
+    "redeliverError": "Redeliver request failed",
+    "eventNames": {
+      "document_uploaded": "Document uploaded",
+      "document_completed": "Document processing completed",
+      "document_failed": "Document processing failed",
+      "prd_generated": "PRD generated",
+      "comment_created": "Comment created"
+    },
+    "type": "Platform",
+    "typeHints": {
+      "standard": "Standard HTTP webhook with HMAC-SHA256 signature. Best for custom server endpoints.",
+      "feishu": "Lark (Feishu) group bot. Paste the bot webhook URL to receive card notifications in the group.",
+      "dingtalk": "DingTalk custom bot. Paste the webhook URL to receive Markdown messages in DingTalk groups.",
+      "wecom": "WeCom (WeChat Work) group bot. Paste the webhook URL to receive Markdown notifications.",
+      "slack": "Slack Incoming Webhook. Paste the Slack webhook URL to receive Block Kit messages in a channel.",
+      "discord": "Discord Webhook. Paste the Discord webhook URL to receive Embed messages in a channel."
+    }
   }
 }

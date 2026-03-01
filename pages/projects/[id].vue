@@ -736,7 +736,7 @@ async function confirmDelete () {
       description: t('projects.deleteSuccessDescription'),
       variant: 'success',
     })
-    router.push('/')
+    router.push('/projects')
   } catch (error) {
     console.error('Failed to delete PRD:', error)
     toast({

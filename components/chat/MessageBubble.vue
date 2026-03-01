@@ -99,6 +99,17 @@
         </div>
 
         <!-- Metadata -->
+        <template v-if="message.role === 'user' && message.documentTitles?.length">
+          <Badge
+            v-for="title in message.documentTitles"
+            :key="title"
+            variant="outline"
+            class="text-xs gap-1 bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950/30 dark:border-blue-800 dark:text-blue-300"
+          >
+            <FileText class="w-3 h-3" />
+            {{ title }}
+          </Badge>
+        </template>
         <Badge v-if="message.modelUsed" variant="secondary" class="text-xs">
           <Cpu class="w-3 h-3 mr-1.5" />
           {{ message.modelUsed }}
@@ -126,8 +137,9 @@
 import { ref, computed } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
-import { Sparkles, User, BookOpen, Cpu, Loader2, Copy, Check, RefreshCw, ArrowLeftFromLine } from 'lucide-vue-next'
+import { Sparkles, User, BookOpen, Cpu, Loader2, Copy, Check, RefreshCw, ArrowLeftFromLine, FileText } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
+import { Badge } from '~/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '~/components/ui/tooltip'
 import type { ConversationMessage } from '~/types/conversation'
 

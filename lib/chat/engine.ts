@@ -19,6 +19,7 @@ export interface ChatStreamOptions {
   topK?: number
   documentIds?: string[]
   prdIds?: string[]
+  workspaceId?: string
 }
 
 export interface ChatEngineOptions {
@@ -26,6 +27,7 @@ export interface ChatEngineOptions {
   targetContext?: ConversationTargetContext
   documentIds?: string[]
   prdIds?: string[]
+  workspaceId?: string
 }
 
 const MAX_HISTORY_MESSAGES = 20
@@ -37,6 +39,7 @@ export class ChatEngine {
   private targetContext?: ConversationTargetContext
   private documentIds?: string[]
   private prdIds?: string[]
+  private workspaceId?: string
 
   constructor (embeddingAdapter?: IEmbeddingAdapter, aiConfig?: Record<string, any>, options?: ChatEngineOptions) {
     this.modelManager = new ModelManager(aiConfig)
@@ -47,6 +50,7 @@ export class ChatEngine {
     this.targetContext = options?.targetContext
     this.documentIds = options?.documentIds
     this.prdIds = options?.prdIds
+    this.workspaceId = options?.workspaceId
   }
 
   /**
@@ -140,7 +144,8 @@ ${this.targetContext.prototypeHtml}
           topK,
           threshold: 0.1,
           prdIds: effectivePrdIds,
-          ragStrategy: 'vector'
+          ragStrategy: 'vector',
+          workspaceId: options?.workspaceId ?? this.workspaceId
         })
         if (retrievedChunks.length > 0) {
           backgroundContext = this.ragRetriever.summarizeResults(retrievedChunks)
@@ -150,7 +155,8 @@ ${this.targetContext.prototypeHtml}
         const retrievedChunks = await this.ragRetriever.retrieve(currentMessage, {
           topK,
           threshold: hasDocumentMentions ? 0.1 : 0.3,
-          documentIds: hasDocumentMentions ? effectiveDocumentIds : undefined
+          documentIds: hasDocumentMentions ? effectiveDocumentIds : undefined,
+          workspaceId: options?.workspaceId ?? this.workspaceId
         })
         if (retrievedChunks.length > 0) {
           backgroundContext = this.ragRetriever.summarizeResults(retrievedChunks)

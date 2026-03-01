@@ -71,7 +71,7 @@ export function useConversation () {
   }
 
   // Add user message
-  function addUserMessage (content: string, options?: { modelUsed?: string; useRAG?: boolean; documentIds?: string[] }) {
+  function addUserMessage (content: string, options?: { modelUsed?: string; useRAG?: boolean; documentIds?: string[]; documentTitles?: string[] }) {
     const message: ConversationMessage = {
       id: nanoid(),
       role: 'user',
@@ -79,6 +79,7 @@ export function useConversation () {
       modelUsed: options?.modelUsed,
       useRAG: options?.useRAG,
       documentIds: options?.documentIds,
+      documentTitles: options?.documentTitles,
       timestamp: Date.now()
     }
     conversation.value.messages.push(message)
@@ -153,12 +154,22 @@ export function useConversation () {
   async function updateConversation () {
     if (!conversation.value.dbId) return
     try {
+      // 如果当前 title 是从消息截取的（可能不是 PRD 真正的标题），尝试从 PRD 内容更新
+      const conv = conversation.value
+      let title = conv.title
+      if (conv.currentPrdContent) {
+        const match = conv.currentPrdContent.match(/^#\s+(.+)$/m)
+        if (match) {
+          title = match[1].trim().substring(0, 50)
+          conv.title = title
+        }
+      }
       await $fetch(`/api/v1/conversations/${conversation.value.dbId}`, {
         method: 'PUT',
         body: {
           messages: conversation.value.messages,
           finalPrdContent: conversation.value.currentPrdContent,
-          title: conversation.value.title
+          title
         }
       })
       conversation.value.lastSavedMessageCount = conversation.value.messages.length
@@ -185,11 +196,18 @@ export function useConversation () {
       // 已有数据库记录，更新
       await updateConversation()
     } else {
-      // 首次保存，自动生成标题
-      const firstUserMessage = conv.messages.find(m => m.role === 'user')
-      const autoTitle = firstUserMessage
-        ? firstUserMessage.content.substring(0, 30) + (firstUserMessage.content.length > 30 ? '...' : '')
-        : '未命名对话'
+      // 首次保存，优先从 PRD 内容提取标题，否则使用第一条用户消息
+      let autoTitle = ''
+      if (conv.currentPrdContent) {
+        const match = conv.currentPrdContent.match(/^#\s+(.+)$/m)
+        autoTitle = match ? match[1].trim().substring(0, 50) : ''
+      }
+      if (!autoTitle) {
+        const firstUserMessage = conv.messages.find(m => m.role === 'user')
+        autoTitle = firstUserMessage
+          ? firstUserMessage.content.substring(0, 30) + (firstUserMessage.content.length > 30 ? '...' : '')
+          : '未命名对话'
+      }
       await saveConversation(autoTitle)
     }
   }
