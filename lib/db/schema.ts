@@ -3,7 +3,7 @@
  * PostgreSQL 数据库表结构
  */
 
-import { pgTable, uuid, varchar, text, integer, boolean, timestamp, jsonb, decimal, index, uniqueIndex } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, varchar, text, integer, smallint, boolean, timestamp, jsonb, decimal, index, uniqueIndex } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 // ============================================
@@ -460,4 +460,23 @@ export const webhookDeliveries = pgTable('webhook_deliveries', {
   webhookIdx: index('idx_webhook_deliveries_webhook').on(table.webhookId),
   createdAtIdx: index('idx_webhook_deliveries_created').on(table.createdAt),
   successIdx: index('idx_webhook_deliveries_success').on(table.webhookId, table.success)
+}))
+
+// ============================================
+// PRD 用户反馈表（v0.4.0 #54）
+// ============================================
+export const prdFeedbacks = pgTable('prd_feedbacks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  prdId: uuid('prd_id').references(() => prdDocuments.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  rating: smallint('rating').notNull(), // 1-5，数据库 CHECK 约束由迁移脚本保障
+  positives: text('positives').array(), // 好的方面标签数组
+  negatives: text('negatives').array(), // 需改进标签数组
+  comment: text('comment'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow()
+}, (table) => ({
+  prdIdIdx: index('idx_prd_feedbacks_prd_id').on(table.prdId),
+  userIdIdx: index('idx_prd_feedbacks_user_id').on(table.userId),
+  uniquePrdUser: uniqueIndex('unique_prd_feedback').on(table.prdId, table.userId)
 }))
