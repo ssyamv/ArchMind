@@ -153,7 +153,7 @@ async function deliverWebhook (
   WebhookDeliveryDAO.create({
     webhookId,
     event,
-    payload,
+    payload: payload as unknown as Record<string, unknown>,
     statusCode,
     responseBody,
     durationMs,

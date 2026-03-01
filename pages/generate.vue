@@ -442,7 +442,7 @@ async function handleSendMessage (
     modelUsed: options.modelId,
     useRAG: options.useRAG,
     documentIds: options.documentIds?.length > 0 ? options.documentIds : undefined,
-    documentTitles: options.mentionedDocs?.length > 0
+    documentTitles: options.mentionedDocs && options.mentionedDocs.length > 0
       ? options.mentionedDocs.map(d => d.title)
       : undefined
   })

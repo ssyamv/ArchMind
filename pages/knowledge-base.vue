@@ -757,7 +757,7 @@ function pollPrdRagStatus(prdId: string) {
     ragPollingTimers.delete(prdId)
     try {
       const res = await $fetch<{ data: any }>(`/api/v1/prd/${prdId}`)
-      const status = res.data?.metadata?.ragStatus as string | undefined
+      const status = res.data?.metadata?.ragStatus as 'pending' | 'processing' | 'completed' | 'failed' | 'retrying' | undefined
       const idx = resources.value.findIndex(r => r.id === prdId)
       if (idx !== -1) {
         resources.value[idx] = {

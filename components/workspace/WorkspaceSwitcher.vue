@@ -522,9 +522,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, resolveComponent } from 'vue'
 import { ChevronsUpDown, Plus, Settings, SlidersHorizontal, MoreVertical, Star, Trash2, Loader2, Pencil, Info, UserPlus, UserMinus, RefreshCw, X } from 'lucide-vue-next'
-import { NuxtLink } from '#components'
 import { useWorkspace, type Workspace, type WorkspaceMember, type WorkspaceInvitation } from '~/composables/useWorkspace'
 import { useToast } from '~/components/ui/toast/use-toast'
 import { Button } from '~/components/ui/button'
@@ -568,6 +567,7 @@ import {
 
 const { t } = useI18n()
 const { toast } = useToast()
+const NuxtLink = resolveComponent('NuxtLink')
 
 const {
   workspaces,
