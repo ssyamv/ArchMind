@@ -263,6 +263,9 @@
                   </div>
                 </CardContent>
               </Card>
+
+              <!-- PRD 用户反馈 -->
+              <FeedbackPanel v-if="prd?.id" :prd-id="prd.id" />
             </div>
 
             <!-- Right Column: Sidebar (1/3 width) -->
