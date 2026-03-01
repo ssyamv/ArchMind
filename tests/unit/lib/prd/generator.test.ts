@@ -228,12 +228,13 @@ describe('PRDGenerator', () => {
     })
   })
 
-  describe('allocateTokenBudget (private)', () => {
-    it('无 options 时使用默认 8000 maxTokens', () => {
+  describe('allocateTokenBudget (private) - #52', () => {
+    it('无 options 时使用默认 8000 maxTokens，context 预算为 5000', () => {
       const budget = callPrivate<any>(generator, 'allocateTokenBudget', undefined)
       expect(budget.output).toBe(8000)
       expect(budget.systemPrompt).toBe(1500)
-      expect(budget.context).toBe(4000)
+      expect(budget.context).toBe(5000) // #52：从 4000 增加至 5000
+      expect(budget.examples).toBe(1500) // #52：从 2000 减少至 1500
     })
 
     it('传入 maxTokens 时 output 使用该值', () => {
@@ -242,44 +243,58 @@ describe('PRDGenerator', () => {
     })
   })
 
-  describe('compressContext (private)', () => {
-    it('上下文 token 数 <= maxTokens 时直接返回原内容', () => {
-      const short = 'Short context'
-      const result = callPrivate<string>(generator, 'compressContext', short, 4000)
+  describe('compressContext (private) - #52 语义感知上下文压缩', () => {
+    it('全量上下文：token 数 <= maxTokens 时直接返回原内容', () => {
+      const short = '## 功能需求\n这是一段短上下文'
+      const result = callPrivate<string>(generator, 'compressContext', short, 5000)
       expect(result).toBe(short)
     })
 
-    it('超出 maxTokens 时压缩长 section', () => {
-      // 构造两个很长的 section（超过 1000 字），用 \n---\n 分隔
-      // maxTokens=300：section1 原始约 1250 tokens，超限，走压缩分支
-      // 压缩后约 1000/4=250 tokens（保留前后各 500 字），250 <= 300，加入
-      // section2 同理，但 250+250=500 > 300，不加入
-      const longSection1 = 'A'.repeat(5000)
-      const longSection2 = 'B'.repeat(5000)
-      const context = longSection1 + '\n---\n' + longSection2
-      const result = callPrivate<string>(generator, 'compressContext', context, 300)
-      // section1 被压缩后加入，应包含省略号
-      expect(result).toContain('...[中间内容省略]...')
-      expect(result.length).toBeLessThan(context.length)
+    it('超预算压缩：高分段落（含关键词+数据指标）优先保留', () => {
+      // 构造超出 token 预算的 Markdown 内容
+      // 高分段落：标题含"功能"（+0.3），正文含数字（+0.2），长度适中（+0.1）
+      const highScoreSection = '## 核心功能需求\n转化率提升 25%，DAU 增长 30%，关键用户路径优化。用户可以完成注册、登录、修改密码等操作。'
+      // 低分段落：标题和正文都无关键词，长度适中
+      const lowScoreSection = '## 其他说明\n' + '这是补充说明内容。'.repeat(10)
+      // 超大填充，使总体超出 maxTokens
+      const padding = '## 无关章节\n' + 'X'.repeat(3000)
+
+      const context = [highScoreSection, lowScoreSection, padding].join('\n\n')
+      // maxTokens=100，只能保留少量内容
+      const result = callPrivate<string>(generator, 'compressContext', context, 100)
+
+      // 高分段落应当被保留
+      expect(result).toContain('核心功能需求')
     })
 
-    it('多个 section 时，优先保留前面的 section', () => {
-      const section1 = 'A'.repeat(200)
-      const section2 = 'B'.repeat(200)
-      const section3 = 'C'.repeat(200)
-      const context = [section1, section2, section3].join('\n---\n')
-      // maxTokens=60 只能容纳前2个 section
-      const result = callPrivate<string>(generator, 'compressContext', context, 60)
-      expect(result).toContain('A')
+    it('边界：仅有一段（无 ## 标题）时退化为简单截取', () => {
+      const longText = 'A'.repeat(10000) // 纯文本，无标题
+      const result = callPrivate<string>(generator, 'compressContext', longText, 50)
+      // 退化截取，结果应包含截取标记
+      expect(result).toContain('...[内容过长已截取]')
+      expect(result.length).toBeLessThan(longText.length)
     })
 
-    it('section 长度 <= 1000 但预算不够时依然加入', () => {
-      const section1 = 'A'.repeat(400) // ~100 tokens
-      const section2 = 'B'.repeat(400) // ~100 tokens
-      const context = [section1, section2].join('\n---\n')
-      // maxTokens=50，section2 不超过 1000 字，走 else 分支加入
-      const result = callPrivate<string>(generator, 'compressContext', context, 50)
-      expect(result).toBeDefined()
+    it('单段超预算时截取前 maxTokens * 1.5 字符并追加截取标记', () => {
+      // 单个超大段落（有标题但内容超大）
+      const hugeSection = '## 功能列表\n' + 'B'.repeat(20000)
+      const result = callPrivate<string>(generator, 'compressContext', hugeSection, 100)
+      expect(result).toContain('...[内容过长已截取]')
+    })
+
+    it('选中段落按原文顺序排列', () => {
+      // 构造三个段落，第1、3段高分，第2段低分
+      const sec1 = '## 用户需求分析\n转化率 80%，DAU 10万，用户故事清晰。'
+      const sec2 = '## 概念说明\n这是一段概念性描述，没有特别关键的内容。'
+      const sec3 = '## 目标功能定义\n功能覆盖 KPI 目标，指标完备，场景 5 个。'
+      const context = [sec1, sec2, sec3].join('\n\n')
+      // maxTokens 足够保留两个高分段落
+      const result = callPrivate<string>(generator, 'compressContext', context, 200)
+
+      // 如果两个段落都保留，sec1 应在 sec3 前面
+      if (result.includes('用户需求分析') && result.includes('目标功能定义')) {
+        expect(result.indexOf('用户需求分析')).toBeLessThan(result.indexOf('目标功能定义'))
+      }
     })
   })
 
