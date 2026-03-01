@@ -547,8 +547,6 @@ describe('RAGRetriever.keywordSearch() 异常处理', () => {
 describe('RAGRetriever.computeThreshold()', () => {
   describe('基准行为（无偏移）', () => {
     it('中等长度普通查询返回基准阈值 0.70', () => {
-      // 20 字符 / 4 = 5 tokens，刚好处于 5..20 范围内，无额外调整
-      const query = '搜索产品功能列表'  // 8 中文字符 = 8/4=2 tokens，< 5，会 -0.05
       // 需要构造一个 5-20 token 的查询（20-80 字符）
       const mid = 'a'.repeat(40)  // 40 chars / 4 = 10 tokens，中等
       const threshold = RAGRetriever.computeThreshold(mid)
