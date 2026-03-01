@@ -100,9 +100,6 @@ export class RAGRetriever {
       results = await this._vectorRetrieve(query, options)
     }
 
-<<<<<<< HEAD
-    return this._vectorRetrieve(query, { ...options, threshold: effectiveThreshold })
-=======
     // 异步写检索日志（fire-and-forget，错误不影响主流程）
     setImmediate(async () => {
       try {
@@ -122,7 +119,6 @@ export class RAGRetriever {
     })
 
     return results
->>>>>>> 5168962 (feat: add RAG retrieval quality panel (#59))
   }
 
   /**
