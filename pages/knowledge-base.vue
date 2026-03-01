@@ -558,6 +558,9 @@ async function loadResources () {
   }
 }
 
+// RAG 轮询计时器（需在 onUnmounted 前定义）
+const ragPollingTimers = new Map<string, ReturnType<typeof setTimeout>>()
+
 onMounted(() => {
   loadResources()
 
@@ -711,8 +714,6 @@ function handleReindexAll() {
 }
 
 // RAG 索引开关（仅 PRD 类型）
-const ragPollingTimers = new Map<string, ReturnType<typeof setTimeout>>()
-
 async function handleToggleRag(resource: Resource) {
   if (resource.type !== 'PRD') return
   const enabling = !resource.ragEnabled
