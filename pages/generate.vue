@@ -27,6 +27,18 @@
             {{ $t('generate.reset') }}
           </Button>
           <Button
+            v-if="conversationRef.messages.length > 0"
+            variant="outline"
+            size="sm"
+            :disabled="isSaving || isGenerating"
+            class="gap-2"
+            @click="handleManualSave"
+          >
+            <Loader2 v-if="isSaving" class="w-4 h-4 animate-spin" />
+            <Save v-else class="w-4 h-4" />
+            {{ $t('generate.save') }}
+          </Button>
+          <Button
             v-if="conversationRef.currentPrdContent"
             variant="default"
             size="sm"
@@ -249,7 +261,7 @@ body:has(.generate-page) {
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { RotateCcw, Download, Sparkles, Cpu, PanelRightClose, PanelRightOpen, FileText, Layout, Loader2, Moon, Sun } from 'lucide-vue-next'
+import { RotateCcw, Download, Sparkles, Cpu, PanelRightClose, PanelRightOpen, FileText, Layout, Loader2, Moon, Sun, Save } from 'lucide-vue-next'
 import { useConversation } from '~/composables/useConversation'
 import { useAiModels } from '~/composables/useAiModels'
 import { usePrototype } from '~/composables/usePrototype'
@@ -307,6 +319,7 @@ const prototypeState = usePrototype()
 const logicMapState = useLogicMap()
 const assetsState = useAssets()
 const isGenerating = ref(false)
+const isSaving = ref(false)
 const activeTab = ref('editor')
 const previewVisible = ref(false)
 const lastUsedModelId = ref('')
@@ -417,7 +430,7 @@ const conversationRef = conversation.conversation
 
 async function handleSendMessage (
   message: string,
-  options: { modelId: string; useRAG: boolean; target: ConversationTargetType; documentIds: string[]; prdIds: string[] }
+  options: { modelId: string; useRAG: boolean; target: ConversationTargetType; documentIds: string[]; prdIds: string[]; mentionedDocs?: import('~/types/conversation').MentionedDocument[] }
 ) {
   // 切换对话目标（如果改变了）
   if (options.target !== conversation.currentTarget.value) {
@@ -428,7 +441,10 @@ async function handleSendMessage (
   conversation.addUserMessage(message, {
     modelUsed: options.modelId,
     useRAG: options.useRAG,
-    documentIds: options.documentIds?.length > 0 ? options.documentIds : undefined
+    documentIds: options.documentIds?.length > 0 ? options.documentIds : undefined,
+    documentTitles: options.mentionedDocs?.length > 0
+      ? options.mentionedDocs.map(d => d.title)
+      : undefined
   })
 
   lastUsedModelId.value = options.modelId
@@ -463,6 +479,7 @@ async function handleSendMessage (
         target: options.target,
         documentIds: options.documentIds?.length > 0 ? options.documentIds : undefined,
         prdIds: options.prdIds?.length > 0 ? options.prdIds : undefined,
+        workspaceId: workspace.currentWorkspaceId.value ?? undefined,
         // 原型目标时传递当前 HTML 上下文
         targetContext: options.target === 'prototype' ? {
           prototypeHtml: conversation.targetContext.value?.prototypeHtml
@@ -551,6 +568,28 @@ function handlePrdIdUpdate (prdId: string) {
   conversationRef.value.dbId = prdId
   conversationRef.value.savedToDb = true
   conversation.saveToStorage()
+}
+
+async function handleManualSave () {
+  if (isSaving.value || conversationRef.value.messages.length === 0) return
+  isSaving.value = true
+  try {
+    await conversation.autoSaveToDatabase()
+    toast({
+      title: t('generate.saveSuccess.title'),
+      description: t('generate.saveSuccess.description'),
+      variant: 'success',
+    })
+  } catch (error) {
+    console.error('Manual save failed:', error)
+    toast({
+      title: t('generate.saveError.title'),
+      description: t('generate.saveError.description'),
+      variant: 'destructive',
+    })
+  } finally {
+    isSaving.value = false
+  }
 }
 
 function handleReset () {

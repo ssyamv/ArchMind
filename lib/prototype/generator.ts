@@ -77,6 +77,7 @@ export class PrototypeGenerator {
       useRAG?: boolean
       currentHtml?: string
       prdContent?: string
+      workspaceId?: string
     }
   ): AsyncGenerator<string> {
     const modelId = options?.modelId || 'glm-4.7'
@@ -86,7 +87,7 @@ export class PrototypeGenerator {
     // RAG 检索
     let backgroundContext = ''
     if (options?.useRAG && this.ragRetriever) {
-      const chunks = await this.ragRetriever.retrieve(message, { topK: 5, threshold: 0.7 })
+      const chunks = await this.ragRetriever.retrieve(message, { topK: 5, threshold: 0.7, workspaceId: options?.workspaceId })
       if (chunks.length > 0) {
         backgroundContext = this.ragRetriever.summarizeResults(chunks)
       }

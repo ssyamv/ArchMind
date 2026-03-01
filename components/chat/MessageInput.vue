@@ -150,7 +150,7 @@ import type { ConversationTargetType, MentionedDocument } from '~/types/conversa
 const { locale } = useI18n()
 
 const emit = defineEmits<{
-  send: [message: string, options: { modelId: string; useRAG: boolean; target: ConversationTargetType; documentIds: string[]; prdIds: string[] }]
+  send: [message: string, options: { modelId: string; useRAG: boolean; target: ConversationTargetType; documentIds: string[]; prdIds: string[]; mentionedDocs: MentionedDocument[] }]
 }>()
 
 const props = defineProps<{
@@ -455,7 +455,8 @@ function handleSubmit () {
     useRAG: useRAG.value,
     target: selectedTarget.value,
     documentIds,
-    prdIds
+    prdIds,
+    mentionedDocs: mentionedDocs.value
   })
   input.value = ''
   mentionedDocs.value = []

@@ -48,6 +48,17 @@
         <span>{{ t('workspace.manage') }}</span>
       </DropdownMenuItem>
 
+      <!-- 工作区设置 -->
+      <DropdownMenuItem
+        v-if="currentWorkspaceId"
+        :as="NuxtLink"
+        :to="`/workspace/${currentWorkspaceId}/settings`"
+        class="gap-2 cursor-pointer"
+      >
+        <SlidersHorizontal class="w-4 h-4" />
+        <span>{{ t('workspace.settingsTitle') }}</span>
+      </DropdownMenuItem>
+
       <DropdownMenuItem @click="showCreateDialog = true" class="gap-2 cursor-pointer">
         <Plus class="w-4 h-4" />
         <span>{{ t('workspace.create') }}</span>
@@ -512,7 +523,8 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { ChevronsUpDown, Plus, Settings, MoreVertical, Star, Trash2, Loader2, Pencil, Info, UserPlus, UserMinus, RefreshCw, X } from 'lucide-vue-next'
+import { ChevronsUpDown, Plus, Settings, SlidersHorizontal, MoreVertical, Star, Trash2, Loader2, Pencil, Info, UserPlus, UserMinus, RefreshCw, X } from 'lucide-vue-next'
+import { NuxtLink } from '#components'
 import { useWorkspace, type Workspace, type WorkspaceMember, type WorkspaceInvitation } from '~/composables/useWorkspace'
 import { useToast } from '~/components/ui/toast/use-toast'
 import { Button } from '~/components/ui/button'

@@ -43,8 +43,10 @@ const isLoading = ref(false)
 const stats = ref<RetrievalStats | null>(null)
 const error = ref<string | null>(null)
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 async function fetchStats () {
-  if (!props.workspaceId) return
+  if (!props.workspaceId || !UUID_RE.test(props.workspaceId)) return
   isLoading.value = true
   error.value = null
   try {
@@ -61,8 +63,8 @@ async function fetchStats () {
   }
 }
 
-// 监听 days 变化自动刷新
-watch(days, fetchStats, { immediate: true })
+// 监听 days 或 workspaceId 变化自动刷新
+watch([days, () => props.workspaceId], fetchStats, { immediate: true })
 
 const hitRatePercent = computed(() =>
   stats.value ? Math.round(stats.value.hitRate * 100) : 0

@@ -48,6 +48,7 @@ export interface ConversationMessage {
   modelUsed?: string
   useRAG?: boolean
   documentIds?: string[]
+  documentTitles?: string[]
   timestamp: number
   isStreaming?: boolean
   prdContent?: string

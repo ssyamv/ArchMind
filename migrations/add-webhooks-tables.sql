@@ -5,7 +5,7 @@
 -- Webhook 订阅表
 CREATE TABLE IF NOT EXISTS webhooks (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id  UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id  TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name          VARCHAR(255) NOT NULL,
   url           TEXT NOT NULL,
