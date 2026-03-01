@@ -69,8 +69,8 @@ export class PRDGenerator {
 
     return {
       systemPrompt: 1500, // 增强版系统提示词约1500 tokens
-      examples: 2000, // 2个few-shot示例约2000 tokens
-      context: 4000, // RAG上下文约4000 tokens
+      examples: 1500, // 精简示例预算，匀出空间给上下文（原2000）
+      context: 5000, // RAG上下文约5000 tokens（原4000，压缩质量提升后可给更多空间）
       userInput: 500, // 用户输入约500 tokens
       output: totalBudget // 传给模型的 maxTokens，代表生成 token 上限
     }
@@ -127,9 +127,10 @@ export class PRDGenerator {
   }
 
   /**
-   * 智能上下文压缩
+   * 语义感知上下文压缩（#52）
+   * 按 Markdown 标题语义分块，基于内容重要性打分后优先保留高价值段落
    */
-  private compressContext (context: string, maxTokens: number = 4000): string {
+  private compressContext (context: string, maxTokens: number = 5000): string {
     const estimatedTokens = this.estimateTokens(context)
 
     // 如果上下文符合预算，直接返回
@@ -137,39 +138,109 @@ export class PRDGenerator {
       return context
     }
 
-    // 按 --- 分割各个文档块
-    const sections = context.split('\n---\n')
-    const compressedSections: string[] = []
-    let currentTokens = 0
+    // 尝试按 Markdown 标题（## 或 ###）拆分语义段落
+    const headingRegex = /^(#{2,3}\s+.+)$/m
+    const parts = context.split(headingRegex)
+
+    // 若拆不出任何标题（纯文本），退化为简单截取策略
+    if (parts.length <= 1) {
+      return this.fallbackTruncate(context, maxTokens)
+    }
+
+    // 重建段落列表：每个段落 = 标题 + 正文
+    interface SemanticSection {
+      heading: string
+      body: string
+      originalIndex: number
+      score: number
+    }
+    const sections: SemanticSection[] = []
+    // parts[0] 是第一个标题前的内容（序言），直接作为独立段落
+    if (parts[0].trim()) {
+      sections.push({
+        heading: '',
+        body: parts[0],
+        originalIndex: 0,
+        score: 0.5 // 序言给中等分
+      })
+    }
+    for (let i = 1; i < parts.length; i += 2) {
+      const heading = parts[i] || ''
+      const body = parts[i + 1] || ''
+      sections.push({
+        heading,
+        body,
+        originalIndex: Math.floor(i / 2) + 1,
+        score: 0
+      })
+    }
+
+    // 对每个段落打重要性分
+    const importantHeadingKeywords = /功能|需求|用户|目标|背景|场景|核心|关键/
+    const metricPatterns = /\d+%?|KPI|指标|目标值|数据|转化率|留存率|DAU|MAU/
 
     for (const section of sections) {
-      const sectionTokens = this.estimateTokens(section)
+      let score = 0
 
-      if (currentTokens + sectionTokens <= maxTokens) {
-        // 整个section可以加入
-        compressedSections.push(section)
-        currentTokens += sectionTokens
-      } else {
-        // 需要压缩这个section
-        // 保留前500字 + 后500字
-        if (section.length > 1000) {
-          const compressed =
-            section.substring(0, 500) + '\n...[中间内容省略]...\n' + section.substring(section.length - 500)
-          const compressedTokens = this.estimateTokens(compressed)
+      // 维度1：标题含关键词 +0.30
+      if (importantHeadingKeywords.test(section.heading)) {
+        score += 0.30
+      }
 
-          if (currentTokens + compressedTokens <= maxTokens) {
-            compressedSections.push(compressed)
-            currentTokens += compressedTokens
-          }
-        } else {
-          // section本身不长，但预算不够了，直接加入
-          compressedSections.push(section)
-          currentTokens += sectionTokens
-        }
+      // 维度2：正文含数字/指标 +0.20
+      if (metricPatterns.test(section.body)) {
+        score += 0.20
+      }
+
+      // 维度3：正文长度适中（100~500字）+0.10
+      const bodyLength = section.body.trim().length
+      if (bodyLength >= 100 && bodyLength <= 500) {
+        score += 0.10
+      }
+
+      section.score = Math.min(score, 1.0)
+    }
+
+    // 按分数降序，累积 token 数直到达到预算
+    const sorted = [...sections].sort((a, b) => b.score - a.score)
+    // selectedTexts: originalIndex → 最终输出文本（支持截取覆盖）
+    const selectedTexts = new Map<number, string>()
+    let usedTokens = 0
+
+    for (const section of sorted) {
+      const text = section.heading ? `${section.heading}\n${section.body}` : section.body
+      const tokenCount = this.estimateTokens(text)
+
+      // 单段超预算时截取后加入，并终止循环
+      if (tokenCount > maxTokens) {
+        const maxChars = Math.floor(maxTokens * 1.5)
+        const truncated = text.slice(0, maxChars) + '\n...[内容过长已截取]'
+        selectedTexts.set(section.originalIndex, truncated)
+        break
+      }
+
+      if (usedTokens + tokenCount <= maxTokens) {
+        selectedTexts.set(section.originalIndex, text)
+        usedTokens += tokenCount
       }
     }
 
-    return compressedSections.join('\n---\n')
+    // 按原文顺序重新排列选中段落
+    const result = sections
+      .filter(s => selectedTexts.has(s.originalIndex))
+      .map(s => selectedTexts.get(s.originalIndex)!)
+      .join('\n\n---\n\n')
+
+    return result || this.fallbackTruncate(context, maxTokens)
+  }
+
+  /**
+   * 退化策略：纯文本无法按标题分段时的简单截取
+   */
+  private fallbackTruncate (context: string, maxTokens: number): string {
+    const maxChars = Math.floor(maxTokens * 1.5)
+    if (context.length <= maxChars) return context
+    return context.slice(0, maxChars) + '\n...[内容过长已截取]'
   }
 
   /**
