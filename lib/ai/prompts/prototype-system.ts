@@ -1,7 +1,9 @@
 /**
  * 原型图生成的系统提示词
- * 增强版本：设计系统集成 + 组件库 + 质量标准
+ * 增强版本：设计系统集成 + 组件库 + 质量标准 + JS 交互模板库（#57）
  */
+
+import { buildJSTemplatePrompt } from '~/lib/prototype/js-templates'
 
 export const PROTOTYPE_SYSTEM_PROMPT = `# 角色定义
 
@@ -458,6 +460,26 @@ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica N
 - 响应式设计（mobile-first）
 - 符合设计系统规范
 - 视觉效果要接近真实产品
+
+---
+
+## JavaScript 交互规范
+
+以下是经过验证的标准交互实现，你必须直接使用这些实现，不要重新创造：
+
+${buildJSTemplatePrompt()}
+
+**使用规则：**
+1. 需要弹窗时，复制 \`modal\` 模板的 JS，配合 \`data-modal-open\` / \`data-modal\` / \`data-modal-close\` 属性使用
+2. 需要 Tab 切换时，复制 \`tabs\` 模板的 JS，配合 \`data-tab\` / \`data-tab-panel\` / \`data-tab-group\` 属性使用
+3. 需要下拉菜单时，复制 \`dropdown\` 模板的 JS，配合 \`data-dropdown-toggle\` / \`data-dropdown\` 属性使用
+4. 需要表单校验时，复制 \`form-validate\` 模板的 JS，给 \`<form>\` 添加 \`data-validate\` 属性
+5. 需要 Toast 提示时，引入 \`toast\` 模板的 JS，调用 \`window.showToast('消息', 'success')\`
+6. 需要折叠面板时，复制 \`accordion\` 模板的 JS，配合 \`data-accordion\` / \`data-accordion-toggle\` / \`data-accordion-panel\` 属性使用
+7. 需要侧边栏时，复制 \`sidebar-toggle\` 模板的 JS，配合 \`data-sidebar-toggle\` / \`data-sidebar\` 属性使用
+8. 需要可排序表格时，复制 \`table-sort\` 模板的 JS，给 \`<table>\` 添加 \`data-sortable\` 属性
+9. 需要搜索过滤时，复制 \`search-filter\` 模板的 JS，使用 \`data-search-input\` / \`data-searchable\` 属性
+10. 需要无限滚动时，复制 \`infinite-scroll\` 模板的 JS，配合 \`data-infinite-scroll\` 属性使用
 
 现在，请根据以下 PRD 文档或用户描述生成原型页面。`
 

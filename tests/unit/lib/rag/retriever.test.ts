@@ -541,3 +541,129 @@ describe('RAGRetriever.keywordSearch() 异常处理', () => {
     await expect(retriever.keywordSearch('query')).rejects.toThrow('SQL error')
   })
 })
+
+// ─── computeThreshold() 动态阈值计算（#58）──────────────────────────────────
+
+describe('RAGRetriever.computeThreshold()', () => {
+  describe('基准行为（无偏移）', () => {
+    it('中等长度普通查询返回基准阈值 0.70', () => {
+      // 需要构造一个 5-20 token 的查询（20-80 字符）
+      const mid = 'a'.repeat(40)  // 40 chars / 4 = 10 tokens，中等
+      const threshold = RAGRetriever.computeThreshold(mid)
+      expect(threshold).toBeCloseTo(0.70, 2)
+    })
+
+    it('短查询（< 5 tokens = < 20 字符）放宽 0.05，结果 0.65', () => {
+      // 12 字符 / 4 = 3 tokens < 5
+      const short = 'hello world!'  // 12 chars
+      const threshold = RAGRetriever.computeThreshold(short)
+      expect(threshold).toBeCloseTo(0.65, 2)
+    })
+
+    it('长查询（> 20 tokens = > 80 字符）收紧 0.05，结果 0.75', () => {
+      const long = 'a'.repeat(100)  // 100 / 4 = 25 tokens > 20
+      const threshold = RAGRetriever.computeThreshold(long)
+      expect(threshold).toBeCloseTo(0.75, 2)
+    })
+
+    it('含大写缩写词（如 API）加 0.03', () => {
+      // 中等长度（30 字符 → 7.5 tokens，在 5-20 之间）+ API 缩写
+      const query = 'a'.repeat(30) + ' API'
+      const threshold = RAGRetriever.computeThreshold(query)
+      expect(threshold).toBeCloseTo(0.73, 2)
+    })
+
+    it('纯中文短句（< 10 tokens）减 0.03', () => {
+      // 20 中文字符 = 20/4=5 tokens（刚好=5，< 5 不成立，不 -0.05），
+      // 纯中文 + tokenCount < 10 → -0.03
+      const query = '用户登录功能设计方案实现'  // 12 中文 = 3 tokens
+      // 实际：3 tokens < 5 → -0.05，同时 < 10 且纯中文 → -0.03，合计 -0.08
+      const threshold = RAGRetriever.computeThreshold(query)
+      expect(threshold).toBeGreaterThanOrEqual(0.55)
+      expect(threshold).toBeLessThanOrEqual(0.85)
+    })
+  })
+
+  describe('工作区级偏移', () => {
+    it('正偏移 +0.1 使阈值更严格', () => {
+      const mid = 'a'.repeat(40)
+      const base = RAGRetriever.computeThreshold(mid, 0)
+      const shifted = RAGRetriever.computeThreshold(mid, 0.1)
+      expect(shifted).toBeGreaterThan(base)
+      expect(shifted).toBeCloseTo(0.80, 2)
+    })
+
+    it('负偏移 -0.1 使阈值更宽松', () => {
+      const mid = 'a'.repeat(40)
+      const base = RAGRetriever.computeThreshold(mid, 0)
+      const shifted = RAGRetriever.computeThreshold(mid, -0.1)
+      expect(shifted).toBeLessThan(base)
+      expect(shifted).toBeCloseTo(0.60, 2)
+    })
+  })
+
+  describe('边界限制 [0.55, 0.85]', () => {
+    it('偏移过大时不超过 0.85', () => {
+      // 长查询（0.75）+ 缩写（+0.03）+ 偏移（+0.5）= 1.28 → 限制到 0.85
+      const long = 'A'.repeat(100) + ' API'
+      const threshold = RAGRetriever.computeThreshold(long, 0.5)
+      expect(threshold).toBe(0.85)
+    })
+
+    it('偏移过小时不低于 0.55', () => {
+      // 短查询（0.65）+ 纯中文（-0.03）+ 偏移（-0.5）= 0.12 → 限制到 0.55
+      const threshold = RAGRetriever.computeThreshold('你好', -0.5)
+      expect(threshold).toBe(0.55)
+    })
+  })
+})
+
+// ─── retrieve() 阈值决策优先级（#58）────────────────────────────────────────
+
+describe('RAGRetriever.retrieve() 阈值决策优先级', () => {
+  let retriever: RAGRetriever
+
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    retriever = new RAGRetriever(makeMockEmbeddingAdapter() as any)
+  })
+
+  it('thresholdOverride 优先级最高，忽略 threshold 和动态计算', async () => {
+    const hybridSpy = vi.spyOn(retriever as any, 'hybridSearch').mockResolvedValue([])
+    await retriever.retrieve('test query', {
+      threshold: 0.8,
+      thresholdOverride: 0.6
+    })
+    // hybridSearch 应该收到 threshold=0.6
+    expect(hybridSpy).toHaveBeenCalledWith(
+      'test query',
+      expect.objectContaining({ threshold: 0.6 })
+    )
+  })
+
+  it('无 thresholdOverride 时，threshold 优先于动态计算', async () => {
+    const hybridSpy = vi.spyOn(retriever as any, 'hybridSearch').mockResolvedValue([])
+    await retriever.retrieve('test query', { threshold: 0.75 })
+    expect(hybridSpy).toHaveBeenCalledWith(
+      'test query',
+      expect.objectContaining({ threshold: 0.75 })
+    )
+  })
+
+  it('无任何手动阈值时，使用动态计算结果（在 [0.55, 0.85] 范围内）', async () => {
+    const hybridSpy = vi.spyOn(retriever as any, 'hybridSearch').mockResolvedValue([])
+    await retriever.retrieve('test query for dynamic threshold')
+    const callArgs = hybridSpy.mock.calls[0][1] as { threshold: number }
+    expect(callArgs.threshold).toBeGreaterThanOrEqual(0.55)
+    expect(callArgs.threshold).toBeLessThanOrEqual(0.85)
+  })
+
+  it('workspaceThresholdOffset 在动态计算中生效', async () => {
+    const hybridSpy = vi.spyOn(retriever as any, 'hybridSearch').mockResolvedValue([])
+    // 中等查询，基准 0.70，偏移 +0.05
+    const query = 'a'.repeat(40)
+    await retriever.retrieve(query, { workspaceThresholdOffset: 0.05 })
+    const callArgs = hybridSpy.mock.calls[0][1] as { threshold: number }
+    expect(callArgs.threshold).toBeCloseTo(0.75, 2)
+  })
+})

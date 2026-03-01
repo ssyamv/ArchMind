@@ -27,12 +27,22 @@
             <TabsTrigger value="all">{{ t('knowledgeBase.tabs.all') }}</TabsTrigger>
             <TabsTrigger value="documents">{{ t('knowledgeBase.tabs.documents') }}</TabsTrigger>
             <TabsTrigger value="prds">{{ t('knowledgeBase.tabs.prds') }}</TabsTrigger>
+            <TabsTrigger value="stats">检索统计</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
       <!-- Table -->
       <div class="flex-1 overflow-auto p-6 min-w-0">
+        <!-- 检索统计 Tab -->
+        <RetrievalStats
+          v-if="activeTab === 'stats' && currentWorkspaceId"
+          :workspace-id="currentWorkspaceId"
+        />
+
+        <!-- 文档列表（仅非统计 Tab 时渲染） -->
+        <template v-else-if="activeTab !== 'stats'">
+
         <!-- Loading: 骨架屏 -->
         <div v-if="loading">
           <Table class="min-w-[640px]">
@@ -165,6 +175,7 @@
           @update:current-page="handlePageChange"
         />
         </template>
+        </template><!-- end activeTab !== 'stats' -->
       </div>
 
       <!-- Footer with Storage Stats -->

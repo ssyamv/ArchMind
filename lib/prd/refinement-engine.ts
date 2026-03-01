@@ -13,11 +13,13 @@ import type { IEmbeddingAdapter } from '~/lib/rag/embedding-adapter'
  * PRD 质量评估结果
  */
 export interface PRDQualityCheck {
-  completeness: number // 完整性评分 (0-1)
-  specificity: number // 具体性评分 (0-1)
-  logicalConsistency: number // 逻辑自洽性评分 (0-1)
-  kpiQuality: number // KPI质量评分 (0-1)
-  averageScore: number // 平均分 (0-1)
+  completeness: number // 完整性评分 (0-1)，权重 25%
+  specificity: number // 具体性评分 (0-1)，权重 20%
+  logicalConsistency: number // 逻辑自洽性评分 (0-1)，权重 15%
+  kpiQuality: number // KPI质量评分 (0-1)，权重 10%
+  feasibility: number // 可行性评分 (0-1)，权重 15%（新增）
+  userFocus: number // 用户视角评分 (0-1)，权重 15%（新增）
+  averageScore: number // 加权平均分 (0-1)
   issues: QualityIssue[] // 发现的问题
 }
 
@@ -36,7 +38,7 @@ export interface QualityIssue {
  */
 export interface RefinementOptions {
   maxIterations?: number // 最大迭代次数（默认2）
-  qualityThreshold?: number // 质量阈值（默认0.85）
+  qualityThreshold?: number // 质量阈值（默认0.80）
   model?: string // 使用的模型
   temperature?: number
   maxTokens?: number
@@ -111,29 +113,40 @@ export class PRDRefinementEngine {
 
     const evaluationPrompt = `# PRD 质量评估任务
 
-请从以下4个维度评估这份PRD的质量，每个维度打分 0-1（1为最高分）：
+请从以下6个维度评估这份PRD的质量，每个维度打分 0-1（1为最高分）：
 
 ## 评估维度
 
-### 1. 完整性 (Completeness)
+### 1. 完整性 (Completeness) - 权重 25%
 - 所有必需章节是否完整（10个章节）
 - 每个章节是否充分展开（不是空泛的1-2句话）
 - 是否包含足够的细节和信息量
 
-### 2. 具体性 (Specificity)
+### 2. 具体性 (Specificity) - 权重 20%
 - 是否避免模糊表述（如"提高用户体验"、"优化性能"等）
 - 是否使用具体数据和示例
 - 功能描述是否有明确的边界条件
 
-### 3. 逻辑自洽性 (Logical Consistency)
+### 3. 逻辑自洽性 (Logical Consistency) - 权重 15%
 - 各章节之间是否有矛盾
 - 异常情况和边界条件是否覆盖
 - 用户流程是否完整可行
 
-### 4. KPI质量 (KPI Quality)
+### 4. KPI质量 (KPI Quality) - 权重 10%
 - 成功指标是否量化（是否包含具体数字）
 - 是否符合SMART原则（Specific/Measurable/Achievable/Relevant/Time-bound）
 - 是否有至少5个KPI
+
+### 5. 可行性 (Feasibility) - 权重 15%
+- 技术方案是否脱离实际？
+- 实施计划时间线是否合理？
+- 资源需求是否有估算？
+- 当分数 < 0.6 时，在 issues 中说明具体问题（如"时间线过于激进"或"未说明技术实现方案"）
+
+### 6. 用户视角 (User Focus) - 权重 15%
+- 用户故事是否从真实场景出发？
+- 功能描述是否从用户利益而非技术角度阐述？
+- 是否清晰展示用户价值？
 
 ## 待评估的PRD
 
@@ -148,7 +161,9 @@ ${prdContent}
   "specificity": 0.70,
   "logicalConsistency": 0.90,
   "kpiQuality": 0.60,
-  "averageScore": 0.76,
+  "feasibility": 0.75,
+  "userFocus": 0.80,
+  "averageScore": 0.78,
   "issues": [
     {
       "section": "核心功能",
@@ -168,7 +183,7 @@ ${prdContent}
 **注意：**
 - issues数组至少列出3个问题，最多10个
 - severity分为：error（必须修复）、warning（建议修复）、suggestion（可选优化）
-- averageScore应为4个维度的平均值
+- averageScore = completeness×0.25 + specificity×0.20 + logicalConsistency×0.15 + kpiQuality×0.10 + feasibility×0.15 + userFocus×0.15
 - 输出纯JSON，不要包含\`\`\`json\`\`\`标记`
 
     const result = await modelAdapter.generateText(evaluationPrompt, {
@@ -198,19 +213,22 @@ ${prdContent}
         typeof qualityCheck.specificity !== 'number' ||
         typeof qualityCheck.logicalConsistency !== 'number' ||
         typeof qualityCheck.kpiQuality !== 'number' ||
+        typeof qualityCheck.feasibility !== 'number' ||
+        typeof qualityCheck.userFocus !== 'number' ||
         !Array.isArray(qualityCheck.issues)
       ) {
         throw new Error('Invalid quality check format')
       }
 
-      // 计算平均分（如果AI没提供或计算错误）
+      // 计算加权平均分（如果AI没提供或计算错误）
       if (!qualityCheck.averageScore) {
         qualityCheck.averageScore =
-          (qualityCheck.completeness +
-            qualityCheck.specificity +
-            qualityCheck.logicalConsistency +
-            qualityCheck.kpiQuality) /
-          4
+          qualityCheck.completeness * 0.25 +
+          qualityCheck.specificity * 0.20 +
+          qualityCheck.logicalConsistency * 0.15 +
+          qualityCheck.kpiQuality * 0.10 +
+          qualityCheck.feasibility * 0.15 +
+          qualityCheck.userFocus * 0.15
       }
 
       return qualityCheck
@@ -222,6 +240,8 @@ ${prdContent}
         specificity: 0.5,
         logicalConsistency: 0.5,
         kpiQuality: 0.5,
+        feasibility: 0.5,
+        userFocus: 0.5,
         averageScore: 0.5,
         issues: [
           {
@@ -302,7 +322,7 @@ ${qualityCheck.issues
     options?: RefinementOptions
   ): Promise<RefinedPRDResult> {
     const maxIterations = options?.maxIterations || 2
-    const qualityThreshold = options?.qualityThreshold || 0.85
+    const qualityThreshold = options?.qualityThreshold || 0.80
 
     // 步骤1：生成初稿
     let prd = await this.generateDraft(userInput, backgroundContext, options)

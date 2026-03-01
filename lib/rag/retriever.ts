@@ -13,6 +13,7 @@ import { PrdChunkDAO } from '~/lib/db/dao/prd-chunk-dao'
 import { DocumentDAO } from '~/lib/db/dao/document-dao'
 import { PRDDAO } from '~/lib/db/dao/prd-dao'
 import { dbClient } from '~/lib/db/client'
+import { RAGRetrievalLogDAO } from '~/lib/db/dao/rag-retrieval-log-dao'
 
 export interface RetrievalOptions {
   topK?: number;
@@ -20,8 +21,14 @@ export interface RetrievalOptions {
   documentIds?: string[];
   prdIds?: string[];
   userId?: string;
+  /** 工作区 ID，供检索日志写入使用（#59）及阈值偏移计算 */
+  workspaceId?: string;
   /** 检索策略：'hybrid'（默认）使用 RRF 混合搜索，'vector' 仅向量检索 */
   ragStrategy?: 'hybrid' | 'vector';
+  /** 明确覆盖动态阈值，优先级高于 threshold 和动态计算 */
+  thresholdOverride?: number;
+  /** 工作区级阈值偏移量（-0.1 ~ +0.1），叠加在动态基准阈值上 */
+  workspaceThresholdOffset?: number;
 }
 
 export interface RetrievedChunk {
@@ -44,24 +51,74 @@ export class RAGRetriever {
   }
 
   /**
+   * 动态阈值计算
+   * 根据查询长度、语言特征自动调整相似度阈值
+   * @param query 查询文本
+   * @param baseOffset 工作区级偏移量（默认 0）
+   * @returns 限制在 [0.55, 0.85] 之间的阈值
+   */
+  static computeThreshold (query: string, baseOffset: number = 0): number {
+    const tokenCount = query.length / 4  // 粗估 token 数
+
+    let threshold = 0.70 + baseOffset    // 基准阈值 + 工作区级偏移
+
+    if (tokenCount < 5) threshold -= 0.05    // 短查询：放宽阈值
+    if (tokenCount > 20) threshold += 0.05   // 长查询：收紧阈值
+    if (/\b[A-Z]{2,}\b/.test(query)) threshold += 0.03   // 含缩写词：精确匹配
+    if (/^[\u4e00-\u9fa5\s]+$/.test(query) && tokenCount < 10) threshold -= 0.03  // 纯中文短句：放宽
+
+    return Math.min(Math.max(threshold, 0.55), 0.85)  // 限制在 [0.55, 0.85]
+  }
+
+  /**
    * 根据查询文本检索相关文档块
    * 默认使用混合搜索（RRF），可通过 ragStrategy: 'vector' 退回纯向量检索
    * prdIds 专用路径（跨不同数据表）暂不支持混合搜索，继续走纯向量
+   *
+   * 阈值优先级：thresholdOverride > threshold > 动态计算
    */
   async retrieve (query: string, options?: RetrievalOptions): Promise<RetrievedChunk[]> {
+    // 动态阈值决策
+    const effectiveThreshold = options?.thresholdOverride
+      ?? options?.threshold
+      ?? RAGRetriever.computeThreshold(query, options?.workspaceThresholdOffset ?? 0)
+
+    console.debug(`[RAG] query="${query.slice(0, 30)}" threshold=${effectiveThreshold}`)
+
     const strategy = options?.ragStrategy ?? 'hybrid'
     const hasPrdScope = options?.prdIds && options.prdIds.length > 0
 
+    let results: RetrievedChunk[]
     if (strategy === 'hybrid' && !hasPrdScope) {
-      return this.hybridSearch(query, {
+      results = await this.hybridSearch(query, {
         topK: options?.topK,
-        threshold: options?.threshold,
+        threshold: effectiveThreshold,
         documentIds: options?.documentIds,
         userId: options?.userId
       })
+    } else {
+      results = await this._vectorRetrieve(query, options)
     }
 
-    return this._vectorRetrieve(query, options)
+    // 异步写检索日志（fire-and-forget，错误不影响主流程）
+    setImmediate(async () => {
+      try {
+        await RAGRetrievalLogDAO.insert({
+          workspaceId: options?.workspaceId ?? null,
+          userId: options?.userId ?? null,
+          query,
+          documentIds: results.map(r => r.documentId),
+          similarityScores: results.map(r => r.similarity),
+          strategy: strategy === 'hybrid' && !hasPrdScope ? 'hybrid' : 'vector',
+          threshold: options?.threshold ?? this.threshold,
+          resultCount: results.length
+        })
+      } catch (e) {
+        console.warn('[RAG] 日志写入失败（不影响检索结果）', e)
+      }
+    })
+
+    return results
   }
 
   /**
