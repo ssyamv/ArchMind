@@ -13,6 +13,7 @@ import { PrdChunkDAO } from '~/lib/db/dao/prd-chunk-dao'
 import { DocumentDAO } from '~/lib/db/dao/document-dao'
 import { PRDDAO } from '~/lib/db/dao/prd-dao'
 import { dbClient } from '~/lib/db/client'
+import { RAGRetrievalLogDAO } from '~/lib/db/dao/rag-retrieval-log-dao'
 
 export interface RetrievalOptions {
   topK?: number;
@@ -20,14 +21,14 @@ export interface RetrievalOptions {
   documentIds?: string[];
   prdIds?: string[];
   userId?: string;
+  /** 工作区 ID，供检索日志写入使用（#59）及阈值偏移计算 */
+  workspaceId?: string;
   /** 检索策略：'hybrid'（默认）使用 RRF 混合搜索，'vector' 仅向量检索 */
   ragStrategy?: 'hybrid' | 'vector';
   /** 明确覆盖动态阈值，优先级高于 threshold 和动态计算 */
   thresholdOverride?: number;
   /** 工作区级阈值偏移量（-0.1 ~ +0.1），叠加在动态基准阈值上 */
   workspaceThresholdOffset?: number;
-  /** 工作区 ID，供检索日志写入使用 */
-  workspaceId?: string;
 }
 
 export interface RetrievedChunk {
@@ -87,16 +88,41 @@ export class RAGRetriever {
     const strategy = options?.ragStrategy ?? 'hybrid'
     const hasPrdScope = options?.prdIds && options.prdIds.length > 0
 
+    let results: RetrievedChunk[]
     if (strategy === 'hybrid' && !hasPrdScope) {
-      return this.hybridSearch(query, {
+      results = await this.hybridSearch(query, {
         topK: options?.topK,
         threshold: effectiveThreshold,
         documentIds: options?.documentIds,
         userId: options?.userId
       })
+    } else {
+      results = await this._vectorRetrieve(query, options)
     }
 
+<<<<<<< HEAD
     return this._vectorRetrieve(query, { ...options, threshold: effectiveThreshold })
+=======
+    // 异步写检索日志（fire-and-forget，错误不影响主流程）
+    setImmediate(async () => {
+      try {
+        await RAGRetrievalLogDAO.insert({
+          workspaceId: options?.workspaceId ?? null,
+          userId: options?.userId ?? null,
+          query,
+          documentIds: results.map(r => r.documentId),
+          similarityScores: results.map(r => r.similarity),
+          strategy: strategy === 'hybrid' && !hasPrdScope ? 'hybrid' : 'vector',
+          threshold: options?.threshold ?? this.threshold,
+          resultCount: results.length
+        })
+      } catch (e) {
+        console.warn('[RAG] 日志写入失败（不影响检索结果）', e)
+      }
+    })
+
+    return results
+>>>>>>> 5168962 (feat: add RAG retrieval quality panel (#59))
   }
 
   /**
