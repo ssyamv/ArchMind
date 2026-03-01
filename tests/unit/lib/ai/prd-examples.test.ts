@@ -102,11 +102,6 @@ describe('selectRelevantExamples - 三维匹配算法', () => {
 
   describe('评分合理性', () => {
     it('电商相关查询：积分/推荐示例应高于政务示例', () => {
-      const allScored = PRD_EXAMPLES.map(ex => ({
-        ex,
-        // 通过取 top-1 验证排序合理性
-      }))
-
       const top1 = selectRelevantExamples('电商 App 积分功能设计', 1)[0]
       // 电商积分示例应排第一
       expect(top1.userInput).toContain('积分')
