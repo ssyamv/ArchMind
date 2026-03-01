@@ -3,7 +3,7 @@
  * PostgreSQL 数据库表结构
  */
 
-import { pgTable, uuid, varchar, text, integer, smallint, boolean, timestamp, jsonb, decimal, index, uniqueIndex } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, varchar, text, integer, smallint, boolean, timestamp, jsonb, decimal, real, index, uniqueIndex } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 // ============================================
@@ -479,4 +479,22 @@ export const prdFeedbacks = pgTable('prd_feedbacks', {
   prdIdIdx: index('idx_prd_feedbacks_prd_id').on(table.prdId),
   userIdIdx: index('idx_prd_feedbacks_user_id').on(table.userId),
   uniquePrdUser: uniqueIndex('unique_prd_feedback').on(table.prdId, table.userId)
+}))
+
+// ============================================
+// RAG 检索日志表（v0.4.0 #59）
+// ============================================
+export const ragRetrievalLogs = pgTable('rag_retrieval_logs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id'), // 可为 null
+  userId: uuid('user_id'),           // 可为 null
+  queryHash: text('query_hash').notNull(), // SHA-256 of query（不存明文）
+  documentIds: uuid('document_ids').array(), // 被引用的文档 ID 列表
+  similarityScores: real('similarity_scores').array(), // 对应相似度分数
+  strategy: text('strategy'),        // 'vector' | 'hybrid'
+  threshold: real('threshold'),      // 实际使用的阈值
+  resultCount: integer('result_count'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow()
+}, (table) => ({
+  workspaceCreatedIdx: index('idx_rag_logs_workspace_created').on(table.workspaceId, table.createdAt)
 }))
