@@ -3,7 +3,7 @@
  * PostgreSQL 数据库表结构
  */
 
-import { pgTable, uuid, varchar, text, integer, smallint, boolean, timestamp, jsonb, decimal, real, index, uniqueIndex } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, varchar, text, integer, boolean, timestamp, jsonb, decimal, real, index, uniqueIndex } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 // ============================================
