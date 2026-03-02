@@ -75,6 +75,18 @@
         >
           <List class="w-4 h-4" />
         </Button>
+        <div class="w-px h-5 bg-border mx-1" />
+        <Button
+          variant="ghost"
+          size="sm"
+          class="gap-1.5 text-muted-foreground hover:text-foreground"
+          as-child
+        >
+          <NuxtLink to="/prd-compare">
+            <GitCompare class="w-4 h-4" />
+            <span class="hidden sm:inline text-xs">版本对比</span>
+          </NuxtLink>
+        </Button>
       </div>
     </div>
 
@@ -205,7 +217,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
-import { Search, Grid3x3, List, RefreshCw, FolderOpen, Plus, MessageSquare, SlidersHorizontal } from 'lucide-vue-next'
+import { Search, Grid3x3, List, RefreshCw, FolderOpen, Plus, MessageSquare, SlidersHorizontal, GitCompare } from 'lucide-vue-next'
 import { Input } from '~/components/ui/input'
 import { Button } from '~/components/ui/button'
 import {
