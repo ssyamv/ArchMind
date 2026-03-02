@@ -1,6 +1,6 @@
 {
 	"name": "archmind-ai",
-	"version": "0.4.0",
+	"version": "0.4.1",
 	"private": true,
 	"license": "GPL-3.0-only",
 	"type": "module",
@@ -114,7 +114,7 @@
 		"@nuxt/devtools": "^1.7.0",
 		"@nuxt/test-utils": "^4.0.0",
 		"@nuxtjs/eslint-config-typescript": "^12.1.0",
-		"@scalar/nuxt": "^0.5.84",
+		"@scalar/nuxt": "^0.5.86",
 		"@tailwindcss/typography": "^0.5.19",
 		"@types/archiver": "^7.0.0",
 		"@types/bcrypt": "^6.0.0",

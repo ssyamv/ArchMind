@@ -103,6 +103,7 @@ export class OpenAIAdapter implements AIModelAdapter {
       supportsStreaming: true,
       supportsStructuredOutput: true,
       supportsVision,
+      supportsThinking: false,
       maxContextLength: 128000,
       supportedLanguages: ['en', 'zh', 'ja', 'ko', 'fr', 'de', 'es']
     }

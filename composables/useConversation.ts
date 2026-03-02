@@ -120,6 +120,16 @@ export function useConversation () {
     }
   }
 
+  // Update AI message thinking content (reasoning models like GLM-4.7)
+  function updateAIThinkingMessage (messageId: string, chunk: string) {
+    const message = conversation.value.messages.find(m => m.id === messageId)
+    if (message) {
+      message.thinkingContent = (message.thinkingContent ?? '') + chunk
+      conversation.value.updatedAt = Date.now()
+      saveToStorage()
+    }
+  }
+
   // Mark AI message as complete
   function completeAIMessage (messageId: string) {
     const message = conversation.value.messages.find(m => m.id === messageId)
@@ -276,6 +286,7 @@ export function useConversation () {
     addUserMessage,
     addAIMessage,
     updateAIMessage,
+    updateAIThinkingMessage,
     completeAIMessage,
     saveConversation,
     autoSaveToDatabase,

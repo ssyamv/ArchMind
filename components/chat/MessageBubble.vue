@@ -36,7 +36,29 @@
             </p>
           </template>
           <!-- AI message: markdown rendered -->
-          <div v-else class="message-markdown text-sm leading-relaxed break-words" v-html="renderedContent" />
+          <template v-else>
+            <!-- Thinking block (reasoning models like GLM-4.7) -->
+            <div
+              v-if="message.thinkingContent || (message.isStreaming && !message.content)"
+              class="mb-3 rounded-md border border-border/60 bg-muted/40 overflow-hidden"
+            >
+              <button
+                class="flex w-full items-center gap-1.5 px-3 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                @click="thinkingExpanded = !thinkingExpanded"
+              >
+                <Brain class="w-3.5 h-3.5 flex-shrink-0" />
+                <span class="flex-1 text-left">{{ message.isStreaming && !message.content ? '思考中...' : '思考过程' }}</span>
+                <Loader2 v-if="message.isStreaming && !message.content" class="w-3 h-3 animate-spin" />
+                <ChevronDown v-else-if="thinkingExpanded" class="w-3 h-3" />
+                <ChevronRight v-else class="w-3 h-3" />
+              </button>
+              <div v-if="thinkingExpanded && message.thinkingContent" class="px-3 pb-3">
+                <div class="message-markdown text-xs text-muted-foreground leading-relaxed border-t border-border/40 pt-2" v-html="renderedThinkingContent" />
+              </div>
+            </div>
+            <!-- Main content -->
+            <div class="message-markdown text-sm leading-relaxed break-words" v-html="renderedContent" />
+          </template>
 
           <!-- Streaming indicator -->
           <div v-if="message.isStreaming" class="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
@@ -151,7 +173,7 @@
 import { ref, computed } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
-import { Sparkles, User, BookOpen, Cpu, Loader2, Copy, Check, RefreshCw, ArrowLeftFromLine, FileText } from 'lucide-vue-next'
+import { Sparkles, User, BookOpen, Cpu, Loader2, Copy, Check, RefreshCw, ArrowLeftFromLine, FileText, ChevronDown, ChevronRight, Brain } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
 import { Badge } from '~/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '~/components/ui/tooltip'
@@ -167,10 +189,16 @@ const emit = defineEmits<{
 }>()
 
 const copied = ref(false)
+const thinkingExpanded = ref(false)
 
 const renderedContent = computed(() => {
   if (props.message.role === 'user') return ''
   return DOMPurify.sanitize(marked.parse(props.message.content) as string)
+})
+
+const renderedThinkingContent = computed(() => {
+  if (!props.message.thinkingContent) return ''
+  return DOMPurify.sanitize(marked.parse(props.message.thinkingContent) as string)
 })
 
 function formatTime (timestamp: number) {

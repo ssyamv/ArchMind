@@ -83,6 +83,7 @@ export class QwenAdapter implements AIModelAdapter {
       supportsStreaming: true,
       supportsStructuredOutput: false,
       supportsVision: true,
+      supportsThinking: false,
       maxContextLength: isMax ? 30000 : 128000,
       supportedLanguages: ['zh', 'en']
     }
