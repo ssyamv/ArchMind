@@ -17,10 +17,14 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
-import postgres from 'postgres'
+import { Pool, type PoolClient } from 'pg'
 
 const MIGRATIONS_DIR = join(process.cwd(), 'migrations')
-const sql = postgres(process.env.DATABASE_URL!)
+const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://localhost:5432/archmind'
+
+const pool = new Pool({
+  connectionString: DATABASE_URL
+})
 
 interface Migration {
   version: string
@@ -30,8 +34,8 @@ interface Migration {
   content: string
 }
 
-async function ensureMigrationsTable() {
-  await sql`
+async function ensureMigrationsTable(): Promise<void> {
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
       id SERIAL PRIMARY KEY,
       version VARCHAR(255) NOT NULL UNIQUE,
@@ -41,20 +45,21 @@ async function ensureMigrationsTable() {
       execution_time_ms INTEGER,
       status VARCHAR(20) DEFAULT 'success'
     )
-  `
+  `)
 }
 
 async function getExecutedMigrations(): Promise<Set<string>> {
-  const rows = await sql<{ version: string }[]>`
-    SELECT version FROM schema_migrations WHERE status = 'success'
-  `
-  return new Set(rows.map(r => r.version))
+  const result = await pool.query<{ version: string }>(
+    'SELECT version FROM schema_migrations WHERE status = $1',
+    ['success']
+  )
+  return new Set(result.rows.map((r) => r.version))
 }
 
 async function getPendingMigrations(): Promise<Migration[]> {
   const files = await readdir(MIGRATIONS_DIR)
   const sqlFiles = files
-    .filter(f => f.endsWith('.sql') && !f.startsWith('000-'))
+    .filter((f) => f.endsWith('.sql') && !f.startsWith('000-'))
     .sort()
 
   const executed = await getExecutedMigrations()
@@ -78,70 +83,82 @@ async function getPendingMigrations(): Promise<Migration[]> {
   return pending
 }
 
-async function executeMigration(migration: Migration) {
+async function executeMigration(migration: Migration): Promise<void> {
   const startTime = Date.now()
+  const client = await pool.connect()
 
   try {
     console.log(`\n🔄 执行迁移: ${migration.version} - ${migration.name}`)
 
-    await sql.begin(async (tx) => {
-      // 执行迁移 SQL
-      await tx.unsafe(migration.content)
+    await client.query('BEGIN')
 
-      // 记录到迁移表
-      await tx`
-        INSERT INTO schema_migrations (version, name, checksum, execution_time_ms, status)
-        VALUES (${migration.version}, ${migration.name}, ${migration.checksum}, ${Date.now() - startTime}, 'success')
-      `
-    })
+    // 执行迁移 SQL
+    await client.query(migration.content)
+
+    // 记录到迁移表
+    await client.query(
+      `INSERT INTO schema_migrations (version, name, checksum, execution_time_ms, status)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [migration.version, migration.name, migration.checksum, Date.now() - startTime, 'success']
+    )
+
+    await client.query('COMMIT')
 
     console.log(`✅ 完成 (${Date.now() - startTime}ms)`)
   } catch (error) {
+    await client.query('ROLLBACK')
     console.error(`❌ 失败: ${error}`)
 
     // 记录失败状态
-    await sql`
-      INSERT INTO schema_migrations (version, name, checksum, execution_time_ms, status)
-      VALUES (${migration.version}, ${migration.name}, ${migration.checksum}, ${Date.now() - startTime}, 'failed')
-    `
+    try {
+      await pool.query(
+        `INSERT INTO schema_migrations (version, name, checksum, execution_time_ms, status)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [migration.version, migration.name, migration.checksum, Date.now() - startTime, 'failed']
+      )
+    } catch (logError) {
+      console.error('无法记录失败状态:', logError)
+    }
 
     throw error
+  } finally {
+    client.release()
   }
 }
 
-async function showStatus() {
-  const executed = await sql<Array<{
+async function showStatus(): Promise<void> {
+  const result = await pool.query<{
     version: string
     name: string
     executed_at: Date
     status: string
-  }>>`
-    SELECT version, name, executed_at, status
-    FROM schema_migrations
-    ORDER BY version DESC
-    LIMIT 10
-  `
+  }>(
+    `SELECT version, name, executed_at, status
+     FROM schema_migrations
+     ORDER BY version DESC
+     LIMIT 10`
+  )
 
   const pending = await getPendingMigrations()
 
   console.log('\n📊 迁移状态\n')
   console.log('最近执行的迁移:')
-  if (executed.length === 0) {
+  if (result.rows.length === 0) {
     console.log('  (无)')
   } else {
-    executed.forEach(m => {
+    result.rows.forEach((m) => {
       const icon = m.status === 'success' ? '✅' : '❌'
       console.log(`  ${icon} ${m.version} - ${m.name} (${m.executed_at.toLocaleString()})`)
     })
   }
 
   console.log(`\n待执行的迁移: ${pending.length} 个`)
-  pending.forEach(m => {
+  pending.forEach((m) => {
     console.log(`  ⏳ ${m.version} - ${m.name}`)
   })
 }
 
-async function runMigrations() {
+async function runMigrations(): Promise<void> {
   await ensureMigrationsTable()
   const pending = await getPendingMigrations()
 
@@ -159,7 +176,7 @@ async function runMigrations() {
   console.log('\n✅ 所有迁移执行完成\n')
 }
 
-async function createMigration(name: string) {
+async function createMigration(name: string): Promise<void> {
   const now = new Date()
   const version = now.toISOString().slice(0, 10).replace(/-/g, '') + '_001'
   const filename = `${version}-${name}.sql`
@@ -217,6 +234,6 @@ const arg = process.argv[3]
     console.error('❌ 错误:', error)
     process.exit(1)
   } finally {
-    await sql.end()
+    await pool.end()
   }
 })()
