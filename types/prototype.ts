@@ -80,6 +80,42 @@ export interface PrototypePageSnapshot {
 
 // === API 请求/响应类型 ===
 
+// 主题预设类型
+export type ThemePreset = 'default' | 'tech' | 'nature' | 'energy' | 'pro' | 'custom'
+
+// 主题配置
+export interface ThemeConfig {
+  preset: ThemePreset
+  primaryColor?: string // 仅 preset='custom' 时有效，格式 #RRGGBB
+}
+
+// 主题颜色解析结果
+export interface ThemeColors {
+  primary: string      // 主色
+  primaryLight: string // 主色 +20% 亮度
+  primaryDark: string  // 主色 -20% 亮度
+}
+
+// 预设主题常量
+export const THEME_PRESETS: Record<ThemePreset, ThemeColors> = {
+  default: { primary: '#6366F1', primaryLight: '#818CF8', primaryDark: '#4F46E5' },
+  tech:    { primary: '#2563EB', primaryLight: '#3B82F6', primaryDark: '#1D4ED8' },
+  nature:  { primary: '#059669', primaryLight: '#10B981', primaryDark: '#047857' },
+  energy:  { primary: '#EA580C', primaryLight: '#F97316', primaryDark: '#C2410C' },
+  pro:     { primary: '#374151', primaryLight: '#6B7280', primaryDark: '#1F2937' },
+  custom:  { primary: '#6366F1', primaryLight: '#818CF8', primaryDark: '#4F46E5' }
+}
+
+// 主题配置标签
+export const THEME_LABELS: Record<ThemePreset, string> = {
+  default: '默认紫',
+  tech:    '科技蓝',
+  nature:  '自然绿',
+  energy:  '活力橙',
+  pro:     '专业灰',
+  custom:  '自定义'
+}
+
 export interface PrototypeGenerateFromPRDRequest {
   prdId: string
   modelId?: string
@@ -87,6 +123,7 @@ export interface PrototypeGenerateFromPRDRequest {
   maxTokens?: number
   pageCount?: number
   deviceType?: DeviceType
+  theme?: ThemeConfig
 }
 
 export interface PrototypeStreamRequest {

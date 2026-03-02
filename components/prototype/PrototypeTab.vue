@@ -116,6 +116,47 @@
       <div class="text-center max-w-md">
         <Layout class="w-12 h-12 mx-auto mb-4 opacity-50" />
         <p class="text-sm mb-4">{{ $t('prototype.emptyHint') }}</p>
+
+        <!-- 主题选择 -->
+        <div v-if="prdContent" class="mb-5">
+          <div class="flex items-center gap-2 mb-2 justify-center">
+            <Palette class="w-3.5 h-3.5 text-muted-foreground" />
+            <span class="text-xs text-muted-foreground">主题色系</span>
+          </div>
+          <div class="flex flex-wrap gap-2 justify-center">
+            <button
+              v-for="opt in themeOptions"
+              :key="opt.preset"
+              class="flex flex-col items-center gap-1 px-2 py-1.5 rounded-lg border transition-all"
+              :class="selectedThemePreset === opt.preset
+                ? 'border-primary bg-primary/5 shadow-sm'
+                : 'border-border hover:border-muted-foreground/40'"
+              @click="selectedThemePreset = opt.preset"
+            >
+              <span
+                class="w-5 h-5 rounded-full border-2 border-white shadow-sm"
+                :style="{ backgroundColor: opt.preset === 'custom' ? customPrimaryColor : opt.color }"
+              />
+              <span class="text-[10px] leading-none text-muted-foreground">{{ opt.label }}</span>
+            </button>
+          </div>
+          <!-- 自定义颜色输入 -->
+          <div v-if="selectedThemePreset === 'custom'" class="flex items-center gap-2 justify-center mt-2">
+            <input
+              v-model="customPrimaryColor"
+              type="color"
+              class="w-7 h-7 rounded border border-border cursor-pointer p-0.5"
+            />
+            <input
+              v-model="customPrimaryColor"
+              type="text"
+              maxlength="7"
+              class="w-24 text-xs border border-border rounded px-2 py-1 bg-background text-foreground font-mono"
+              placeholder="#6366F1"
+            />
+          </div>
+        </div>
+
         <Button
           v-if="prdContent"
           variant="default"
@@ -181,7 +222,8 @@ import PrototypeCodeEditor from './PrototypeCodeEditor.vue'
 import PrototypePageNavigator from './PrototypePageNavigator.vue'
 import PrototypeToolbar from './PrototypeToolbar.vue'
 import { usePrototype } from '~/composables/usePrototype'
-import type { DeviceType } from '~/types/prototype'
+import type { DeviceType, ThemeConfig, ThemePreset } from '~/types/prototype'
+import { THEME_PRESETS, THEME_LABELS } from '~/types/prototype'
 
 // GLM 系列是推荐的原型生成模型（效果更好、更稳定）
 const RECOMMENDED_MODEL_PREFIXES = ['glm-']
@@ -207,6 +249,22 @@ const showAddPageDialog = ref(false)
 const newPageName = ref('')
 const newPageSlug = ref('')
 const selectedDeviceType = ref<DeviceType>('responsive')
+
+// 主题选择状态
+const selectedThemePreset = ref<ThemePreset>('default')
+const customPrimaryColor = ref('#6366F1')
+
+const selectedTheme = computed<ThemeConfig>(() => ({
+  preset: selectedThemePreset.value,
+  primaryColor: selectedThemePreset.value === 'custom' ? customPrimaryColor.value : undefined
+}))
+
+// 所有主题预设选项（用于渲染）
+const themeOptions = (Object.keys(THEME_PRESETS) as ThemePreset[]).map(preset => ({
+  preset,
+  label: THEME_LABELS[preset],
+  color: THEME_PRESETS[preset].primary
+}))
 
 // 本地模型选择状态：优先用 prop 传入的，其次取推荐模型，最后取第一个
 const localModelId = ref('')
@@ -387,7 +445,7 @@ async function handleGenerateFromPRD () {
       })
     }
 
-    await prototypeState.generateFromPRD(prdId!, { modelId, deviceType: selectedDeviceType.value })
+    await prototypeState.generateFromPRD(prdId!, { modelId, deviceType: selectedDeviceType.value, theme: selectedTheme.value })
     toast({ title: t('prototype.generateSuccess'), variant: 'success' })
   } catch (error) {
     toast({

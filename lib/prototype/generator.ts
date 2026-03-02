@@ -12,6 +12,7 @@ import {
 import type { ChatMessage } from '~/lib/ai/types'
 import type { ConversationMessage } from '~/types/conversation'
 import type { IEmbeddingAdapter } from '~/lib/rag/embedding-adapter'
+import type { ThemeConfig } from '~/types/prototype'
 
 export interface PrototypeGenerateOptions {
   modelId?: string
@@ -20,6 +21,7 @@ export interface PrototypeGenerateOptions {
   useRAG?: boolean
   pageCount?: number
   deviceType?: string
+  theme?: ThemeConfig
 }
 
 export interface ParsedPrototypePage {
@@ -52,7 +54,7 @@ export class PrototypeGenerator {
     const adapter = this.modelManager.getAdapter(modelId)
     if (!adapter) throw new Error(`Model ${modelId} not available`)
 
-    const prompt = buildPrototypeFromPRDPrompt(prdContent, options?.pageCount, options?.deviceType)
+    const prompt = buildPrototypeFromPRDPrompt(prdContent, options?.pageCount, options?.deviceType, options?.theme)
 
     const stream = adapter.generateStream(prompt, {
       temperature: options?.temperature || 0.3,
