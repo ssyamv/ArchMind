@@ -11,6 +11,19 @@
 
 ---
 
+## [0.4.3] - 2026-03-03
+
+### 修复 (Fixed)
+
+- **生产环境紧急修复**: 补充 `lib/db/schema.ts` 中 `webhooks` 表缺失的 `type` 字段定义，修复 `GET /api/v1/workspaces/:id/webhooks` 端点 500 错误（`column "type" does not exist`）
+- **数据库迁移**: 生产环境已执行 `ALTER TABLE webhooks ADD COLUMN type VARCHAR(20) NOT NULL DEFAULT 'standard'`
+
+### 文档 (Documentation)
+
+- 新增 `docs/PRODUCTION_HOTFIX_WEBHOOK_TYPE.md` 生产修复指南，包含迁移 SQL、验证步骤和预防措施
+
+---
+
 ## [0.4.0] - 2026-03-02
 
 本版本为 v0.4.0 功能发布版，聚焦 PRD 生成质量提升、RAG 检索优化、原型定制能力增强，以及版本管理功能完善。
