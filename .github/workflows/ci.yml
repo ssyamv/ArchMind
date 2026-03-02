@@ -104,6 +104,62 @@ jobs:
           echo "## Security Audit" >> $GITHUB_STEP_SUMMARY
           pnpm audit --audit-level=high 2>&1 | tail -20 >> $GITHUB_STEP_SUMMARY || true
 
+  # ─── 数据库 Schema 验证 ───────────────────────────────────────────────────────
+  schema-check:
+    name: Database Schema Check
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    services:
+      postgres:
+        image: pgvector/pgvector:pg14
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: archmind_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Initialize database
+        run: |
+          psql postgresql://test:test@localhost:5432/archmind_test < docker/init-db.sql
+        env:
+          PGPASSWORD: test
+
+      - name: Run migrations
+        run: pnpm migrate up
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/archmind_test
+
+      - name: Verify schema consistency
+        run: |
+          echo "## Database Schema Check" >> $GITHUB_STEP_SUMMARY
+          pnpm migrate status >> $GITHUB_STEP_SUMMARY
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/archmind_test
+
   # ─── 单元测试 & 覆盖率 ───────────────────────────────────────────────────────
   test:
     name: Unit Tests

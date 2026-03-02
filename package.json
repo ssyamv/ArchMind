@@ -17,6 +17,7 @@
 		"format:check": "prettier --check \"**/*.{js,ts,vue,json,md,css}\"",
 		"db:init": "tsx scripts/init-db.ts",
 		"db:seed": "tsx scripts/seed-data.ts",
+		"migrate": "tsx scripts/migrate.ts",
 		"db:migrate": "tsx scripts/migrate-documents-schema.ts",
 		"db:migrate-vectors": "tsx scripts/migrate-vector-dimensions.ts",
 		"db:migrate-multi-model": "tsx scripts/migrate-to-multi-model-vectors.ts",
