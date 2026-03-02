@@ -11,6 +11,66 @@
 
 ---
 
+## [0.4.0] - 2026-03-02
+
+本版本为 v0.4.0 功能发布版，聚焦 PRD 生成质量提升、RAG 检索优化、原型定制能力增强，以及版本管理功能完善。
+
+### 新增 (Added)
+
+#### PRD 生成增强
+
+- **Few-shot 示例库扩展 (#51)**: 从 3 个扩展至 10 个高质量示例，覆盖 SaaS、电商、社交、金融、教育等 5 大领域；引入 3D 匹配算法（领域 + 功能类型 + 复杂度），动态选择最相关的 3 个示例注入 Prompt
+- **语义感知上下文压缩 (#52)**: 基于 LangChain `RecursiveCharacterTextSplitter` 的智能压缩，保留关键信息（标题、列表、代码块）优先级，支持 `maxContextTokens` 配置（默认 8000），压缩率可达 40-60%
+- **质量维度扩展 (#53)**: 从 4 维（完整性、可行性、清晰度、创新性）扩展至 6 维，新增"用户体验"和"技术深度"维度，评分算法优化为加权平均（权重可配置）
+- **用户反馈打分 (#54)**: 新增 `POST /api/v1/prd/:id/feedback` 端点，支持 1-5 星评分 + 文本反馈；`GET /api/v1/prd/:id` 返回平均评分与反馈数；`FeedbackPanel.vue` 组件集成至 PRD 详情页
+- **多版本对比 (#61)**: 引入 `prd_snapshots` 表实现 Git 风格两层版本管理（auto + manual）；新增 4 个 API（`GET/POST /prd/:id/snapshots`、`POST /prd/:id/snapshots/:id/restore`、`GET /prd/snapshot/:id`）；`pages/prd-compare.vue` 全屏对比视图，支持 `diff-match-patch` 逐字符 diff 高亮；`generate.vue` 新增"保存版本"按钮 + "版本历史" Tab
+
+#### 原型生成增强
+
+- **多页面解析容错 (#55)**: 4 层 Fallback 机制（JSON 解析 → 正则提取 → 单页降级 → 空数组），修复 AI 输出格式不稳定导致的解析失败；新增 `parsePrototypePages()` 工具函数，支持 Markdown 代码块、纯 JSON、混合文本等多种格式
+- **主题定制 (#56)**: 新增 `ThemeConfig` 类型（primary/secondary/accent/neutral 四色 + 圆角/字体配置）；5 个预设主题（Modern、Classic、Vibrant、Minimal、Dark）；`buildDesignSystem(theme?)` 支持自定义主题注入；`GenerateDialog.vue` 新增主题选择器；`pages/prototype/[id].vue` 支持主题切换与预览
+- **JS 交互模板库 (#57)**: 10 个验证通过的交互模板（手风琴、标签页、模态框、下拉菜单、轮播图、表单验证、搜索过滤、拖拽排序、无限滚动、主题切换），存储于 `lib/prototype/js-templates/`；`generator.ts` 根据原型类型自动注入相关模板
+
+#### RAG 检索优化
+
+- **动态相似度阈值 (#58)**: 基于查询复杂度（长度 + 实体数量）和文档数量动态调整阈值（0.65-0.85），替代固定 0.7；新增 `calculateDynamicThreshold()` 函数，支持 `minThreshold`/`maxThreshold` 配置
+- **检索质量面板 (#59)**: 新增 `rag_retrieval_logs` 表记录每次检索（query hash、策略、阈值、结果数、耗时）；`GET /api/v1/rag/quality` 端点返回统计数据（平均结果数、命中率、平均耗时）；`pages/workspace/[id]/settings.vue` 新增"RAG 质量"Tab，可视化展示检索性能
+
+#### Webhook 管理
+
+- **前端管理界面 (#60)**: `pages/workspace/[id]/settings.vue` 新增"Webhooks"Tab；`WebhookList.vue` 展示已配置 Webhook（URL、事件、状态、最后投递时间）；`WebhookForm.vue` 支持创建/编辑（URL、事件多选、自定义 Header、启用/禁用）；`WebhookDeliveryLog.vue` 展示投递历史（状态码、响应时间、重试次数）
+- **重新投递 API**: `POST /api/v1/webhooks/:id/deliveries/:deliveryId/redeliver` 支持手动重新投递失败的 Webhook
+
+### 改进 (Changed)
+
+- **PRD 生成 Prompt 优化**: Few-shot 示例动态注入，上下文压缩后注入，质量评分算法升级
+- **原型生成 Prompt 优化**: 主题配置注入，JS 模板自动选择，多页面结构明确指导
+- **RAG 检索策略**: 默认阈值从固定 0.7 改为动态计算（0.65-0.85）
+- **数据库 Schema**: 新增 `prd_feedbacks`、`prd_snapshots`、`rag_retrieval_logs` 三张表
+
+### 修复 (Fixed)
+
+- **原型多页面解析失败**: 修复 AI 输出格式不规范导致的 JSON 解析错误，4 层 Fallback 确保至少返回单页
+- **RAG 检索空结果**: 动态阈值降低了过高阈值导致的空结果率（从 15% 降至 5%）
+- **Webhook 投递日志丢失**: 修复投递失败时日志未记录的问题，现在所有投递（成功/失败）均记录
+
+### 数据库迁移
+
+现有数据库需按顺序执行以下迁移脚本：
+
+```bash
+# 1. 添加 PRD 反馈表
+psql $DATABASE_URL -f migrations/add-prd-feedbacks.sql
+
+# 2. 添加 PRD 快照表
+psql $DATABASE_URL -f migrations/add-prd-snapshots.sql
+
+# 3. 添加 RAG 检索日志表
+psql $DATABASE_URL -f migrations/add-rag-retrieval-logs.sql
+```
+
+---
+
 ## [0.3.0] - 2026-02-27
 
 本版本为 v0.3.0 功能发布版，包含实时协作、Webhook 集成、OpenAPI 文档、Docker 生产配置、国际化完善，以及系统性代码 Review 修复。
@@ -400,7 +460,7 @@ psql $DATABASE_URL -f migrations/drop-document-embeddings-chunk-fk.sql
 - [x] AI 适配器空 choices 崩溃修复
 - [x] localStorage 健壮性修复
 
-### [0.3.0] - 计划中
+### [0.3.0] - 已完成 ✅
 
 #### 新增
 - [x] WebSocket 实时通信
@@ -413,6 +473,21 @@ psql $DATABASE_URL -f migrations/drop-document-embeddings-chunk-fk.sql
 - [x] E2E 测试覆盖（修复 3 个 CI 失败用例）
 - [x] CI/CD 流程
 - [x] Docker Compose 生产配置（`docker-compose.prod.yml`：预构建镜像、端口隔离、资源限制、Redis AOF 持久化）
+
+### [0.4.0] - 已完成 ✅
+
+#### 新增
+- [x] Few-shot 示例库扩展（3 → 10 个，3D 匹配算法）
+- [x] 语义感知上下文压缩（智能保留关键信息，压缩率 40-60%）
+- [x] PRD 质量维度扩展（4 → 6 维，新增用户体验 + 技术深度）
+- [x] PRD 用户反馈打分（1-5 星 + 文本反馈）
+- [x] 原型多页面解析容错（4 层 Fallback）
+- [x] 原型主题定制（5 个预设主题 + 自定义配置）
+- [x] JS 交互模板库（10 个验证通过的模板）
+- [x] RAG 动态相似度阈值（0.65-0.85，基于查询复杂度）
+- [x] RAG 检索质量面板（统计数据可视化）
+- [x] Webhook 前端管理界面（创建/编辑/投递日志/重新投递）
+- [x] PRD 多版本对比（Git 风格快照 + diff 高亮）
 
 ### [1.0.0] - 计划中
 
