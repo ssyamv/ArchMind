@@ -1,10 +1,13 @@
 import { ref, computed } from 'vue'
 import { nanoid } from 'nanoid'
-import type { Conversation, ConversationMessage, ConversationTargetType, ConversationTargetContext } from '~/types/conversation'
+import type { Conversation, ConversationMessage, ConversationTargetType, ConversationTargetContext, ImageAttachment } from '~/types/conversation'
+import { useWorkspace } from '~/composables/useWorkspace'
 
 const STORAGE_KEY = 'conversation:active'
 
 export function useConversation () {
+  const { currentWorkspaceId } = useWorkspace()
+
   const conversation = ref<Conversation>({
     id: nanoid(),
     messages: [],
@@ -71,7 +74,7 @@ export function useConversation () {
   }
 
   // Add user message
-  function addUserMessage (content: string, options?: { modelUsed?: string; useRAG?: boolean; documentIds?: string[] }) {
+  function addUserMessage (content: string, options?: { modelUsed?: string; useRAG?: boolean; documentIds?: string[]; documentTitles?: string[]; images?: ImageAttachment[] }) {
     const message: ConversationMessage = {
       id: nanoid(),
       role: 'user',
@@ -79,6 +82,8 @@ export function useConversation () {
       modelUsed: options?.modelUsed,
       useRAG: options?.useRAG,
       documentIds: options?.documentIds,
+      documentTitles: options?.documentTitles,
+      images: options?.images,
       timestamp: Date.now()
     }
     conversation.value.messages.push(message)
@@ -126,7 +131,7 @@ export function useConversation () {
   }
 
   // Save conversation to database (first time)
-  async function saveConversation (title: string) {
+  async function saveConversation (title: string, parentId?: string) {
     try {
       const response = await $fetch<{ success: boolean; id: string }>('/api/v1/conversations/save', {
         method: 'POST',
@@ -134,7 +139,9 @@ export function useConversation () {
           conversationId: conversation.value.id,
           title,
           messages: conversation.value.messages,
-          finalPrdContent: conversation.value.currentPrdContent
+          finalPrdContent: conversation.value.currentPrdContent,
+          parentId: parentId || undefined,
+          workspaceId: currentWorkspaceId.value || undefined // 传递当前工作区 ID
         }
       })
       conversation.value.savedToDb = true
@@ -153,12 +160,15 @@ export function useConversation () {
   async function updateConversation () {
     if (!conversation.value.dbId) return
     try {
+      const conv = conversation.value
+      // 使用当前已保存的标题（不从 PRD 内容覆盖用户手动设置的标题）
+      const title = conv.title
       await $fetch(`/api/v1/conversations/${conversation.value.dbId}`, {
         method: 'PUT',
         body: {
           messages: conversation.value.messages,
           finalPrdContent: conversation.value.currentPrdContent,
-          title: conversation.value.title
+          title
         }
       })
       conversation.value.lastSavedMessageCount = conversation.value.messages.length
@@ -169,13 +179,19 @@ export function useConversation () {
     }
   }
 
+  // Mark PRD content as dirty (manually edited), forces next save to proceed
+  function markPrdContentDirty () {
+    conversation.value.lastSavedMessageCount = -1
+    saveToStorage()
+  }
+
   // Auto-save to database (create or update)
-  async function autoSaveToDatabase () {
+  async function autoSaveToDatabase (parentId?: string) {
     const conv = conversation.value
     // 没有消息时不保存
     if (conv.messages.length === 0) return
 
-    // 消息数量没有变化时不保存
+    // 消息数量没有变化且内容未被手动编辑时不保存
     if (conv.lastSavedMessageCount === conv.messages.length) return
 
     // 原型目标不自动保存到 PRD 数据库
@@ -185,12 +201,8 @@ export function useConversation () {
       // 已有数据库记录，更新
       await updateConversation()
     } else {
-      // 首次保存，自动生成标题
-      const firstUserMessage = conv.messages.find(m => m.role === 'user')
-      const autoTitle = firstUserMessage
-        ? firstUserMessage.content.substring(0, 30) + (firstUserMessage.content.length > 30 ? '...' : '')
-        : '未命名对话'
-      await saveConversation(autoTitle)
+      // 首次保存，标题留空（前端显示"未命名项目"作为占位）
+      await saveConversation('', parentId)
     }
   }
 
@@ -267,6 +279,7 @@ export function useConversation () {
     completeAIMessage,
     saveConversation,
     autoSaveToDatabase,
+    markPrdContentDirty,
     switchTarget,
     updateTargetContext,
     deleteMessagesFrom,

@@ -3,7 +3,8 @@
  * PostgreSQL 数据库表结构
  */
 
-import { pgTable, uuid, varchar, text, integer, boolean, timestamp, jsonb, decimal, index, uniqueIndex } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, varchar, text, integer, smallint, boolean, timestamp, jsonb, decimal, real, index, uniqueIndex } from 'drizzle-orm/pg-core'
+import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 // ============================================
@@ -105,6 +106,7 @@ export const prdDocuments = pgTable('prd_documents', {
   estimatedCost: decimal('estimated_cost', { precision: 10, scale: 4 }),
   status: varchar('status', { length: 20 }).default('draft'),
   metadata: jsonb('metadata').default(sql`'{}'::jsonb`),
+  parentId: uuid('parent_id').references((): AnyPgColumn => prdDocuments.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow()
 }, (table) => {
@@ -112,7 +114,8 @@ export const prdDocuments = pgTable('prd_documents', {
     userIdIdx: index('idx_prd_user_id').on(table.userId),
     workspaceIdIdx: index('idx_prd_workspace_id').on(table.workspaceId),
     createdAtIdx: index('idx_prd_created_at').on(table.createdAt),
-    modelUsedIdx: index('idx_prd_model_used').on(table.modelUsed)
+    modelUsedIdx: index('idx_prd_model_used').on(table.modelUsed),
+    parentIdIdx: index('idx_prd_parent_id').on(table.parentId)
   }
 })
 
@@ -460,4 +463,60 @@ export const webhookDeliveries = pgTable('webhook_deliveries', {
   webhookIdx: index('idx_webhook_deliveries_webhook').on(table.webhookId),
   createdAtIdx: index('idx_webhook_deliveries_created').on(table.createdAt),
   successIdx: index('idx_webhook_deliveries_success').on(table.webhookId, table.success)
+}))
+
+// ============================================
+// PRD 用户反馈表（v0.4.0 #54）
+// ============================================
+export const prdFeedbacks = pgTable('prd_feedbacks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  prdId: uuid('prd_id').references(() => prdDocuments.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  rating: smallint('rating').notNull(), // 1-5，数据库 CHECK 约束由迁移脚本保障
+  positives: text('positives').array(), // 好的方面标签数组
+  negatives: text('negatives').array(), // 需改进标签数组
+  comment: text('comment'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow()
+}, (table) => ({
+  prdIdIdx: index('idx_prd_feedbacks_prd_id').on(table.prdId),
+  userIdIdx: index('idx_prd_feedbacks_user_id').on(table.userId),
+  uniquePrdUser: uniqueIndex('unique_prd_feedback').on(table.prdId, table.userId)
+}))
+
+// ============================================
+// RAG 检索日志表（v0.4.0 #59）
+// ============================================
+export const ragRetrievalLogs = pgTable('rag_retrieval_logs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workspaceId: uuid('workspace_id'), // 可为 null
+  userId: uuid('user_id'),           // 可为 null
+  queryHash: text('query_hash').notNull(), // SHA-256 of query（不存明文）
+  documentIds: uuid('document_ids').array(), // 被引用的文档 ID 列表
+  similarityScores: real('similarity_scores').array(), // 对应相似度分数
+  strategy: text('strategy'),        // 'vector' | 'hybrid'
+  threshold: real('threshold'),      // 实际使用的阈值
+  resultCount: integer('result_count'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow()
+}, (table) => ({
+  workspaceCreatedIdx: index('idx_rag_logs_workspace_created').on(table.workspaceId, table.createdAt)
+}))
+
+// ============================================
+// PRD 快照表（v0.4.0 #61 Git 风格版本管理）
+// snapshot_type: 'auto' = 每次保存自动创建, 'manual' = 用户显式命名版本
+// ============================================
+export const prdSnapshots = pgTable('prd_snapshots', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  prdId: uuid('prd_id').references(() => prdDocuments.id, { onDelete: 'cascade' }).notNull(),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  snapshotType: varchar('snapshot_type', { length: 10 }).notNull().default('auto'),
+  tag: varchar('tag', { length: 200 }),
+  description: text('description'),
+  content: text('content').notNull(),
+  contentSize: integer('content_size'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+}, (table) => ({
+  prdCreatedIdx: index('idx_prd_snapshots_prd_created').on(table.prdId, table.createdAt),
+  typeIdx: index('idx_prd_snapshots_type').on(table.prdId, table.snapshotType)
 }))

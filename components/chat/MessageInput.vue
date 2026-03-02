@@ -5,6 +5,9 @@
       ref="containerRef"
       class="relative rounded-xl bg-muted shadow-sm transition-all"
       :style="{ height: `${containerHeight}px` }"
+      @dragover.prevent="isDragging = true"
+      @dragleave="handleDragLeave"
+      @drop.prevent="handleDrop"
     >
       <!-- @ 文档提及下拉菜单 -->
       <DocumentMentionDropdown
@@ -26,6 +29,17 @@
         <div class="w-12 h-1 rounded-full bg-border transition-all group-hover:bg-primary group-hover:w-16" />
       </div>
 
+      <!-- 拖拽上传遮罩 -->
+      <Transition name="drag-overlay">
+        <div
+          v-if="isDragging"
+          class="absolute inset-0 z-10 rounded-xl border-2 border-dashed border-primary bg-primary/5 flex flex-col items-center justify-center gap-2 pointer-events-none"
+        >
+          <ImageIcon class="w-8 h-8 text-primary/60" />
+          <span class="text-sm text-primary/80 font-medium">{{ $t('chat.dropImageHere') }}</span>
+        </div>
+      </Transition>
+
       <!-- Input Area -->
       <Textarea
         ref="textareaRef"
@@ -35,6 +49,7 @@
         class="w-full h-full resize-none border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 pt-3 bg-transparent"
         :class="mentionedDocs.length > 0 ? 'pb-20' : 'pb-12'"
         @keydown="handleKeydown"
+        @paste="handlePaste"
         @compositionstart="isComposing = true"
         @compositionend="isComposing = false"
         style="padding-left: 1rem; padding-right: 1rem;"
@@ -69,18 +84,19 @@
       </div>
 
       <!-- Bottom Controls Bar -->
-      <div ref="bottomBarRef" class="absolute bottom-0 left-0 right-0 px-3 py-2 flex items-center justify-between bg-transparent rounded-b-lg">
+      <div ref="bottomBarRef" class="absolute bottom-0 left-0 right-0 px-3 py-2 flex items-center justify-between gap-2 bg-transparent rounded-b-lg">
         <!-- Left Controls -->
-        <div ref="leftControlsRef" class="flex items-center gap-2 shrink-0 flex-wrap">
+        <div ref="leftControlsRef" class="flex items-center gap-2 min-w-0 flex-1">
           <!-- Target Selector -->
           <TargetSelector
             v-model="selectedTarget"
             :is-loading="isLoading"
+            class="shrink-0"
           />
 
           <!-- Model Selector -->
           <Select v-model="selectedModel" :disabled="isLoading">
-            <SelectTrigger class="h-8 w-[160px] text-xs border-0 shadow-none hover:bg-background/80 bg-transparent">
+            <SelectTrigger class="h-8 min-w-[100px] max-w-[160px] text-xs border-0 shadow-none hover:bg-background/80 bg-transparent">
               <SelectValue :placeholder="$t('chat.selectModel')" />
             </SelectTrigger>
             <SelectContent>
@@ -96,12 +112,13 @@
             </SelectContent>
           </Select>
 
-          <!-- RAG Toggle -->
+          <!-- RAG Toggle (hidden on narrow width) -->
           <Button
+            v-show="!isNarrow"
             variant="ghost"
             size="sm"
             :disabled="isLoading"
-            class="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-background/60"
+            class="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-background/60 shrink-0"
             @click="useRAG = !useRAG"
           >
             <span
@@ -111,6 +128,17 @@
             <BookOpen class="w-3.5 h-3.5" />
             <span>RAG</span>
           </Button>
+
+          <!-- Image Upload -->
+          <ImageUpload
+            ref="imageUploadRef"
+            :disabled="isLoading"
+            :max-images="5"
+            :max-size-kb="5120"
+            @update="handleImagesUpdate"
+            @error="handleImageError"
+            class="shrink-0"
+          />
         </div>
 
         <!-- Right Controls -->
@@ -142,20 +170,23 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { BookOpen, Send, Loader2, X, FileText, ScrollText } from 'lucide-vue-next'
+import { BookOpen, Send, Loader2, X, FileText, ScrollText, ImageIcon } from 'lucide-vue-next'
 import TargetSelector from './TargetSelector.vue'
 import DocumentMentionDropdown from './DocumentMentionDropdown.vue'
-import type { ConversationTargetType, MentionedDocument } from '~/types/conversation'
+import ImageUpload from './ImageUpload.vue'
+import { useToast } from '~/components/ui/toast/use-toast'
+import type { ConversationTargetType, MentionedDocument, ImageAttachment } from '~/types/conversation'
 
 const { locale } = useI18n()
+const { toast } = useToast()
 
 const emit = defineEmits<{
-  send: [message: string, options: { modelId: string; useRAG: boolean; target: ConversationTargetType; documentIds: string[]; prdIds: string[] }]
+  send: [message: string, options: { modelId: string; useRAG: boolean; target: ConversationTargetType; documentIds: string[]; prdIds: string[]; mentionedDocs: MentionedDocument[]; images?: ImageAttachment[] }]
 }>()
 
 const props = defineProps<{
   isLoading?: boolean
-  availableModels: Array<{ id: string; label: string; isUserModel?: boolean }>
+  availableModels: Array<{ id: string; label: string; isUserModel?: boolean; supportsVision?: boolean }>
   workspaceId?: string
 }>()
 
@@ -191,6 +222,14 @@ const mentionedDocs = ref<MentionedDocument[]>([])
 const mentionStartIndex = ref(-1)
 const dropdownRef = ref<InstanceType<typeof DocumentMentionDropdown>>()
 
+// 图片上传相关状态
+const imageUploadRef = ref<InstanceType<typeof ImageUpload>>()
+const uploadedImages = ref<ImageAttachment[]>([])
+const isDragging = ref(false)
+
+// 响应式宽度检测：当容器宽度 < 500px 时隐藏 RAG 按钮
+const isNarrow = ref(false)
+
 // 工作区 ID：优先使用 prop，其次从 localStorage 获取
 const currentWorkspaceId = computed(() => {
   if (props.workspaceId) return props.workspaceId
@@ -210,6 +249,9 @@ function checkHintVisibility() {
   const available = barWidth - leftWidth - rightFixedWidth
   // hintNaturalWidth 包含 tips 文字宽度 + gap
   showHint.value = available >= hintNaturalWidth + 8
+
+  // 检测容器宽度，决定是否隐藏 RAG 按钮
+  isNarrow.value = barWidth < 500
 }
 
 // 从 localStorage 恢复状态
@@ -455,10 +497,50 @@ function handleSubmit () {
     useRAG: useRAG.value,
     target: selectedTarget.value,
     documentIds,
-    prdIds
+    prdIds,
+    mentionedDocs: mentionedDocs.value,
+    images: uploadedImages.value.length > 0 ? uploadedImages.value : undefined
   })
   input.value = ''
   mentionedDocs.value = []
+  // 清空图片
+  imageUploadRef.value?.clear()
+  uploadedImages.value = []
+}
+
+function handleImagesUpdate (images: ImageAttachment[]) {
+  uploadedImages.value = images
+}
+
+function handleImageError (message: string) {
+  toast({ title: message, variant: 'destructive' })
+}
+
+// 粘贴截图支持（Ctrl+V）
+function handlePaste (event: ClipboardEvent) {
+  if (!event.clipboardData) return
+  const items = Array.from(event.clipboardData.items)
+  const imageItems = items.filter(item => item.type.startsWith('image/'))
+  if (imageItems.length === 0) return
+
+  event.preventDefault()
+  imageUploadRef.value?.pasteFiles(imageItems.map(item => item.getAsFile()).filter(Boolean) as File[])
+}
+
+// 拖拽上传图片
+function handleDragLeave (event: DragEvent) {
+  // 只有真正离开容器才关闭（避免子元素触发误关）
+  if (!containerRef.value?.contains(event.relatedTarget as Node)) {
+    isDragging.value = false
+  }
+}
+
+function handleDrop (event: DragEvent) {
+  isDragging.value = false
+  const files = Array.from(event.dataTransfer?.files ?? []).filter(f => f.type.startsWith('image/'))
+  if (files.length > 0) {
+    imageUploadRef.value?.pasteFiles(files)
+  }
 }
 </script>
 
@@ -477,6 +559,16 @@ function handleSubmit () {
 .resize-handle.is-resizing * {
   user-select: none !important;
   -webkit-user-select: none !important;
+}
+
+/* 拖拽遮罩动画 */
+.drag-overlay-enter-active,
+.drag-overlay-leave-active {
+  transition: opacity 0.15s ease;
+}
+.drag-overlay-enter-from,
+.drag-overlay-leave-to {
+  opacity: 0;
 }
 
 </style>

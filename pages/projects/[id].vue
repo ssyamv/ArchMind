@@ -5,7 +5,7 @@
       <div class="max-w-[1400px] mx-auto px-6 py-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-4">
-            <Button variant="ghost" size="icon" @click="router.back()">
+            <Button variant="ghost" size="icon" @click="router.push('/app')">
               <ArrowLeft class="w-4 h-4" />
             </Button>
             <div>
@@ -51,6 +51,11 @@
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem @click="handleVersionCompare">
+                  <GitCompare class="w-4 h-4 mr-2" />
+                  版本对比
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem @click="handleExportMarkdown">
                   <Download class="w-4 h-4 mr-2" />
                   {{ $t('projects.details.actions.exportMarkdown') }}
@@ -191,7 +196,7 @@
                         <Edit class="w-3.5 h-3.5" />
                         {{ $t('projects.details.edit') }}
                       </Button>
-                      <Button variant="ghost" size="sm" @click="handleExportMarkdown" class="gap-1.5 text-xs">
+<Button variant="ghost" size="sm" @click="handleExportMarkdown" class="gap-1.5 text-xs">
                         <Download class="w-3.5 h-3.5" />
                         {{ $t('common.export') }}
                       </Button>
@@ -263,6 +268,9 @@
                   </div>
                 </CardContent>
               </Card>
+
+              <!-- PRD 用户反馈 -->
+              <FeedbackPanel v-if="prd?.id" :prd-id="prd.id" />
             </div>
 
             <!-- Right Column: Sidebar (1/3 width) -->
@@ -491,7 +499,7 @@ import {
   ArrowLeft, MoreVertical, Download, Trash2, MessageSquarePlus,
   FileText, MessageCircle, Layout, BookOpen, Calendar, Info,
   ChevronDown, User, Sparkles, Maximize2, Edit, Brain, Loader2,
-  FileType, Printer
+  FileType, Printer, GitCompare, GitBranch
 } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
@@ -733,7 +741,7 @@ async function confirmDelete () {
       description: t('projects.deleteSuccessDescription'),
       variant: 'success',
     })
-    router.push('/')
+    router.push('/projects')
   } catch (error) {
     console.error('Failed to delete PRD:', error)
     toast({
@@ -763,6 +771,17 @@ function handleEditPrd () {
   router.push({
     path: '/generate',
     query: { loadPrd: prdId, immersive: '1' }
+  })
+}
+
+function handleVersionCompare () {
+  router.push(`/prd-compare?mode=snapshot&root=${prdId}`)
+}
+
+function handleRegenerateAsVersion () {
+  router.push({
+    path: '/generate',
+    query: { parentId: prdId, immersive: '1' }
   })
 }
 

@@ -1,7 +1,60 @@
 /**
  * 原型图生成的系统提示词
- * 增强版本：设计系统集成 + 组件库 + 质量标准
+ * 增强版本：设计系统集成 + 组件库 + 质量标准 + JS 交互模板库（#57）+ 主题定制（#56）
  */
+
+import { buildJSTemplatePrompt } from '~/lib/prototype/js-templates'
+import type { ThemeConfig } from '~/types/prototype'
+import { THEME_PRESETS } from '~/types/prototype'
+
+/**
+ * 根据主题配置解析颜色
+ */
+function resolveThemeColors (theme?: ThemeConfig) {
+  if (!theme) return THEME_PRESETS.default
+
+  if (theme.preset === 'custom' && theme.primaryColor) {
+    // 简单从 hex 推导 light/dark（调整亮度）
+    return {
+      primary: theme.primaryColor,
+      primaryLight: adjustHexBrightness(theme.primaryColor, 0.2),
+      primaryDark: adjustHexBrightness(theme.primaryColor, -0.2)
+    }
+  }
+
+  return THEME_PRESETS[theme.preset] ?? THEME_PRESETS.default
+}
+
+/**
+ * 简单调整 HEX 颜色亮度（factor > 0 变亮，< 0 变暗）
+ */
+function adjustHexBrightness (hex: string, factor: number): string {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+
+  const clamp = (v: number) => Math.max(0, Math.min(255, Math.round(v)))
+  const adjust = (c: number) => clamp(factor > 0 ? c + (255 - c) * factor : c + c * factor)
+
+  const rr = adjust(r).toString(16).padStart(2, '0')
+  const gg = adjust(g).toString(16).padStart(2, '0')
+  const bb = adjust(b).toString(16).padStart(2, '0')
+
+  return `#${rr}${gg}${bb}`
+}
+
+/**
+ * 构建主题色系 CSS 变量描述（注入到 prompt 中替换默认颜色）
+ */
+function buildThemeColorBlock (theme?: ThemeConfig): string {
+  const colors = resolveThemeColors(theme)
+  return `/* Primary Colors - 主色调（主题定制） */
+--primary-500: ${colors.primary};   /* 主要操作按钮 */
+--primary-600: ${colors.primaryDark};
+--primary-700: ${colors.primaryDark};   /* 按钮hover状态 */
+--primary-400: ${colors.primaryLight};
+--primary-300: ${colors.primaryLight};`
+}
 
 export const PROTOTYPE_SYSTEM_PROMPT = `# 角色定义
 
@@ -459,18 +512,43 @@ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica N
 - 符合设计系统规范
 - 视觉效果要接近真实产品
 
+---
+
+## JavaScript 交互规范
+
+以下是经过验证的标准交互实现，你必须直接使用这些实现，不要重新创造：
+
+${buildJSTemplatePrompt()}
+
+**使用规则：**
+1. 需要弹窗时，复制 \`modal\` 模板的 JS，配合 \`data-modal-open\` / \`data-modal\` / \`data-modal-close\` 属性使用
+2. 需要 Tab 切换时，复制 \`tabs\` 模板的 JS，配合 \`data-tab\` / \`data-tab-panel\` / \`data-tab-group\` 属性使用
+3. 需要下拉菜单时，复制 \`dropdown\` 模板的 JS，配合 \`data-dropdown-toggle\` / \`data-dropdown\` 属性使用
+4. 需要表单校验时，复制 \`form-validate\` 模板的 JS，给 \`<form>\` 添加 \`data-validate\` 属性
+5. 需要 Toast 提示时，引入 \`toast\` 模板的 JS，调用 \`window.showToast('消息', 'success')\`
+6. 需要折叠面板时，复制 \`accordion\` 模板的 JS，配合 \`data-accordion\` / \`data-accordion-toggle\` / \`data-accordion-panel\` 属性使用
+7. 需要侧边栏时，复制 \`sidebar-toggle\` 模板的 JS，配合 \`data-sidebar-toggle\` / \`data-sidebar\` 属性使用
+8. 需要可排序表格时，复制 \`table-sort\` 模板的 JS，给 \`<table>\` 添加 \`data-sortable\` 属性
+9. 需要搜索过滤时，复制 \`search-filter\` 模板的 JS，使用 \`data-search-input\` / \`data-searchable\` 属性
+10. 需要无限滚动时，复制 \`infinite-scroll\` 模板的 JS，配合 \`data-infinite-scroll\` 属性使用
+
 现在，请根据以下 PRD 文档或用户描述生成原型页面。`
 
 /**
  * 从 PRD 构建原型生成 Prompt
  */
-export function buildPrototypeFromPRDPrompt (prdContent: string, pageCount?: number, deviceType?: string): string {
+export function buildPrototypeFromPRDPrompt (prdContent: string, pageCount?: number, deviceType?: string, theme?: ThemeConfig): string {
   const pageHint = pageCount
     ? `请生成 ${pageCount} 个页面的原型。`
     : '请根据 PRD 中描述的功能模块，合理划分页面数量（通常 2-5 个页面）。'
 
   // 设备类型相关的生成指导
   const deviceGuidance = getDeviceGuidance(deviceType)
+
+  // 主题色系（如有自定义主题则注入覆盖提示）
+  const themeNote = theme && theme.preset !== 'default'
+    ? `\n## 主题色系（必须使用以下颜色）\n\n\`\`\`css\n${buildThemeColorBlock(theme)}\n\`\`\`\n所有 primary 相关颜色（按钮、链接、高亮边框、选中状态等）必须使用上方指定的颜色，不得使用默认的 indigo/purple 色。\n`
+    : ''
 
   return `${PROTOTYPE_SYSTEM_PROMPT}
 
@@ -479,7 +557,7 @@ export function buildPrototypeFromPRDPrompt (prdContent: string, pageCount?: num
 根据以下 PRD 文档，生成对应的 HTML 原型页面。
 
 ${pageHint}
-
+${themeNote}
 ## 目标设备类型
 
 ${deviceGuidance}

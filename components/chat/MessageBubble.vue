@@ -17,10 +17,24 @@
         :class="message.role === 'user' ? 'bg-primary text-primary-foreground' : ''"
       >
         <CardContent class="p-4">
-          <!-- User message: plain text -->
-          <p v-if="message.role === 'user'" class="text-sm leading-relaxed whitespace-pre-wrap break-words">
-            {{ message.content }}
-          </p>
+          <!-- User message: plain text + images -->
+          <template v-if="message.role === 'user'">
+            <!-- Images (if any) -->
+            <div v-if="message.images && message.images.length > 0" class="flex flex-wrap gap-2 mb-3">
+              <img
+                v-for="image in message.images"
+                :key="image.id"
+                :src="getImagePreview(image)"
+                :alt="image.name || 'Uploaded image'"
+                class="max-w-[200px] max-h-[200px] rounded border border-border object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                @click="openImagePreview(image)"
+              >
+            </div>
+            <!-- Text content -->
+            <p class="text-sm leading-relaxed whitespace-pre-wrap break-words">
+              {{ message.content }}
+            </p>
+          </template>
           <!-- AI message: markdown rendered -->
           <div v-else class="message-markdown text-sm leading-relaxed break-words" v-html="renderedContent" />
 
@@ -99,6 +113,17 @@
         </div>
 
         <!-- Metadata -->
+        <template v-if="message.role === 'user' && message.documentTitles?.length">
+          <Badge
+            v-for="title in message.documentTitles"
+            :key="title"
+            variant="outline"
+            class="text-xs gap-1 bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950/30 dark:border-blue-800 dark:text-blue-300"
+          >
+            <FileText class="w-3 h-3" />
+            {{ title }}
+          </Badge>
+        </template>
         <Badge v-if="message.modelUsed" variant="secondary" class="text-xs">
           <Cpu class="w-3 h-3 mr-1.5" />
           {{ message.modelUsed }}
@@ -126,10 +151,11 @@
 import { ref, computed } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
-import { Sparkles, User, BookOpen, Cpu, Loader2, Copy, Check, RefreshCw, ArrowLeftFromLine } from 'lucide-vue-next'
+import { Sparkles, User, BookOpen, Cpu, Loader2, Copy, Check, RefreshCw, ArrowLeftFromLine, FileText } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
+import { Badge } from '~/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '~/components/ui/tooltip'
-import type { ConversationMessage } from '~/types/conversation'
+import type { ConversationMessage, ImageAttachment } from '~/types/conversation'
 
 const props = defineProps<{
   message: ConversationMessage
@@ -173,6 +199,20 @@ function handleRetry () {
 function handleBack () {
   emit('back', props.message)
 }
+
+function getImagePreview (image: ImageAttachment): string {
+  if (image.type === 'base64') {
+    return `data:${image.mimeType};base64,${image.data}`
+  }
+  return image.data
+}
+
+function openImagePreview (image: ImageAttachment) {
+  // 在新窗口打开图片
+  const url = getImagePreview(image)
+  window.open(url, '_blank')
+}
+
 </script>
 
 <style scoped>

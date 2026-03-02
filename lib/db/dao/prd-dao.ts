@@ -12,9 +12,9 @@ export class PRDDAO {
     const sql = `
       INSERT INTO prd_documents (
         id, user_id, workspace_id, title, content, user_input, model_used,
-        generation_time, token_count, estimated_cost, status, metadata, created_at, updated_at
+        generation_time, token_count, estimated_cost, status, metadata, parent_id, created_at, updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *
     `
 
@@ -31,6 +31,7 @@ export class PRDDAO {
       prd.estimatedCost || null,
       prd.status || 'draft',
       JSON.stringify(prd.metadata || {}),
+      prd.parentId || null,
       now,
       now
     ])
@@ -146,9 +147,9 @@ export class PRDDAO {
     const sql = `
       INSERT INTO prd_documents (
         id, user_id, workspace_id, title, content, user_input, model_used,
-        generation_time, token_count, estimated_cost, status, metadata, created_at, updated_at
+        generation_time, token_count, estimated_cost, status, metadata, parent_id, created_at, updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *
     `
 
@@ -165,6 +166,7 @@ export class PRDDAO {
       prd.estimatedCost || null,
       prd.status || 'draft',
       JSON.stringify(prd.metadata || {}),
+      prd.parentId || null,
       now,
       now
     ])
@@ -301,6 +303,31 @@ export class PRDDAO {
     return result.rowCount! > 0
   }
 
+  // 更新 PRD 标题
+  static async updateTitle (id: string, title: string): Promise<PRDDocument | null> {
+    const now = new Date().toISOString()
+    const sql = `
+      UPDATE prd_documents
+      SET title = $1, updated_at = $2
+      WHERE id = $3
+      RETURNING *
+    `
+    const result = await dbClient.query<any>(sql, [title, now, id])
+    if (result.rows.length === 0) { return null }
+    return this.mapRowToPRD(result.rows[0])
+  }
+
+  // 查询某 PRD 的所有版本（自身 + 所有以其为 parent_id 的子版本），按 createdAt DESC 排序
+  static async findVersions (rootId: string): Promise<PRDDocument[]> {
+    const sql = `
+      SELECT * FROM prd_documents
+      WHERE id = $1 OR parent_id = $1
+      ORDER BY created_at DESC
+    `
+    const result = await dbClient.query<any>(sql, [rootId])
+    return result.rows.map(row => this.mapRowToPRD(row))
+  }
+
   // 统计 PRD 数量
   static async count (options?: { onlyWithContent?: boolean; workspaceId?: string; userId?: string }): Promise<number> {
     const { onlyWithContent = false, workspaceId, userId } = options || {}
@@ -338,6 +365,7 @@ export class PRDDAO {
       id: row.id,
       userId: row.user_id,
       workspaceId: row.workspace_id,
+      parentId: row.parent_id ?? undefined,
       title: row.title,
       content: row.content,
       userInput: row.user_input,

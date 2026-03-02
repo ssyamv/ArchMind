@@ -1,9 +1,6 @@
-import { readFileSync } from 'fs'
-import { join } from 'path'
-import YAML from 'js-yaml'
 import { PrototypeGenerator } from '~/lib/prototype/generator'
 import { getModelManager } from '~/lib/ai/manager'
-import { EmbeddingServiceFactory } from '~/lib/rag/embedding-adapter'
+import { createEmbeddingAdapter } from '~/server/utils/embedding'
 import type { PrototypeStreamRequest } from '~/types/prototype'
 import type { ConversationMessage } from '~/types/conversation'
 
@@ -25,7 +22,6 @@ export default defineEventHandler(async (event) => {
 
     const runtimeConfig = useRuntimeConfig()
     const glmApiKey = runtimeConfig.glmApiKey as string | undefined
-    const openaiApiKey = runtimeConfig.openaiApiKey as string | undefined
 
     const config = {
       anthropicApiKey: runtimeConfig.anthropicApiKey,
@@ -53,17 +49,7 @@ export default defineEventHandler(async (event) => {
     let embeddingAdapter = null
     if (body.useRAG) {
       try {
-        const configPath = join(process.cwd(), 'config', 'ai-models.yaml')
-        const content = readFileSync(configPath, 'utf-8')
-        const parsed = YAML.load(content) as { ai_models: { models: Record<string, any> } }
-        const modelConfig = parsed.ai_models.models[modelId]
-
-        if (modelConfig) {
-          embeddingAdapter = await EmbeddingServiceFactory.createFromModelConfig(
-            modelConfig,
-            { glmApiKey, openaiApiKey }
-          )
-        }
+        embeddingAdapter = await createEmbeddingAdapter({ glmApiKey })
       } catch (error) {
         console.error('[RAG] 初始化 Embedding 失败:', error)
       }

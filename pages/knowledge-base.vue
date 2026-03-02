@@ -27,12 +27,22 @@
             <TabsTrigger value="all">{{ t('knowledgeBase.tabs.all') }}</TabsTrigger>
             <TabsTrigger value="documents">{{ t('knowledgeBase.tabs.documents') }}</TabsTrigger>
             <TabsTrigger value="prds">{{ t('knowledgeBase.tabs.prds') }}</TabsTrigger>
+            <TabsTrigger value="stats">检索统计</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
       <!-- Table -->
       <div class="flex-1 overflow-auto p-6 min-w-0">
+        <!-- 检索统计 Tab -->
+        <RetrievalStats
+          v-if="activeTab === 'stats' && currentWorkspaceId"
+          :workspace-id="currentWorkspaceId"
+        />
+
+        <!-- 文档列表（仅非统计 Tab 时渲染） -->
+        <template v-else-if="activeTab !== 'stats'">
+
         <!-- Loading: 骨架屏 -->
         <div v-if="loading">
           <Table class="min-w-[640px]">
@@ -112,7 +122,7 @@
                   </Badge>
                 </TableCell>
                 <TableCell class="whitespace-nowrap">
-                  <template v-if="resource.type === 'DOCUMENT'">
+                  <template v-if="resource.processingStatus !== undefined">
                     <Badge :variant="getIndexStatusVariant(resource.processingStatus)" class="text-xs whitespace-nowrap">
                       {{ t(getIndexStatusKey(resource.processingStatus)) }}
                     </Badge>
@@ -141,6 +151,18 @@
                       <Download class="w-4 h-4 mr-2" />
                       {{ t('knowledgeBase.actions.download') }}
                     </DropdownMenuItem>
+                    <!-- PRD 索引控制 -->
+                    <template v-if="resource.type === 'PRD'">
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        :disabled="resource.processingStatus === 'processing'"
+                        @click.stop="handleToggleRag(resource)"
+                      >
+                        <Loader2 v-if="resource.processingStatus === 'processing'" class="w-4 h-4 mr-2 animate-spin" />
+                        <Brain v-else class="w-4 h-4 mr-2" />
+                        {{ resource.ragEnabled ? t('knowledgeBase.actions.disableIndex') : t('knowledgeBase.actions.enableIndex') }}
+                      </DropdownMenuItem>
+                    </template>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       class="text-destructive focus:text-destructive"
@@ -165,6 +187,7 @@
           @update:current-page="handlePageChange"
         />
         </template>
+        </template><!-- end activeTab !== 'stats' -->
       </div>
 
       <!-- Footer with Storage Stats -->
@@ -230,10 +253,13 @@
       v-if="selectedResource"
       class="w-80 border-l border-border flex flex-col overflow-hidden"
     >
-      <div class="p-4 border-b border-border">
+      <div class="p-4 border-b border-border flex items-center justify-between">
         <h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           {{ t('knowledgeBase.inspector.title') }}
         </h3>
+        <Button variant="ghost" size="icon" class="h-6 w-6 -mr-1" @click="selectedResource = null">
+          <X class="w-4 h-4" />
+        </Button>
       </div>
 
       <ScrollArea class="flex-1">
@@ -331,7 +357,10 @@ import {
   Download,
   Trash2,
   File,
-  Image as ImageIcon
+  Image as ImageIcon,
+  X,
+  Brain,
+  Loader2
 } from 'lucide-vue-next'
 import { Input } from '~/components/ui/input'
 import { Button } from '~/components/ui/button'
@@ -388,6 +417,7 @@ interface Resource {
   lastSync: string
   size: number
   processingStatus?: 'pending' | 'processing' | 'completed' | 'failed' | 'retrying'
+  ragEnabled?: boolean
   usage?: {
     references: number
     lastUsed: string
@@ -500,6 +530,8 @@ async function loadResources () {
         source: 'GENERATED' as const,
         lastSync: prd.updated_at || prd.created_at,
         size: (prd.content?.length || 0) * 2, // Rough estimate: 2 bytes per char
+        processingStatus: prd.metadata?.ragEnabled ? (prd.metadata?.ragStatus || 'pending') : undefined,
+        ragEnabled: prd.metadata?.ragEnabled === true,
         usage: {
           references: 0,
           lastUsed: prd.updated_at || prd.created_at
@@ -526,6 +558,9 @@ async function loadResources () {
   }
 }
 
+// RAG 轮询计时器（需在 onUnmounted 前定义）
+const ragPollingTimers = new Map<string, ReturnType<typeof setTimeout>>()
+
 onMounted(() => {
   loadResources()
 
@@ -539,8 +574,9 @@ onUnmounted(() => {
   if (process.client) {
     window.removeEventListener('workspace-changed', loadResources)
   }
+  ragPollingTimers.forEach(timer => clearTimeout(timer))
+  ragPollingTimers.clear()
 })
-
 function selectResource(resource: Resource) {
   selectedResource.value = resource
 }
@@ -675,5 +711,68 @@ function handleReindexAll() {
     console.error('Reindex failed:', err)
     toast({ title: t('knowledgeBase.reindexFailed'), variant: 'destructive' })
   })
+}
+
+// RAG 索引开关（仅 PRD 类型）
+async function handleToggleRag(resource: Resource) {
+  if (resource.type !== 'PRD') return
+  const enabling = !resource.ragEnabled
+
+  // 乐观更新 UI
+  const idx = resources.value.findIndex(r => r.id === resource.id)
+  if (idx === -1) return
+  resources.value[idx] = {
+    ...resources.value[idx],
+    ragEnabled: enabling,
+    processingStatus: enabling ? 'processing' : undefined
+  }
+
+  try {
+    if (enabling) {
+      await $fetch(`/api/v1/prd/${resource.id}/vectorize`, { method: 'POST' })
+      toast({ title: t('knowledgeBase.actions.enableIndex'), variant: 'success' })
+      pollPrdRagStatus(resource.id)
+    } else {
+      await $fetch(`/api/v1/prd/${resource.id}/vectorize`, { method: 'DELETE' })
+      toast({ title: t('knowledgeBase.actions.disableIndex'), variant: 'success' })
+    }
+  } catch (err) {
+    console.error('[RAG] toggle failed:', err)
+    // 回滚
+    resources.value[idx] = {
+      ...resources.value[idx],
+      ragEnabled: !enabling,
+      processingStatus: !enabling ? 'completed' : undefined
+    }
+    toast({
+      title: enabling ? t('projects.details.ragEnableFailed') : t('projects.details.ragDisableFailed'),
+      variant: 'destructive'
+    })
+  }
+}
+
+function pollPrdRagStatus(prdId: string) {
+  if (ragPollingTimers.has(prdId)) clearTimeout(ragPollingTimers.get(prdId)!)
+  const timer = setTimeout(async () => {
+    ragPollingTimers.delete(prdId)
+    try {
+      const res = await $fetch<{ data: any }>(`/api/v1/prd/${prdId}`)
+      const status = res.data?.metadata?.ragStatus as 'pending' | 'processing' | 'completed' | 'failed' | 'retrying' | undefined
+      const idx = resources.value.findIndex(r => r.id === prdId)
+      if (idx !== -1) {
+        resources.value[idx] = {
+          ...resources.value[idx],
+          ragEnabled: res.data?.metadata?.ragEnabled === true,
+          processingStatus: res.data?.metadata?.ragEnabled ? (status || 'pending') : undefined
+        }
+      }
+      if (status === 'processing') {
+        pollPrdRagStatus(prdId)
+      }
+    } catch {
+      // 忽略轮询错误
+    }
+  }, 3000)
+  ragPollingTimers.set(prdId, timer)
 }
 </script>

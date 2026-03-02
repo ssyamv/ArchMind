@@ -16,11 +16,14 @@ const SUPPORTED_EVENTS = [
   'comment.created'
 ] as const
 
+const WEBHOOK_TYPES = ['standard', 'feishu', 'dingtalk', 'wecom', 'slack', 'discord'] as const
+
 const BodySchema = z.object({
   name: z.string().min(1).max(255),
   url: z.string().url(),
   events: z.array(z.enum(SUPPORTED_EVENTS)).min(1),
-  headers: z.record(z.string()).optional()
+  headers: z.record(z.string()).optional(),
+  type: z.enum(WEBHOOK_TYPES).optional()
 })
 
 export default defineEventHandler(async (event) => {
@@ -41,7 +44,8 @@ export default defineEventHandler(async (event) => {
     url: body.url,
     events: body.events,
     secret,
-    headers: body.headers ?? {}
+    headers: body.headers ?? {},
+    type: body.type ?? 'standard'
   })
 
   // 响应中包含 secret，仅此一次返回（后续不再展示）

@@ -22,13 +22,21 @@ export class OllamaAdapter implements AIModelAdapter {
     })
   }
 
-  private buildMessages (prompt: string, options?: GenerateOptions) {
+  private buildMessages (prompt: string, options?: GenerateOptions): OpenAI.ChatCompletionMessageParam[] {
     if (options?.messages) {
-      return options.messages.map(m => ({ role: m.role as 'system' | 'user' | 'assistant', content: m.content }))
+      return options.messages.map((m): OpenAI.ChatCompletionMessageParam => {
+        // Ollama 不支持多模态内容部分，将 ContentBlock[] 降级为纯文本
+        const textContent = Array.isArray(m.content)
+          ? m.content.filter(b => b.type === 'text').map(b => b.text || '').join('\n')
+          : m.content as string
+        if (m.role === 'system') return { role: 'system', content: textContent }
+        if (m.role === 'assistant') return { role: 'assistant', content: textContent }
+        return { role: 'user', content: textContent }
+      })
     }
     return [
-      { role: 'system' as const, content: options?.systemPrompt || '' },
-      { role: 'user' as const, content: prompt }
+      { role: 'system', content: options?.systemPrompt || '' },
+      { role: 'user', content: prompt }
     ]
   }
 

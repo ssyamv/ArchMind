@@ -337,6 +337,28 @@ export class ModelManager {
   }
 
   /**
+   * 获取第一个可用的视觉模型适配器
+   * 按优先级查找：GLM 视觉版 > Claude > GPT-4 系列 > Gemini
+   */
+  getVisionAdapter (): AIModelAdapter | null {
+    const visionPriority = [
+      'glm-4.6v',
+      'claude-sonnet-4-6', 'claude-opus-4-6', 'claude-haiku-4-5',
+      'gpt-4.1', 'gpt-4o', 'gpt-4-vision-preview',
+      'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'
+    ]
+    for (const modelId of visionPriority) {
+      const adapter = this.adapters.get(modelId)
+      if (adapter) return adapter
+    }
+    // 兜底：遍历所有适配器，找第一个支持视觉的
+    for (const adapter of this.adapters.values()) {
+      if (adapter.getCapabilities().supportsVision) return adapter
+    }
+    return null
+  }
+
+  /**
    * 检查模型是否可用
    */
   async isModelAvailable (modelId: string): Promise<boolean> {

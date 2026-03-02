@@ -128,6 +128,9 @@ importers:
       dagre:
         specifier: ^0.8.5
         version: 0.8.5
+      diff-match-patch:
+        specifier: ^1.0.5
+        version: 1.0.5
       docx:
         specifier: ^9.6.0
         version: 9.6.0
@@ -252,6 +255,9 @@ importers:
       '@types/bcrypt':
         specifier: ^6.0.0
         version: 6.0.0
+      '@types/diff-match-patch':
+        specifier: ^1.0.36
+        version: 1.0.36
       '@types/ioredis':
         specifier: ^5.0.0
         version: 5.0.0
@@ -4473,6 +4479,9 @@ packages:
   '@types/deep-eql@4.0.2':
     resolution: {integrity: sha512-c9h9dVVMigMPc4bwTvC5dxqtqJZwQPePsWjPlpSOnojbor6pGqdk541lfA7AqFQr5pB1BRdq0juY9db81BwyFw==}
 
+  '@types/diff-match-patch@1.0.36':
+    resolution: {integrity: sha512-xFdR6tkm0MWvBfO8xXCSsinYxHcqkQUlcHeSpMC2ukzOb6lwQAfDmW+Qt0AvlGd8HpsS28qKsB+oPeJn9I39jg==}
+
   '@types/esrecurse@4.3.1':
     resolution: {integrity: sha512-xJBAbDifo5hpffDBuHl0Y8ywswbiAp/Wi7Y/GtAgSlZyIABppyurxVueOPE8LUQOxdlgi6Zqce7uoEpqNTeiUw==}
 
@@ -6054,6 +6063,9 @@ packages:
 
   didyoumean@1.2.2:
     resolution: {integrity: sha512-gxtyfqMg7GKyhQmb056K7M3xszy/myH8w+B4RT+QXBQsvAOdc3XymqDDPHx1BgPgsdAA5SIifona89YtRATDzw==}
+
+  diff-match-patch@1.0.5:
+    resolution: {integrity: sha512-IayShXAgj/QMXgB0IWmKx+rOPuGMhqm5w6jvFxmVenXKIzRqTAAsbBPT3kWQeGANj3jGgvcvv4yK6SxqYmikgw==}
 
   diff@7.0.0:
     resolution: {integrity: sha512-PJWHUb1RFevKCwaFA9RlG5tCd+FO5iRh9A8HEtkmBH2Li03iJriB6m6JIN4rGz3K3JLawI7/veA1xzRKP6ISBw==}
@@ -15312,6 +15324,8 @@ snapshots:
 
   '@types/deep-eql@4.0.2': {}
 
+  '@types/diff-match-patch@1.0.36': {}
+
   '@types/esrecurse@4.3.1': {}
 
   '@types/estree@1.0.8': {}
@@ -17006,6 +17020,8 @@ snapshots:
       dequal: 2.0.3
 
   didyoumean@1.2.2: {}
+
+  diff-match-patch@1.0.5: {}
 
   diff@7.0.0: {}
 

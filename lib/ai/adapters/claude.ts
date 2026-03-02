@@ -21,14 +21,47 @@ export class ClaudeAdapter implements AIModelAdapter {
 
   private buildClaudeParams (prompt: string, options?: GenerateOptions) {
     let systemPrompt = options?.systemPrompt
-    let messages: Array<{ role: 'user' | 'assistant'; content: string }>
+    let messages: Array<{ role: 'user' | 'assistant'; content: string | any[] }>
 
     if (options?.messages) {
       const systemMsg = options.messages.find(m => m.role === 'system')
-      if (systemMsg) systemPrompt = systemMsg.content
+      if (systemMsg) systemPrompt = typeof systemMsg.content === 'string' ? systemMsg.content : ''
+
       messages = options.messages
         .filter(m => m.role !== 'system')
-        .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
+        .map(m => {
+          // 处理多模态内容
+          if (Array.isArray(m.content)) {
+            const content = m.content.map(block => {
+              if (block.type === 'text') {
+                return { type: 'text', text: block.text || '' }
+              } else if (block.type === 'image') {
+                // Claude 支持 base64 和 URL
+                if (block.imageBase64) {
+                  return {
+                    type: 'image',
+                    source: {
+                      type: 'base64',
+                      media_type: block.mimeType || 'image/jpeg',
+                      data: block.imageBase64
+                    }
+                  }
+                } else if (block.imageUrl) {
+                  return {
+                    type: 'image',
+                    source: {
+                      type: 'url',
+                      url: block.imageUrl
+                    }
+                  }
+                }
+              }
+              return { type: 'text', text: '' }
+            })
+            return { role: m.role as 'user' | 'assistant', content }
+          }
+          return { role: m.role as 'user' | 'assistant', content: m.content as string }
+        })
     } else {
       messages = [{ role: 'user', content: prompt }]
     }

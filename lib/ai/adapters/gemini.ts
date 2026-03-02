@@ -19,17 +19,42 @@ export class GeminiAdapter implements AIModelAdapter {
 
   private buildGeminiParams (prompt: string, options?: GenerateOptions) {
     let systemInstruction: string | undefined
-    let contents: Array<{ role: string; parts: Array<{ text: string }> }>
+    let contents: Array<{ role: string; parts: any[] }>
 
     if (options?.messages) {
       const systemMsg = options.messages.find(m => m.role === 'system')
-      if (systemMsg) systemInstruction = systemMsg.content
+      if (systemMsg) systemInstruction = typeof systemMsg.content === 'string' ? systemMsg.content : ''
       contents = options.messages
         .filter(m => m.role !== 'system')
-        .map(m => ({
-          role: m.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: m.content }]
-        }))
+        .map(m => {
+          // 处理多模态内容
+          if (Array.isArray(m.content)) {
+            const parts = m.content.map(block => {
+              if (block.type === 'text') {
+                return { text: block.text || '' }
+              } else if (block.type === 'image') {
+                // Gemini 支持 inline data
+                if (block.imageBase64) {
+                  return {
+                    inlineData: {
+                      mimeType: block.mimeType || 'image/jpeg',
+                      data: block.imageBase64
+                    }
+                  }
+                }
+              }
+              return { text: '' }
+            })
+            return {
+              role: m.role === 'assistant' ? 'model' : 'user',
+              parts
+            }
+          }
+          return {
+            role: m.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: m.content as string }]
+          }
+        })
     } else {
       systemInstruction = options?.systemPrompt
       contents = [{ role: 'user', parts: [{ text: prompt }] }]

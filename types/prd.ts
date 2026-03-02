@@ -6,6 +6,7 @@ export interface PRDDocument {
   id: string;
   userId?: string;
   workspaceId?: string;
+  parentId?: string;
   title: string;
   userInput: string;
   content: string;
@@ -35,6 +36,7 @@ export interface PRDGenerateRequest {
   useRAG?: boolean;
   documentIds?: string[];
   workspaceId?: string;
+  parentId?: string;  // 指定该次生成为某 PRD 的新版本
 }
 
 export interface PRDGenerateResponse {

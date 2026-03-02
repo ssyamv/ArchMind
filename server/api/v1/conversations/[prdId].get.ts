@@ -62,7 +62,7 @@ export default defineEventHandler(async (event) => {
       return {
         success: true,
         data: {
-          conversation: null,
+          conversation: { title: prd.title },
           messages: [],
           prdContent: prd.content
         }
@@ -99,7 +99,7 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       data: {
-        conversation,
+        conversation: conversation ? { ...conversation, title: prd.title } : null,
         messages: formattedMessages,
         prdContent: prd.content
       }

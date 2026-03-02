@@ -6,6 +6,15 @@
 import { createHmac } from 'crypto'
 import { WebhookDAO } from '~/lib/db/dao/webhook-dao'
 import { WebhookDeliveryDAO } from '~/lib/db/dao/webhook-delivery-dao'
+import {
+  toFeishuPayload,
+  toDingtalkPayload,
+  toWecomPayload,
+  toSlackPayload,
+  toDiscordPayload,
+  type StandardPayload
+} from './webhook-adapters'
+import type { WebhookType } from '~/lib/db/dao/webhook-dao'
 
 /** 支持的 Webhook 事件类型 */
 export type WebhookEvent =
@@ -26,6 +35,20 @@ function signPayload (secret: string, body: string): string {
 }
 
 /**
+ * 根据 Webhook 类型将标准负载转换为平台专属格式
+ */
+function buildPlatformBody (type: WebhookType, payload: StandardPayload): string {
+  switch (type) {
+    case 'feishu':   return JSON.stringify(toFeishuPayload(payload))
+    case 'dingtalk': return JSON.stringify(toDingtalkPayload(payload))
+    case 'wecom':    return JSON.stringify(toWecomPayload(payload))
+    case 'slack':    return JSON.stringify(toSlackPayload(payload))
+    case 'discord':  return JSON.stringify(toDiscordPayload(payload))
+    default:         return JSON.stringify(payload)
+  }
+}
+
+/**
  * 触发工作区内订阅了该事件的所有活跃 Webhook
  * 异步执行，失败不影响主业务流程
  */
@@ -38,17 +61,27 @@ export async function triggerWebhooks (
     const webhooks = await WebhookDAO.findActiveByEvent(workspaceId, event)
     if (webhooks.length === 0) return
 
-    const payload = {
+    const payload: StandardPayload = {
       event,
       workspaceId,
       timestamp: new Date().toISOString(),
       data
     }
-    const bodyStr = JSON.stringify(payload)
+    // 标准格式原始 JSON，用于签名和 standard 类型投递
+    const standardBodyStr = JSON.stringify(payload)
 
     // 并行触发所有匹配的 Webhook
     await Promise.allSettled(
-      webhooks.map(webhook => deliverWebhook(webhook.id, webhook.url, webhook.secret, webhook.headers, event, payload, bodyStr))
+      webhooks.map(webhook => deliverWebhook(
+        webhook.id,
+        webhook.url,
+        webhook.secret,
+        webhook.headers,
+        webhook.type ?? 'standard',
+        event,
+        payload,
+        standardBodyStr
+      ))
     )
   } catch (err) {
     console.warn('[WebhookTrigger] Failed to trigger webhooks:', err)
@@ -63,11 +96,16 @@ async function deliverWebhook (
   url: string,
   secret: string,
   customHeaders: Record<string, string>,
+  type: WebhookType,
   event: string,
-  payload: Record<string, unknown>,
-  bodyStr: string
+  payload: StandardPayload,
+  standardBodyStr: string
 ): Promise<void> {
-  const signature = signPayload(secret, bodyStr)
+  // 平台消息体（飞书/钉钉等走各自格式，standard 走原始 JSON）
+  const bodyStr = buildPlatformBody(type, payload)
+
+  // 签名始终基于标准负载，方便接收端做幂等校验
+  const signature = signPayload(secret, standardBodyStr)
   const startTime = Date.now()
 
   let statusCode: number | undefined
@@ -79,17 +117,25 @@ async function deliverWebhook (
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
 
+    // 平台型 Webhook 不需要 ArchMind 签名头，只保留通用头
+    const headers: Record<string, string> = type === 'standard'
+      ? {
+          ...customHeaders,
+          'Content-Type': 'application/json',
+          'User-Agent': 'ArchMind-Webhook/1.0',
+          'X-ArchMind-Event': event,
+          'X-ArchMind-Signature': `sha256=${signature}`,
+          'X-ArchMind-Timestamp': new Date().toISOString()
+        }
+      : {
+          ...customHeaders,
+          'Content-Type': 'application/json',
+          'User-Agent': 'ArchMind-Webhook/1.0'
+        }
+
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        // 自定义 header 放在前面，系统安全 header 放在后面确保不被覆盖
-        ...customHeaders,
-        'Content-Type': 'application/json',
-        'User-Agent': 'ArchMind-Webhook/1.0',
-        'X-ArchMind-Event': event,
-        'X-ArchMind-Signature': `sha256=${signature}`,
-        'X-ArchMind-Timestamp': new Date().toISOString()
-      },
+      headers,
       body: bodyStr,
       signal: controller.signal
     }).finally(() => clearTimeout(timer))
@@ -107,7 +153,7 @@ async function deliverWebhook (
   WebhookDeliveryDAO.create({
     webhookId,
     event,
-    payload,
+    payload: payload as unknown as Record<string, unknown>,
     statusCode,
     responseBody,
     durationMs,

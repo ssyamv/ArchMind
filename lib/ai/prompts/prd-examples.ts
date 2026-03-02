@@ -135,7 +135,7 @@ const smartRecommendationExample: PRDExample = {
 
 ## 4. 核心功能
 
-### 4.1 协同过滤推荐
+### 4.1 协同过滤推��
 
 **优先级:** Must-have
 
@@ -307,17 +307,616 @@ const searchOptimizationExample: PRDExample = {
   category: 'optimization'
 }
 
+// ─── 新增示例（#51）────────────────────────────────────────────────────────────
+
 /**
- * 导出所有示例
+ * 示例 4: SaaS B2B - 企业 RBAC 权限管理
  */
-export const PRD_EXAMPLES: PRDExample[] = [
-  pointsRedemptionExample,
-  smartRecommendationExample,
-  searchOptimizationExample
+const rbacPermissionExample: PRDExample = {
+  userInput: '为 SaaS 企业系统设计 RBAC 权限管理功能，支持角色定义、权限分配和操作审计',
+  context: `[文档 1: 现有用户体系]
+- 用户表: users（id, email, company_id, created_at）
+- 企业表: companies（id, name, plan, max_members）
+- 当前权限: 简单的 admin/member 二级区分
+
+[文档 2: 客户反馈]
+- 企业客户要求: 部门级权限隔离
+- 高频诉求: 自定义角色、操作日志、权限批量调整`,
+  prdOutput: `## 1. 产品概述
+
+**产品名称:** RBAC 权限管理系统
+
+**一句话定位:** 为 SaaS 企业提供细粒度的角色-权限-资源三层访问控制体系
+
+**价值主张:**
+- **用户价值:** 企业管理员可精确控制每个员工的操作边界，避免误操作风险
+- **商业价值:** 满足中大型企业合规需求，提升企业版付费转化率预计 25%
+- **技术价值:** 统一权限校验层，替代现有散乱的 if/else 鉴权逻辑
+
+---
+
+## 4. 核心功能
+
+### 4.1 角色管理
+
+**优先级:** Must-have
+
+**功能描述:**
+支持创建自定义角色，每个角色绑定一组权限集合。系统预置超级管理员、部门管理员、普通成员三个内置角色，企业可在此基础上扩展。
+
+**用户流程:**
+1. 企业管理员进入「权限管理」→「角色配置」页
+2. 点击「新建角色」，填写角色名称和描述
+3. 在权限矩阵中勾选该角色可访问的模块和操作
+4. 保存后，该角色可被分配给任意成员
+
+**边界条件:**
+- 超级管理员角色不可删除、不可修改权限范围
+- 删除角色前须将该角色下所有成员迁移至其他角色
+- 角色数量上限：企业版 50 个，基础版 5 个
+
+**数据要求:**
+- \`roles\` 表: id, company_id, name, description, is_system, created_by
+- \`role_permissions\` 表: role_id, resource, action（如 documents:read）
+- \`user_roles\` 表: user_id, role_id, granted_by, granted_at
+
+### 4.2 操作审计日志
+
+**优先级:** Should-have
+
+**功能描述:**
+记录所有权限变更操作，包含操作人、操作时间、变更前后状态，支持按时间范围和操作类型筛选导出。
+
+**边界条件:**
+- 审计日志只读，任何人不可删除
+- 日志保留 180 天（企业版），30 天（基础版）
+
+**数据要求:**
+- \`audit_logs\` 表: id, company_id, operator_id, action, target_type, target_id, before_state, after_state, ip, created_at
+
+---
+
+## 6. 成功指标
+
+### 6.1 权限配置完成率
+- **目标:** 上线 60 天内，企业版客户权限配置完成率 > 80%
+- **度量方式:** 已完成角色分配的企业数 / 企业总数
+
+### 6.2 误操作投诉率
+- **目标:** 权限相关误操作工单下降 60%
+- **追踪频率:** 每月`,
+  category: 'feature'
+}
+
+/**
+ * 示例 5: 教育行业 - 在线学习进度追踪与证书发放
+ */
+const learningProgressExample: PRDExample = {
+  userInput: '为在线学习平台设计学习进度追踪与证书发放功能，帮助学员看到自己的成长',
+  context: `[文档 1: 课程体系]
+- 课程结构: 章节 → 小节 → 视频/测验
+- 现有数据: 视频播放时长、测验得分
+- 完课定义: 视频观看≥80%且测验通过
+
+[文档 2: 用户调研]
+- 42% 学员表示缺乏学习动力
+- 学员最期待: 可分享的结业证书、进度可视化`,
+  prdOutput: `## 1. 产品概述
+
+**产品名称:** 学习成长体系
+
+**一句话定位:** 可视化学习进度 + 自动化证书发放，激励学员持续完课
+
+**价值主张:**
+- **用户价值:** 学员清晰看到每日学习成果，完课后获得可分享证书
+- **商业价值:** 提升课程完课率，目标从当前 35% 提升至 60%，带动口碑传播
+- **技术价值:** 统一进度计算标准，为后续 AI 学习路径推荐奠定数据基础
+
+---
+
+## 4. 核心功能
+
+### 4.1 学习进度可视化
+
+**优先级:** Must-have
+
+**功能描述:**
+在课程详情页和个人中心展示环形进度图，实时显示当前学员在每门课程中的完成百分比。进度按小节维度计算，视频≥80%且测验≥60分视为该小节完成。
+
+**用户流程:**
+1. 学员进入课程页，顶部展示总体进度百分比（环形图）
+2. 章节列表中每个小节显示状态图标（未学/进行中/已完成）
+3. 学员完成视频或测验后，进度实时更新（±3秒内）
+
+**边界条件:**
+- 视频快进不计入有效观看时长
+- 测验可重试，取最高分计入
+
+**数据要求:**
+- \`learning_records\` 表: user_id, course_id, lesson_id, watch_duration, quiz_score, completed_at
+- 进度缓存: Redis key \`progress:{user_id}:{course_id}\`，TTL 1小时
+
+### 4.2 证书自动发放
+
+**优先级:** Must-have
+
+**功能描述:**
+学员完成所有必修小节后，系统自动生成 PDF 证书，包含姓名、课程名、完成日期和唯一验证码，可分享至社交平台。
+
+**边界条件:**
+- 证书一经发放不可撤销（退款后证书依然有效，但课程访问权限关闭）
+- 每门课程限发一张证书（重修不重发）
+
+**数据要求:**
+- \`certificates\` 表: id, user_id, course_id, issued_at, verify_code（UUID），pdf_url
+- PDF 生成服务: 异步队列，生成后推送通知
+
+---
+
+## 6. 成功指标
+
+### 6.1 完课率
+- **目标:** 上线 90 天达到 55%（当前 35%）
+- **度量方式:** 完课人数 / 购课人数
+
+### 6.2 证书分享率
+- **目标:** 获证学员中 30% 主动分享至社交平台
+- **追踪频率:** 每周`,
+  category: 'feature'
+}
+
+/**
+ * 示例 6: 医疗健康 - 用户健康数据看板与预警
+ */
+const healthDashboardExample: PRDExample = {
+  userInput: '为健康 App 设计用户健康数据看板与预警功能，整合运动、睡眠、饮食多维数据',
+  context: `[文档 1: 现有数据源]
+- 运动数据: 步数、心率（来自穿戴设备）
+- 睡眠数据: 入睡/起床时间、深浅睡比例
+- 饮食记录: 用户手动输入热量
+
+[文档 2: 健康目标设置]
+- 用户可设置每日步数、睡眠时长、卡路里目标
+- 当前无异常提醒，用户容易忽略健康风险`,
+  prdOutput: `## 1. 产品概述
+
+**产品名称:** 健康数据看板与智能预警
+
+**一句话定位:** 多维健康数据聚合展示，异常时主动提醒用户关注健康风险
+
+**价值主张:**
+- **用户价值:** 一屏查看全天健康状态，关键指标异常时第一时间收到提醒
+- **商业价值:** 提升 DAU 15%，付费会员续费率预计提升 20%
+- **技术价值:** 统一健康数据模型，为后续 AI 健康建议奠定基础
+
+---
+
+## 4. 核心功能
+
+### 4.1 多维健康看板
+
+**优先级:** Must-have
+
+**功能描述:**
+首页展示当日健康总览卡片，包含步数环、睡眠评分、热量平衡三个核心指标，点击可下钻查看7日/30日趋势折线图。
+
+**用户流程:**
+1. 用户打开 App，首页展示今日健康评分（综合计算，满分100）
+2. 三个指标卡片分别显示完成率（步数/目标）
+3. 点击任意卡片进入详情，查看历史趋势和同龄人对比百分位
+
+**边界条件:**
+- 数据缺失超过 6 小时（如设备未佩戴），显示「数据不完整」提示
+- 首次使用用户默认目标：步数 8000 步、睡眠 7 小时、热量 1800kcal
+
+**数据要求:**
+- \`health_metrics\` 表: user_id, date, metric_type, value, source（device/manual）
+- 综合评分算法: 步数×0.4 + 睡眠×0.35 + 热量平衡×0.25
+
+### 4.2 健康异常预警
+
+**优先级:** Must-have
+
+**功能描述:**
+当用户健康指标触发阈值时，推送 Push 通知，支持自定义预警规则。内置 3 类预警：连续心率异常（>120bpm 持续 10 分钟）、睡眠不足（<5h 连续 3 天）、步数严重不足（<2000步 连续 5 天）。
+
+**边界条件:**
+- 同类预警每天最多推送 1 次，避免打扰
+- 用户可关闭任意预警类型
+
+---
+
+## 6. 成功指标
+
+### 6.1 预警触达率
+- **目标:** 推送后 1 小时内打开率 > 35%
+- **追踪频率:** 实时
+
+### 6.2 DAU 提升
+- **目标:** 看板上线后 DAU 提升 15%
+- **度量方式:** 对照组 A/B 测试`,
+  category: 'feature'
+}
+
+/**
+ * 示例 7: 金融行业 - 账单分析与智能记账分类
+ */
+const billAnalysisExample: PRDExample = {
+  userInput: '为个人记账 App 设计账单分析与智能分类功能，让用户一眼看清每月消费结构',
+  context: `[文档 1: 现有记账功能]
+- 支持手动添加收支记录
+- 分类: 餐饮、购物、交通等 12 个固定类别
+- 数据: 已积累 50 万条用户账单记录
+
+[文档 2: 用户痛点调研]
+- 62% 用户不清楚自己每月"钱花在哪了"
+- 手动分类耗时，30% 用户放弃坚持记账`,
+  prdOutput: `## 1. 产品概述
+
+**产品名称:** 智能账单分析
+
+**一句话定位:** AI 自动分类账单，月度消费报告让财务状况一目了然
+
+**价值主张:**
+- **用户价值:** 银行账单自动导入 + AI 分类，记账效率提升 80%
+- **商业价值:** 提升月活 25%，为高级分析功能付费转化创造条件
+- **技术价值:** 积累高质量分类训练数据，持续优化 AI 模型准确率
+
+---
+
+## 4. 核心功能
+
+### 4.1 智能账单分类
+
+**优先级:** Must-have
+
+**功能描述:**
+通过 NLP 模型对账单摘要自动识别消费类别，准确率目标 ≥ 90%。支持用户手动纠正，纠正后自动学习更新个人分类偏好模型。
+
+**用户流程:**
+1. 用户授权导入银行/支付宝账单（CSV 或 Open API）
+2. 系统解析账单，调用分类服务为每笔账单打标签
+3. 账单列表展示分类结果，置信度 < 70% 的记录标「待确认」
+4. 用户点击修正分类，确认后更新个人偏好模型
+
+**边界条件:**
+- 跨行账单合并去重（相同金额+商户+5秒内视为重复）
+- 隐私保护：账单明细本地加密，不上传原始文本到服务器
+
+**数据要求:**
+- \`transactions\` 表: id, user_id, amount, merchant, category, confidence, source, date
+- 分类模型: 基于 BERT-Chinese 微调，支持在线更新个人偏好向量
+
+### 4.2 月度消费报告
+
+**优先级:** Must-have
+
+**功能描述:**
+每月 1 日自动生成上月消费报告，包含支出分布饼图、同比环比变化、TOP5 消费商户、超支预警，可一键分享为图片。
+
+**边界条件:**
+- 报告数据锁定（生成后不因分类修改而变更）
+- 收入和支出分开统计
+
+---
+
+## 6. 成功指标
+
+### 6.1 AI 分类准确率
+- **目标:** ≥ 90%（用户纠正率 < 10%）
+- **追踪频率:** 每周计算滚动 7 日准确率
+
+### 6.2 月活提升
+- **目标:** 上线 60 天 MAU 提升 25%
+- **度量方式:** A/B 测试对照组`,
+  category: 'feature'
+}
+
+/**
+ * 示例 8: 内容社区 - 创作者激励体系
+ */
+const creatorIncentiveExample: PRDExample = {
+  userInput: '为内容社区设计创作者激励体系，包含打赏、分成和创作勋章，留住优质创作者',
+  context: `[文档 1: 社区现状]
+- 月活创作者: 5 万人，头部 1000 人贡献 60% 内容
+- 现有功能: 点赞、评论、转发，无直接变现手段
+- 创作者流失率: 月均 15%
+
+[文档 2: 商业目标]
+- 降低头部创作者流失率至 5%
+- 新增付费用户转化`,
+  prdOutput: `## 1. 产品概述
+
+**产品名称:** 创作者激励体系
+
+**一句话定位:** 打赏 + 广告分成 + 成长勋章，让优质创作持续有收益
+
+**价值主张:**
+- **用户价值（创作者）:** 内容变现路径清晰，收入可预期
+- **用户价值（读者）:** 打赏好内容，获得专属互动特权
+- **商业价值:** 头部创作者留存率提升，预计平台内容量增长 40%
+
+---
+
+## 4. 核心功能
+
+### 4.1 打赏系统
+
+**优先级:** Must-have
+
+**功能描述:**
+读者可对文章/视频一键打赏，金额档位 1/5/10/50/100 元。打赏金额 90% 归创作者，平台抽成 10%。创作者收益 T+7 日可提现。
+
+**用户流程:**
+1. 读者点击「打赏」按钮，选择金额（或自定义）
+2. 调起支付弹窗，完成支付
+3. 创作者收到收益通知，内容页展示总打赏金额和打赏人头像
+4. 创作者在「收益中心」查看打赏明细，申请提现
+
+**边界条件:**
+- 打赏不可退款（特殊情况走人工审核）
+- 创作者未达认证门槛（粉丝≥100）不可开启打赏
+- 未成年人账号禁止打赏功能
+
+**数据要求:**
+- \`tip_orders\` 表: id, reader_id, creator_id, content_id, amount, platform_fee, status, paid_at
+- \`creator_earnings\` 表: creator_id, period, tips_income, ad_income, withdrawable, withdrawn
+
+### 4.2 创作勋章体系
+
+**优先级:** Should-have
+
+**功能描述:**
+基于创作数量、质量、粉丝增长等维度自动授予勋章，分 5 个等级（青铜→钻石），高等级勋章解锁流量扶持权益。
+
+---
+
+## 6. 成功指标
+
+### 6.1 头部创作者月留存率
+- **目标:** 从 85% 提升至 95%
+- **追踪频率:** 每月
+
+### 6.2 平均创作者月收入
+- **目标:** 头部创作者月均收入 > 2000 元
+- **追踪频率:** 每月`,
+  category: 'feature'
+}
+
+/**
+ * 示例 9: 工具软件 - 数据导入导出与批量操作
+ */
+const dataImportExportExample: PRDExample = {
+  userInput: '为工具软件设计数据导入导出与批量操作功能，支持 Excel/CSV 格式，提升工作效率',
+  context: `[文档 1: 当前数据操作]
+- 只支持逐条手动录入数据
+- 数据量大时操作繁琐，客户投诉较多
+- 已有基础的表格展示组件
+
+[文档 2: 客户需求调研]
+- 80% 企业客户有批量导入需求
+- 最常见格式: Excel (.xlsx) 和 CSV
+- 关键需求: 导入前预览、错误行标红`,
+  prdOutput: `## 1. 产品概述
+
+**产品名称:** 数据批量导入导出
+
+**一句话定位:** 支持 Excel/CSV 一键批量导入导出，提升企业数据管理效率 10 倍
+
+**价值主张:**
+- **用户价值:** 原本需要 2 小时的数据录入，批量导入 3 分钟完成
+- **商业价值:** 解决企业客户核心痛点，续费率预计提升 30%
+- **技术价值:** 通用批量处理框架，���复用至其他模块
+
+---
+
+## 4. 核心功能
+
+### 4.1 批量数据导入
+
+**优先级:** Must-have
+
+**功能描述:**
+支持上传 .xlsx / .csv 文件（最大 10MB，最多 5000 行），系统解析后展示预览表格，标红不合规行并提示错误原因，用户确认后批量写入数据库。
+
+**用户流程:**
+1. 进入数据列表页，点击「批量导入」
+2. 下载标准模板（含字段说明和示例数据）
+3. 上传填写完成的文件，系统解析并展示预览（最多预览50行）
+4. 错误行标红，展示错误类型（如「手机号格式不正确」）
+5. 用户选择「跳过错误行导入」或「修正后重新上传」
+6. 确认后异步导入，完成后邮件/站内信通知
+
+**边界条件:**
+- 单次导入超 5000 行时，拆分为多个任务分批处理
+- 导入过程中页面可关闭，任务在后台继续执行
+- 重复数据处理策略：默认「忽略重复」，可配置「覆盖更新」
+
+**数据要求:**
+- \`import_tasks\` 表: id, user_id, status, total, success, failed, file_url, created_at
+- \`import_error_logs\` 表: task_id, row_number, field, error_message
+
+### 4.2 数据导出
+
+**优先级:** Must-have
+
+**功能描述:**
+支持全量导出和筛选条件导出，格式选择 Excel 或 CSV，超过 1 万行时异步生成下载链接，链接有效期 24 小时。
+
+---
+
+## 6. 成功指标
+
+### 6.1 批量导入成功率
+- **目标:** 单次导入成功率 > 95%（不含用户数据格式错误）
+- **追踪频率:** 每天
+
+### 6.2 客户操作时长
+- **目标:** 批量录入任务平均耗时从 120 分钟降至 10 分钟
+- **度量方式:** 导入任务完成耗时 P50`,
+  category: 'feature'
+}
+
+/**
+ * 示例 10: 政务/企业内部 - 审批流程引擎
+ */
+const approvalWorkflowExample: PRDExample = {
+  userInput: '为政务/企业内部系统设计审批流程引擎，支持多级审批、条件分支和流程追踪',
+  context: `[文档 1: 现有审批现状]
+- 审批通过邮件/微信手动流转，容易遗漏
+- 无标准化流程，不同部门各用各的规则
+- 月均审批超 3000 件，管理员难以追踪状态
+
+[文档 2: 合规要求]
+- 财务报销需: 直属领导 → 财务总监 → CFO（金额>10万）
+- 需保留完整的审批记录，用于年度审计`,
+  prdOutput: `## 1. 产品概述
+
+**产品名称:** 智能审批流程引擎
+
+**一句话定位:** 可视化流程设计 + 自动化流转，让审批有据可查、有序可控
+
+**价值主张:**
+- **用户价值:** 申请人实时查看审批进度，审批人集中处理待办，效率提升 60%
+- **商业价值:** 减少因流程混乱导致的合规风险，满足政务/大型企业审计要求
+- **技术价值:** 通用流程引擎，可复用至请假、采购、权限申请等多场景
+
+---
+
+## 4. 核心功能
+
+### 4.1 流程设计器
+
+**优先级:** Must-have
+
+**功能描述:**
+提供拖拽式流程设计界面，支持顺序节点、条件分支（如金额>10万走额外审批层）、并行审批（需全部通过）三种节点类型。
+
+**用户流程:**
+1. 流程管理员进入「流程设计」，选择场景模板或从空白创建
+2. 拖拽节点到画布，配置每个节点的审批人（指定人/角色/部门主管）
+3. 为条件分支设置规则（如 amount > 100000 走分支 A）
+4. 保存并发布，指定该流程适用的申请表单
+
+**边界条件:**
+- 流程节点上限：20 个（避免过于复杂）
+- 已有进行中的审批单时，流程不可修改（需新建版本）
+- 系统内置超时处理：超过 48 小时未审批，自动升级至上级
+
+**数据要求:**
+- \`workflow_definitions\` 表: id, name, nodes_config（JSONB）, version, status
+- \`approval_instances\` 表: id, workflow_id, applicant_id, form_data, current_node, status, created_at
+- \`approval_records\` 表: instance_id, node_id, approver_id, action, comment, acted_at
+
+### 4.2 审批待办中心
+
+**优先级:** Must-have
+
+**功能描述:**
+审批人的统一待办工作台，按紧急程度排序，支持批量审批（同类型低风险申请），提供移动端 Push 提醒。
+
+**边界条件:**
+- 批量审批上限：一次最多 50 条
+- 批量操作仅适用于预定义的低风险类型（由管理员配置）
+
+---
+
+## 6. 成功指标
+
+### 6.1 审批平均耗时
+- **目标:** 从当前平均 3.5 天降至 1 天以内
+- **追踪频率:** 每周
+
+### 6.2 审批按时完成率
+- **目标:** 48 小时内完成率 > 90%
+- **度量方式:** 按时完成审批数 / 总审批数`,
+  category: 'feature'
+}
+
+// ─── 行业关键词词表（#51 三维匹配算法用）─────────────────────────────────────
+
+const INDUSTRY_KEYWORD_MAP: Record<string, string[]> = {
+  'saas-b2b': ['SaaS', 'saas', '企业', 'B2B', 'b2b', 'RBAC', 'rbac', '权限', '角色', '多租户', '工作空间'],
+  'education': ['教育', '学习', '课程', '学员', '培训', '证书', '题库', '作业', '考试', '在线教育'],
+  'health': ['健康', '医疗', '运动', '睡眠', '心率', '饮食', '卡路里', '穿戴', '体重', '血压'],
+  'finance': ['金融', '记账', '账单', '收支', '理财', '支出', '预算', '报销', '财务', '银行'],
+  'community': ['社区', '内容', '创作者', '打赏', '粉丝', '评论', '分享', '话题', '关注', '激励'],
+  'tools': ['工具', '效率', '批量', '导入', '导出', 'Excel', 'CSV', '自动化', '模板', '数据处理'],
+  'gov-enterprise': ['政务', '审批', '流程', '工单', '报销', '采购', '合规', '审计', '内部系统'],
+  'ecommerce': ['电商', '商品', '购物', '订单', '积分', '优惠', '购买', '结算', '库存', '推荐']
+}
+
+const FUNCTION_KEYWORDS: string[] = [
+  '管理', '分析', '追踪', '激励', '导出', '导入', '审批', '看板', '证书',
+  '权限', '统计', '报告', '预警', '分类', '评分', '推荐', '搜索', '缓存'
 ]
 
 /**
- * 根据用户输入选择最相关的示例
+ * 维度1：行业关键词匹配（0 或 1）
+ * 同时在用户输入和示例输入中检测行业词，两者命中同一行业则得满分
+ */
+function industryKeywordMatch (userInput: string, exampleInput: string): number {
+  for (const [, keywords] of Object.entries(INDUSTRY_KEYWORD_MAP)) {
+    const userHit = keywords.some(kw => userInput.includes(kw))
+    const exampleHit = keywords.some(kw => exampleInput.includes(kw))
+    if (userHit && exampleHit) return 1
+  }
+  return 0
+}
+
+/**
+ * 维度2：功能动词匹配（0..1）
+ * 计算两者功能词集合的命中数占比
+ */
+function functionKeywordMatch (userInput: string, exampleInput: string): number {
+  const userHits = FUNCTION_KEYWORDS.filter(kw => userInput.includes(kw))
+  const exampleHits = FUNCTION_KEYWORDS.filter(kw => exampleInput.includes(kw))
+  if (userHits.length === 0 && exampleHits.length === 0) return 0
+  const intersection = userHits.filter(kw => exampleHits.includes(kw))
+  const union = new Set([...userHits, ...exampleHits])
+  return union.size > 0 ? intersection.length / union.size : 0
+}
+
+/**
+ * 维度3：文本 Jaccard 相似度（0..1）
+ */
+function jaccardSimilarity (userInput: string, exampleInput: string): number {
+  const userKeywords = new Set(extractKeywords(userInput.toLowerCase()))
+  const exampleKeywords = new Set(extractKeywords(exampleInput.toLowerCase()))
+  if (userKeywords.size === 0 && exampleKeywords.size === 0) return 0
+  const intersection = [...userKeywords].filter(k => exampleKeywords.has(k))
+  const union = new Set([...userKeywords, ...exampleKeywords])
+  return union.size > 0 ? intersection.length / union.size : 0
+}
+
+/**
+ * 三维综合评分
+ */
+function computeMatchScore (userInput: string, ex: PRDExample): number {
+  const dim1 = industryKeywordMatch(userInput, ex.userInput)
+  const dim2 = functionKeywordMatch(userInput, ex.userInput)
+  const dim3 = jaccardSimilarity(userInput, ex.userInput)
+  return dim1 * 0.5 + dim2 * 0.3 + dim3 * 0.2
+}
+
+/**
+ * 导出所有示例（原有3个 + 新增7个 = 10个）
+ */
+export const PRD_EXAMPLES: PRDExample[] = [
+  pointsRedemptionExample,       // #01 电商 - 积分抵现
+  smartRecommendationExample,    // #02 电商 - 智能推荐
+  searchOptimizationExample,     // #03 电商 - 搜索优化
+  rbacPermissionExample,         // #04 SaaS B2B - RBAC 权限
+  learningProgressExample,       // #05 教育 - 学习进度追踪
+  healthDashboardExample,        // #06 医疗健康 - 健康看板
+  billAnalysisExample,           // #07 金融 - 账单分析
+  creatorIncentiveExample,       // #08 内容社区 - 创作者激励
+  dataImportExportExample,       // #09 工具软件 - 数据导入导出
+  approvalWorkflowExample        // #10 政务/企业 - 审批流程
+]
+
+/**
+ * 根据用户输入选择最相关的示例（三维匹配算法，#51）
  * @param userInput 用户输入
  * @param count 返回示例数量（默认2个）
  * @returns 最相关的PRD示例
@@ -326,49 +925,11 @@ export function selectRelevantExamples (
   userInput: string,
   count: number = 2
 ): PRDExample[] {
-  const input = userInput.toLowerCase()
-
-  // 简单的关键词匹配策略
-  const scores: Array<{ example: PRDExample; score: number }> = []
-
-  for (const example of PRD_EXAMPLES) {
-    let score = 0
-
-    // 类别匹配
-    if (example.category === 'feature' && (
-      input.includes('增加') ||
-      input.includes('新增') ||
-      input.includes('开发')
-    )) {
-      score += 2
-    }
-
-    if (example.category === 'optimization' && (
-      input.includes('优化') ||
-      input.includes('性能') ||
-      input.includes('提升')
-    )) {
-      score += 2
-    }
-
-    // 关键词匹配
-    const keywords = extractKeywords(input)
-    const exampleKeywords = extractKeywords(example.userInput.toLowerCase())
-
-    for (const keyword of keywords) {
-      if (exampleKeywords.includes(keyword)) {
-        score += 1
-      }
-    }
-
-    scores.push({ example, score })
-  }
-
-  // 按分数降序排序，返回前N个
-  return scores
+  return PRD_EXAMPLES
+    .map(ex => ({ ex, score: computeMatchScore(userInput, ex) }))
     .sort((a, b) => b.score - a.score)
     .slice(0, count)
-    .map(item => item.example)
+    .map(({ ex }) => ex)
 }
 
 /**
@@ -376,7 +937,7 @@ export function selectRelevantExamples (
  */
 function extractKeywords (text: string): string[] {
   // 移除停用词
-  const stopWords = ['的', '我', '想', '在', '一个', '根据', '和', '等']
+  const stopWords = ['的', '我', '想', '在', '一个', '根据', '和', '等', '为', '设计', '功能', '支持']
 
   // 分词（简单按空格和标点分割）
   const words = text
