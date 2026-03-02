@@ -1,10 +1,6 @@
-import { readFileSync } from 'fs'
-import { join } from 'path'
-import YAML from 'js-yaml'
 import { ChatEngine } from '~/lib/chat/engine'
 import { getModelManager } from '~/lib/ai/manager'
-import { EmbeddingServiceFactory } from '~/lib/rag/embedding-adapter'
-import type { ConversationMessage, ConversationTargetType, ConversationTargetContext } from '~/types/conversation'
+import type { ConversationMessage, ConversationTargetType, ConversationTargetContext, ImageAttachment } from '~/types/conversation'
 
 interface ChatStreamRequest {
   message: string
@@ -18,6 +14,7 @@ interface ChatStreamRequest {
   documentIds?: string[]
   prdIds?: string[]
   workspaceId?: string
+  images?: ImageAttachment[]
 }
 
 export default defineEventHandler(async (event) => {
@@ -38,7 +35,6 @@ export default defineEventHandler(async (event) => {
 
     const runtimeConfig = useRuntimeConfig()
     const glmApiKey = runtimeConfig.glmApiKey as string | undefined
-    const openaiApiKey = runtimeConfig.openaiApiKey as string | undefined
 
     const config = {
       anthropicApiKey: runtimeConfig.anthropicApiKey,
@@ -63,19 +59,15 @@ export default defineEventHandler(async (event) => {
     }
 
     // 初始化 Embedding（如果需要 RAG 或有 @ 提及文档/PRD）
+    // Embedding 服务独立于对话模型，只使用 GLM Embedding
     let embeddingAdapter = null
     if (body.useRAG || (body.documentIds && body.documentIds.length > 0) || (body.prdIds && body.prdIds.length > 0)) {
       try {
-        const configPath = join(process.cwd(), 'config', 'ai-models.yaml')
-        const content = readFileSync(configPath, 'utf-8')
-        const parsed = YAML.load(content) as { ai_models: { models: Record<string, any> } }
-        const modelConfig = parsed.ai_models.models[modelId]
-
-        if (modelConfig) {
-          embeddingAdapter = await EmbeddingServiceFactory.createFromModelConfig(
-            modelConfig,
-            { glmApiKey, openaiApiKey }
-          )
+        if (glmApiKey) {
+          const { GLMEmbeddingAdapter } = await import('~/lib/rag/adapters/glm-embedding')
+          embeddingAdapter = new GLMEmbeddingAdapter(glmApiKey)
+        } else {
+          console.warn('[RAG] 未配置 GLM_API_KEY，无法初始化 Embedding 服务')
         }
       } catch (error) {
         console.error('[RAG] 初始化 Embedding 失败:', error)
@@ -91,15 +83,55 @@ export default defineEventHandler(async (event) => {
       workspaceId: body.workspaceId
     })
 
+    // 视觉代理：当主模型不支持视觉但用户上传了图片时，自动用视觉模型描述图片
+    const requestImages = body.images?.map(img => ({
+      type: img.type,
+      data: img.data,
+      mimeType: img.mimeType
+    }))
+
+    let finalMessage = body.message
+    let finalImages: typeof requestImages = requestImages
+    let visionProxyUsed = false
+    let visionProxyModel: string | undefined
+
+    if (requestImages && requestImages.length > 0) {
+      const modelSupportsVision = selectedModel.getCapabilities().supportsVision
+      if (!modelSupportsVision) {
+        const visionAdapter = engine.getModelManager().getVisionAdapter()
+        if (visionAdapter) {
+          try {
+            // 通知前端视觉代理开始（非阻塞提示）
+            event.node.res.write(`data: ${JSON.stringify({ visionProxy: true, visionModel: visionAdapter.modelId, done: false })}\n\n`)
+
+            const imageDescription = await engine.describeImages(requestImages, body.message)
+            // 将图片描述追加到消息中，不再传图片给主模型
+            finalMessage = `${body.message}\n\n[图片内容描述（由 ${visionAdapter.name} 分析）]\n${imageDescription}`
+            finalImages = undefined // 主模型不再接收图片
+            visionProxyUsed = true
+            visionProxyModel = visionAdapter.modelId
+          } catch (err) {
+            console.error('[VisionProxy] 图片描述失败，丢弃图片继续:', err)
+            // 视觉代理失败时，丢弃图片（不传给不支持视觉的主模型），正常发送文字消息
+            finalImages = undefined
+          }
+        } else {
+          // 没有可用的视觉模型，丢弃图片，避免传给不支持视觉的主模型
+          finalImages = undefined
+        }
+      }
+    }
+
     // 流式生成
-    const stream = engine.chatStream(body.message, body.history || [], {
+    const stream = engine.chatStream(finalMessage, body.history || [], {
       modelId,
       temperature: body.temperature,
       maxTokens: body.maxTokens,
       useRAG: body.useRAG === true && embeddingAdapter !== null,
       documentIds: body.documentIds,
       prdIds: body.prdIds,
-      workspaceId: body.workspaceId
+      workspaceId: body.workspaceId,
+      images: finalImages
     })
 
     const MAX_CONTENT_LENGTH = 200_000 // 200K 字符上限，防止内存溢出
@@ -169,7 +201,8 @@ export default defineEventHandler(async (event) => {
     event.node.res.write(`data: ${JSON.stringify({
       chunk: '',
       done: true,
-      isPRD
+      isPRD,
+      ...(visionProxyUsed ? { visionProxyUsed, visionProxyModel } : {})
     })}\n\n`)
     event.node.res.end()
   } catch (error) {

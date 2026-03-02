@@ -43,7 +43,7 @@
               <Pencil class="w-4 h-4 mr-2" />
               {{ $t('common.edit') }}
             </DropdownMenuItem>
-            <DropdownMenuItem @click.stop="handleDuplicate">
+<DropdownMenuItem @click.stop="handleDuplicate">
               <Copy class="w-4 h-4 mr-2" />
               {{ $t('common.duplicate') }}
             </DropdownMenuItem>
@@ -120,6 +120,7 @@ interface Project {
 
 const { t } = useI18n()
 const { toast } = useToast()
+const router = useRouter()
 const isDuplicating = ref(false)
 
 const props = defineProps<{
@@ -167,4 +168,5 @@ async function handleDuplicate() {
     isDuplicating.value = false
   }
 }
+
 </script>

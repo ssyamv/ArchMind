@@ -7,7 +7,7 @@ import { ModelManager } from '~/lib/ai/manager'
 import { RAGRetriever } from '~/lib/rag/retriever'
 import { buildConversationalPrompt } from '~/lib/ai/prompts/conversation-system'
 import { buildPrototypeConversationalPrompt } from '~/lib/ai/prompts/prototype-system'
-import type { ChatMessage } from '~/lib/ai/types'
+import type { ChatMessage, ContentBlock } from '~/lib/ai/types'
 import type { ConversationMessage, ConversationTargetType, ConversationTargetContext } from '~/types/conversation'
 import type { IEmbeddingAdapter } from '~/lib/rag/embedding-adapter'
 
@@ -20,6 +20,7 @@ export interface ChatStreamOptions {
   documentIds?: string[]
   prdIds?: string[]
   workspaceId?: string
+  images?: Array<{ type: 'base64' | 'url'; data: string; mimeType: string }>
 }
 
 export interface ChatEngineOptions {
@@ -51,6 +52,52 @@ export class ChatEngine {
     this.documentIds = options?.documentIds
     this.prdIds = options?.prdIds
     this.workspaceId = options?.workspaceId
+  }
+
+  /**
+   * 暴露 ModelManager，供外部调用 getVisionAdapter() 等
+   */
+  getModelManager (): ModelManager {
+    return this.modelManager
+  }
+
+  /**
+   * 使用视觉模型描述图片列表，返回汇总的文字描述
+   * 当主模型不支持视觉时作为代理使用
+   */
+  async describeImages (
+    images: Array<{ type: 'base64' | 'url'; data: string; mimeType: string }>,
+    context?: string
+  ): Promise<string> {
+    const visionAdapter = this.modelManager.getVisionAdapter()
+    if (!visionAdapter) {
+      throw new Error('No vision-capable model available')
+    }
+
+    const contentBlocks: import('~/lib/ai/types').ContentBlock[] = []
+
+    if (context) {
+      contentBlocks.push({ type: 'text', text: `用户消息：${context}\n\n请描述以下图片内容，结合用户消息给出有针对性的分析：` })
+    } else {
+      contentBlocks.push({ type: 'text', text: '请详细描述以下图片的内容，包括文字、图表、界面元素等关键信息：' })
+    }
+
+    for (const img of images) {
+      if (img.type === 'base64') {
+        contentBlocks.push({ type: 'image', imageBase64: img.data, mimeType: img.mimeType })
+      } else {
+        contentBlocks.push({ type: 'image', imageUrl: img.data })
+      }
+    }
+
+    const description = await visionAdapter.generateText('', {
+      maxTokens: 1000,
+      messages: [
+        { role: 'user', content: contentBlocks }
+      ]
+    })
+
+    return description
   }
 
   /**
@@ -89,7 +136,8 @@ ${this.targetContext.prototypeHtml}
   private buildMessages (
     history: ConversationMessage[],
     currentMessage: string,
-    systemPrompt: string
+    systemPrompt: string,
+    currentImages?: Array<{ type: 'base64' | 'url'; data: string; mimeType: string }>
   ): ChatMessage[] {
     const messages: ChatMessage[] = [
       { role: 'system', content: systemPrompt }
@@ -99,14 +147,60 @@ ${this.targetContext.prototypeHtml}
     const recentHistory = history.slice(-MAX_HISTORY_MESSAGES)
 
     for (const msg of recentHistory) {
-      messages.push({
-        role: msg.role,
-        content: msg.content
-      })
+      // 如果消息包含图片，构建多模态内容
+      if (msg.images && msg.images.length > 0) {
+        const contentBlocks: ContentBlock[] = [
+          { type: 'text', text: msg.content }
+        ]
+        for (const img of msg.images) {
+          if (img.type === 'base64') {
+            contentBlocks.push({
+              type: 'image',
+              imageBase64: img.data,
+              mimeType: img.mimeType
+            })
+          } else if (img.type === 'url') {
+            contentBlocks.push({
+              type: 'image',
+              imageUrl: img.data
+            })
+          }
+        }
+        messages.push({
+          role: msg.role,
+          content: contentBlocks
+        })
+      } else {
+        messages.push({
+          role: msg.role,
+          content: msg.content
+        })
+      }
     }
 
-    // 添加当前用户消息（可能包含目标上下文）
-    messages.push({ role: 'user', content: currentMessage })
+    // 添加当前用户消息（可能包含目标上下文和图片）
+    if (currentImages && currentImages.length > 0) {
+      const contentBlocks: ContentBlock[] = [
+        { type: 'text', text: currentMessage }
+      ]
+      for (const img of currentImages) {
+        if (img.type === 'base64') {
+          contentBlocks.push({
+            type: 'image',
+            imageBase64: img.data,
+            mimeType: img.mimeType
+          })
+        } else if (img.type === 'url') {
+          contentBlocks.push({
+            type: 'image',
+            imageUrl: img.data
+          })
+        }
+      }
+      messages.push({ role: 'user', content: contentBlocks })
+    } else {
+      messages.push({ role: 'user', content: currentMessage })
+    }
 
     return messages
   }
@@ -171,7 +265,7 @@ ${this.targetContext.prototypeHtml}
     const contextualMessage = this.buildContextualMessage(currentMessage)
 
     // 构建完整的 messages 数组
-    const messages = this.buildMessages(history, contextualMessage, systemPrompt)
+    const messages = this.buildMessages(history, contextualMessage, systemPrompt, options?.images)
 
     // 调用模型流式生成
     const streamIterator = modelAdapter.generateStream('', {

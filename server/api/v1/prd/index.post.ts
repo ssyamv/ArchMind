@@ -1,9 +1,6 @@
 import { PRDGenerator } from '~/lib/prd/generator'
 import { getModelManager } from '~/lib/ai/manager'
-import { EmbeddingServiceFactory } from '~/lib/rag/embedding-adapter'
-import { readFileSync } from 'fs'
-import { join } from 'path'
-import YAML from 'js-yaml'
+import { createEmbeddingAdapter } from '~/server/utils/embedding'
 import type { PRDGenerateRequest } from '~/types/prd'
 
 export default defineEventHandler(async (event) => {
@@ -22,7 +19,6 @@ export default defineEventHandler(async (event) => {
 
     const runtimeConfig = useRuntimeConfig()
     const glmApiKey = runtimeConfig.glmApiKey as string | undefined
-    const openaiApiKey = runtimeConfig.openaiApiKey as string | undefined
 
     // 获取模型管理器来验证选择的模型是否可用
     const config = {
@@ -49,20 +45,9 @@ export default defineEventHandler(async (event) => {
     }
 
     // 创建 embedding adapter (如果需要 RAG)
-    let embeddingAdapter: Awaited<ReturnType<typeof EmbeddingServiceFactory.createFromModelConfig>> | undefined
+    let embeddingAdapter
     if (body.useRAG !== false) {
-      // 读取模型配置
-      const configPath = join(process.cwd(), 'config', 'ai-models.yaml')
-      const configContent = readFileSync(configPath, 'utf-8')
-      const parsed = YAML.load(configContent) as { ai_models: { models: Record<string, any> } }
-      const modelConfigData = parsed.ai_models.models[modelId]
-
-      if (modelConfigData) {
-        embeddingAdapter = await EmbeddingServiceFactory.createFromModelConfig(
-          modelConfigData,
-          { glmApiKey, openaiApiKey }
-        )
-      }
+      embeddingAdapter = await createEmbeddingAdapter({ glmApiKey }) ?? undefined
     }
 
     const generator = new PRDGenerator(embeddingAdapter ?? undefined, config)
@@ -74,7 +59,8 @@ export default defineEventHandler(async (event) => {
       useRAG: body.useRAG,
       documentIds: body.documentIds,
       userId,
-      workspaceId: body.workspaceId
+      workspaceId: body.workspaceId,
+      parentId: body.parentId
     })
 
     return {

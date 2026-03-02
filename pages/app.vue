@@ -275,6 +275,7 @@ const loading = ref(true)
 const projects = ref<Project[]>([])
 const currentPage = ref(1)
 const pageSize = 9 // 每页显示 9 个项目（3x3 网格）
+const totalProjects = ref(0) // 总项目数（从后端返回）
 const stats = ref<Stats>({
   totalPRDs: 0,
   logicVerified: 0,
@@ -375,19 +376,16 @@ const filteredProjects = computed(() => {
   )
 })
 
-// 计算总页数
-const totalPages = computed(() => Math.ceil(filteredProjects.value.length / pageSize))
+// 计算总页数（使用服务端返回的总数）
+const totalPages = computed(() => Math.ceil(totalProjects.value / pageSize))
 
-// 当前页显示的项目
-const paginatedProjects = computed(() => {
-  const start = (currentPage.value - 1) * pageSize
-  const end = start + pageSize
-  return filteredProjects.value.slice(start, end)
-})
+// 当前页显示的项目（服务端分页，直接显示）
+const paginatedProjects = computed(() => projects.value)
 
-// 页码改变时
-function handlePageChange(page: number) {
+// 页码改变时，重新加载数据
+async function handlePageChange(page: number) {
   currentPage.value = page
+  await loadProjects()
 }
 
 onMounted(async () => {
@@ -417,6 +415,15 @@ onMounted(async () => {
   }
 })
 
+// 监听路由变化，从 generate 页面返回时刷新项目列表
+watch(() => route.path, async (newPath, oldPath) => {
+  // 当从 /generate 返回到 /app 时，重新加载项目列表并重置到第一页
+  if (newPath === '/app' && oldPath?.startsWith('/generate')) {
+    currentPage.value = 1 // 重置到第一页
+    await loadProjects()
+  }
+})
+
 // 清理事件监听器和 debounce timer
 if (process.client) {
   onBeforeUnmount(() => {
@@ -430,8 +437,11 @@ if (process.client) {
 async function loadProjects () {
   loading.value = true
   try {
-    // 构建查询参数,包含当前工作区 ID
-    const queryParams: Record<string, string> = {}
+    // 构建查询参数,包含当前工作区 ID 和分页参数
+    const queryParams: Record<string, string> = {
+      page: currentPage.value.toString(),
+      limit: pageSize.toString()
+    }
     if (currentWorkspaceId.value) {
       queryParams.workspace_id = currentWorkspaceId.value
     }
@@ -440,6 +450,9 @@ async function loadProjects () {
     const response = await $fetch<{ success: boolean; data: { prds: any[]; total: number } }>('/api/v1/prd', {
       query: queryParams
     })
+
+    // 保存总项目数
+    totalProjects.value = response.data.total
 
     // Transform PRD documents to projects
     projects.value = response.data.prds.map((prd: any) => {

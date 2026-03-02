@@ -6,6 +6,26 @@
       <!-- Header with Status Badges -->
       <div class="flex items-center justify-between flex-shrink-0 mb-2" :class="{ 'pl-14': isImmersive }">
         <div class="flex items-center gap-3">
+          <!-- 项目标题（可编辑） -->
+          <div v-if="conversationRef.dbId" class="flex items-center gap-2">
+            <Input
+              v-if="isEditingTitle"
+              v-model="editingTitle"
+              class="h-7 w-[200px] text-sm"
+              @blur="handleTitleBlur"
+              @keydown.enter="handleTitleSave"
+              @keydown.esc="cancelTitleEdit"
+              ref="titleInputRef"
+            />
+            <button
+              v-else
+              class="text-sm font-medium hover:text-primary transition-colors flex items-center gap-1.5 group"
+              @click="startTitleEdit"
+            >
+              <span>{{ conversationRef.title || '未命名项目' }}</span>
+              <Pencil class="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </button>
+          </div>
           <Badge variant="secondary" class="gap-2">
             <Sparkles class="w-3 h-3" />
             {{ $t('generate.knowledgeBaseActive') }}
@@ -37,6 +57,17 @@
             <Loader2 v-if="isSaving" class="w-4 h-4 animate-spin" />
             <Save v-else class="w-4 h-4" />
             {{ $t('generate.save') }}
+          </Button>
+          <!-- 保存版本按钮（有 dbId 时显示） -->
+          <Button
+            v-if="conversationRef.dbId"
+            variant="outline"
+            size="sm"
+            class="gap-2"
+            @click="showSaveVersionDialog = true"
+          >
+            <Tag class="w-4 h-4" />
+            保存版本
           </Button>
           <Button
             v-if="conversationRef.currentPrdContent"
@@ -106,6 +137,7 @@
                 <TabsTrigger value="prototype">{{ $t('prototype.title') }}</TabsTrigger>
                 <TabsTrigger value="logic">{{ $t('generate.logicMap') }}</TabsTrigger>
                 <TabsTrigger value="assets">{{ $t('generate.assets') }}</TabsTrigger>
+                <TabsTrigger value="history">版本历史</TabsTrigger>
               </TabsList>
             </div>
             <TabsContent value="editor" class="flex-1 overflow-hidden mt-0">
@@ -135,6 +167,12 @@
                 :prd-id="conversationRef.dbId || null"
                 :available-models="availableModels"
                 :selected-model-id="lastUsedModelId"
+              />
+            </TabsContent>
+            <TabsContent value="history" class="flex-1 overflow-hidden mt-0">
+              <PRDSnapshotHistory
+                :prd-id="conversationRef.dbId"
+                @restore="handleRestoreSnapshot"
               />
             </TabsContent>
           </Tabs>
@@ -247,6 +285,88 @@
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <!-- 退出提醒 Dialog -->
+    <Dialog v-model:open="showExitDialog">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>保存项目</DialogTitle>
+          <DialogDescription>
+            您的项目尚未命名，是否要为项目命名后再退出？
+          </DialogDescription>
+        </DialogHeader>
+        <div class="space-y-3 py-2">
+          <div class="space-y-1.5">
+            <Label for="exit-title">项目名称</Label>
+            <Input
+              id="exit-title"
+              v-model="exitDialogTitle"
+              placeholder="输入项目名称..."
+              maxlength="200"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" @click="confirmExitWithoutSave">
+            不保存，直接退出
+          </Button>
+          <Button
+            :disabled="!exitDialogTitle.trim() || isSavingExitTitle"
+            class="gap-2"
+            @click="handleSaveAndExit"
+          >
+            <Loader2 v-if="isSavingExitTitle" class="w-4 h-4 animate-spin" />
+            保存并退出
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- 保存版本 Dialog -->
+    <Dialog v-model:open="showSaveVersionDialog">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>保存为命名版本</DialogTitle>
+          <DialogDescription>
+            为当前 PRD 内容创建一个命名版本，便于后续对比和恢复。
+          </DialogDescription>
+        </DialogHeader>
+        <div class="space-y-3 py-2">
+          <div class="space-y-1.5">
+            <Label for="version-tag">版本名称（可选）</Label>
+            <Input
+              id="version-tag"
+              v-model="versionTag"
+              placeholder="例如：v1.0 初稿、评审后修订版..."
+              maxlength="200"
+            />
+          </div>
+          <div class="space-y-1.5">
+            <Label for="version-desc">备注（可选）</Label>
+            <Textarea
+              id="version-desc"
+              v-model="versionDescription"
+              placeholder="描述此版本的主要变更..."
+              class="h-20 resize-none"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" @click="showSaveVersionDialog = false">
+            {{ $t('common.cancel') }}
+          </Button>
+          <Button
+            :disabled="isSavingVersion"
+            class="gap-2"
+            @click="handleSaveVersion"
+          >
+            <Loader2 v-if="isSavingVersion" class="w-4 h-4 animate-spin" />
+            <Tag v-else class="w-4 h-4" />
+            保存版本
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
   </NuxtLayout>
   </div>
@@ -260,8 +380,8 @@ body:has(.generate-page) {
 </style>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { RotateCcw, Download, Sparkles, Cpu, PanelRightClose, PanelRightOpen, FileText, Layout, Loader2, Moon, Sun, Save } from 'lucide-vue-next'
+import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { RotateCcw, Download, Sparkles, Cpu, PanelRightClose, PanelRightOpen, FileText, Layout, Loader2, Moon, Sun, Save, Tag, Pencil } from 'lucide-vue-next'
 import { useConversation } from '~/composables/useConversation'
 import { useAiModels } from '~/composables/useAiModels'
 import { usePrototype } from '~/composables/usePrototype'
@@ -289,18 +409,26 @@ import {
   DialogTitle
 } from '~/components/ui/dialog'
 import { Checkbox } from '~/components/ui/checkbox'
+import { Input } from '~/components/ui/input'
+import { Label } from '~/components/ui/label'
+import { Textarea } from '~/components/ui/textarea'
 import { useToast } from '~/components/ui/toast/use-toast'
 import LanguageSwitcher from '~/components/common/LanguageSwitcher.vue'
+import PRDSnapshotHistory from '~/components/prd/PRDSnapshotHistory.vue'
 import { useWorkspace } from '~/composables/useWorkspace'
 import type { ConversationTargetType, ConversationMessage } from '~/types/conversation'
 
 const { t } = useI18n()
 const { toast } = useToast()
 const route = useRoute()
+const router = useRouter()
 const workspace = useWorkspace()
 
 const isImmersive = computed(() => route.query.immersive === '1')
 const layoutName = computed(() => isImmersive.value ? 'chat' : 'dashboard')
+
+// 从 URL 参数读取 parentId，用于将本次生成关联为某 PRD 的新版本
+const parentPrdId = computed(() => (route.query.parentId as string) || undefined)
 
 const colorMode = useColorMode()
 const isDark = computed(() => colorMode.value === 'dark')
@@ -332,6 +460,24 @@ const exportOptions = reactive({
   prd: true,
   selectedPages: [] as string[]
 })
+
+// 保存版本 dialog state
+const showSaveVersionDialog = ref(false)
+const isSavingVersion = ref(false)
+const versionTag = ref('')
+const versionDescription = ref('')
+
+// 标题编辑 state
+const isEditingTitle = ref(false)
+const editingTitle = ref('')
+const titleInputRef = ref<HTMLInputElement | null>(null)
+
+// 退出提醒 dialog state
+const showExitDialog = ref(false)
+const exitDialogTitle = ref('')
+const isSavingExitTitle = ref(false)
+const pendingNavigationPath = ref<string | null>(null)
+const allowNavigation = ref(false) // 标志：是否允许导航（跳过退出检查）
 
 // Prototype pages available for export
 const prototypePages = computed(() => prototypeState.pages.value)
@@ -385,6 +531,66 @@ onMounted(async () => {
   await aiModels.fetchAvailableModels()
 })
 
+// 离开页面时自动保存（路由跳转）
+onBeforeRouteLeave(async (to, from, next) => {
+  // 如果已经允许导航（用户已确认），直接放行
+  if (allowNavigation.value) {
+    allowNavigation.value = false // 重置标志
+    next()
+    return
+  }
+
+  const conv = conversation.conversation.value
+
+  // 检查是否是未命名项目（数据库中标题为空）
+  const isUntitled = conv.dbId && !conv.title && conv.messages.length > 0
+
+  if (isUntitled) {
+    // 显示退出提醒 Dialog
+    exitDialogTitle.value = conv.title || ''
+    showExitDialog.value = true
+    pendingNavigationPath.value = to.path
+    next(false) // 阻止导航
+    return
+  }
+
+  // 正常自动保存
+  if (!isGenerating.value && conv.messages.length > 0) {
+    try {
+      await conversation.autoSaveToDatabase(parentPrdId.value)
+    } catch {
+      // 静默失败，不阻止导航
+    }
+  }
+  next()
+})
+
+// 关闭/刷新浏览器时用 sendBeacon 同步保存
+function handleBeforeUnload () {
+  const conv = conversation.conversation.value
+  if (
+    conv.messages.length === 0 ||
+    conv.lastSavedMessageCount === conv.messages.length ||
+    !conv.savedToDb ||
+    !conv.dbId
+  ) return
+
+  const body = JSON.stringify({
+    messages: conv.messages,
+    finalPrdContent: conv.currentPrdContent,
+    title: conv.title
+  })
+  navigator.sendBeacon(`/api/v1/conversations/${conv.dbId}/beacon`, new Blob([body], { type: 'application/json' }))
+}
+
+onMounted(() => {
+  window.addEventListener('beforeunload', handleBeforeUnload)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload)
+})
+
 // 监听路由参数变化（路由复用时 onMounted 不会重新执行，需要 watch 处理）
 watch(() => route.query, async (newQuery) => {
   const loadPrdId = newQuery.loadPrd as string
@@ -422,7 +628,7 @@ watch(() => conversation.conversation.value.currentPrdContent, (newContent) => {
 })
 
 const availableModels = computed(() =>
-  aiModels.models.value?.map(m => ({ id: m.id, label: m.name, isUserModel: m.isUserModel })) || []
+  aiModels.models.value?.map(m => ({ id: m.id, label: m.name, isUserModel: m.isUserModel, supportsVision: m.capabilities.supportsVision })) || []
 )
 
 // Expose conversation ref for template
@@ -430,7 +636,7 @@ const conversationRef = conversation.conversation
 
 async function handleSendMessage (
   message: string,
-  options: { modelId: string; useRAG: boolean; target: ConversationTargetType; documentIds: string[]; prdIds: string[]; mentionedDocs?: import('~/types/conversation').MentionedDocument[] }
+  options: { modelId: string; useRAG: boolean; target: ConversationTargetType; documentIds: string[]; prdIds: string[]; mentionedDocs?: import('~/types/conversation').MentionedDocument[]; images?: import('~/types/conversation').ImageAttachment[] }
 ) {
   // 切换对话目标（如果改变了）
   if (options.target !== conversation.currentTarget.value) {
@@ -444,7 +650,8 @@ async function handleSendMessage (
     documentIds: options.documentIds?.length > 0 ? options.documentIds : undefined,
     documentTitles: options.mentionedDocs && options.mentionedDocs.length > 0
       ? options.mentionedDocs.map(d => d.title)
-      : undefined
+      : undefined,
+    images: options.images && options.images.length > 0 ? options.images : undefined
   })
 
   lastUsedModelId.value = options.modelId
@@ -472,7 +679,8 @@ async function handleSendMessage (
           id: m.id,
           role: m.role,
           content: m.content,
-          timestamp: m.timestamp
+          timestamp: m.timestamp,
+          images: m.images && m.images.length > 0 ? m.images : undefined
         })),
         modelId: options.modelId,
         useRAG: options.useRAG,
@@ -480,6 +688,7 @@ async function handleSendMessage (
         documentIds: options.documentIds?.length > 0 ? options.documentIds : undefined,
         prdIds: options.prdIds?.length > 0 ? options.prdIds : undefined,
         workspaceId: workspace.currentWorkspaceId.value ?? undefined,
+        images: options.images && options.images.length > 0 ? options.images : undefined,
         // 原型目标时传递当前 HTML 上下文
         targetContext: options.target === 'prototype' ? {
           prototypeHtml: conversation.targetContext.value?.prototypeHtml
@@ -547,7 +756,7 @@ async function handleSendMessage (
 
     // 自动保存到数据库
     try {
-      await conversation.autoSaveToDatabase()
+      await conversation.autoSaveToDatabase(parentPrdId.value)
     } catch (error) {
       console.error('Auto-save failed:', error)
       toast({
@@ -561,7 +770,7 @@ async function handleSendMessage (
 
 function handlePrdContentUpdate (content: string) {
   conversationRef.value.currentPrdContent = content
-  conversation.saveToStorage()
+  conversation.markPrdContentDirty()
 }
 
 function handlePrdIdUpdate (prdId: string) {
@@ -574,7 +783,7 @@ async function handleManualSave () {
   if (isSaving.value || conversationRef.value.messages.length === 0) return
   isSaving.value = true
   try {
-    await conversation.autoSaveToDatabase()
+    await conversation.autoSaveToDatabase(parentPrdId.value)
     toast({
       title: t('generate.saveSuccess.title'),
       description: t('generate.saveSuccess.description'),
@@ -594,6 +803,39 @@ async function handleManualSave () {
 
 function handleReset () {
   resetDialogOpen.value = true
+}
+
+async function handleSaveVersion () {
+  if (!conversationRef.value.dbId || isSavingVersion.value) return
+  isSavingVersion.value = true
+  try {
+    await $fetch(`/api/v1/prd/${conversationRef.value.dbId}/snapshots`, {
+      method: 'POST',
+      body: {
+        tag: versionTag.value || undefined,
+        description: versionDescription.value || undefined,
+        content: conversationRef.value.currentPrdContent || undefined
+      }
+    })
+    toast({
+      title: '版本已保存',
+      description: versionTag.value ? `已保存版本"${versionTag.value}"` : '已创建新版本',
+      variant: 'success'
+    })
+    showSaveVersionDialog.value = false
+    versionTag.value = ''
+    versionDescription.value = ''
+  } catch (e) {
+    console.error('保存版本失败:', e)
+    toast({ title: '保存版本失败，请重试', variant: 'destructive' })
+  } finally {
+    isSavingVersion.value = false
+  }
+}
+
+function handleRestoreSnapshot (content: string) {
+  handlePrdContentUpdate(content)
+  toast({ title: '已恢复到所选版本', variant: 'success' })
 }
 
 function confirmReset () {
@@ -710,6 +952,98 @@ function downloadBlob (blob: Blob, filename: string) {
   a.download = filename
   a.click()
   URL.revokeObjectURL(url)
+}
+
+// 标题编辑相关
+function startTitleEdit () {
+  isEditingTitle.value = true
+  editingTitle.value = conversationRef.value.title || ''
+  nextTick(() => {
+    titleInputRef.value?.focus()
+    titleInputRef.value?.select()
+  })
+}
+
+function cancelTitleEdit () {
+  isEditingTitle.value = false
+  editingTitle.value = ''
+}
+
+async function handleTitleSave () {
+  if (!editingTitle.value.trim() || !conversationRef.value.dbId) {
+    cancelTitleEdit()
+    return
+  }
+
+  try {
+    await $fetch(`/api/v1/prd/${conversationRef.value.dbId}/title`, {
+      method: 'PUT',
+      body: { title: editingTitle.value.trim() }
+    })
+    conversationRef.value.title = editingTitle.value.trim()
+    conversation.saveToStorage()
+    toast({
+      title: '项目名称已更新',
+      variant: 'success'
+    })
+  } catch (error) {
+    toast({
+      title: '更新失败',
+      description: error instanceof Error ? error.message : '请重试',
+      variant: 'destructive'
+    })
+  } finally {
+    isEditingTitle.value = false
+  }
+}
+
+function handleTitleBlur () {
+  if (editingTitle.value.trim() !== conversationRef.value.title) {
+    handleTitleSave()
+  } else {
+    cancelTitleEdit()
+  }
+}
+
+// 退出提醒相关
+async function handleSaveAndExit () {
+  if (!exitDialogTitle.value.trim() || !conversationRef.value.dbId) return
+
+  isSavingExitTitle.value = true
+  try {
+    await $fetch(`/api/v1/prd/${conversationRef.value.dbId}/title`, {
+      method: 'PUT',
+      body: { title: exitDialogTitle.value.trim() }
+    })
+    conversationRef.value.title = exitDialogTitle.value.trim()
+    conversation.saveToStorage()
+    showExitDialog.value = false
+
+    // 设置允许导航标志，然后执行跳转
+    allowNavigation.value = true
+    if (pendingNavigationPath.value) {
+      await router.push(pendingNavigationPath.value)
+      pendingNavigationPath.value = null
+    }
+  } catch (error) {
+    toast({
+      title: '保存失败',
+      description: error instanceof Error ? error.message : '请重试',
+      variant: 'destructive'
+    })
+  } finally {
+    isSavingExitTitle.value = false
+  }
+}
+
+function confirmExitWithoutSave () {
+  showExitDialog.value = false
+  // 设置允许导航标志，然后执行跳转
+  allowNavigation.value = true
+  if (pendingNavigationPath.value) {
+    router.push(pendingNavigationPath.value)
+    pendingNavigationPath.value = null
+  }
 }
 
 // Handle retry - resend a user message

@@ -13,11 +13,7 @@
  */
 
 import { RAGRetriever } from '~/lib/rag/retriever'
-import { EmbeddingServiceFactory } from '~/lib/rag/embedding-adapter'
-import { getModelManager } from '~/lib/ai/manager'
-import { readFileSync } from 'fs'
-import { join } from 'path'
-import YAML from 'js-yaml'
+import { createEmbeddingAdapter } from '~/server/utils/embedding'
 import { z } from 'zod'
 import { cache } from '~/lib/cache'
 import { CacheKeys, CacheTTL } from '~/lib/cache/keys'
@@ -60,14 +56,6 @@ export default defineEventHandler(async (event) => {
 
     // 初始化 embedding 适配器
     const glmApiKey = config.glmApiKey as string | undefined
-    const openaiApiKey = config.openaiApiKey as string | undefined
-
-    if (!glmApiKey && !openaiApiKey && mode !== 'keyword') {
-      throw createError({
-        statusCode: 500,
-        message: t('errors.noEmbeddingApiKey')
-      })
-    }
 
     let retriever: RAGRetriever
 
@@ -76,43 +64,12 @@ export default defineEventHandler(async (event) => {
       // 创建一个 dummy retriever (keywordSearch 方法不需要 embedding)
       retriever = new RAGRetriever(null as any, topK, threshold)
     } else {
-      // 获取当前选择的模型
-      const modelConfig = {
-        anthropicApiKey: config.anthropicApiKey,
-        openaiApiKey: config.openaiApiKey,
-        googleApiKey: config.googleApiKey,
-        glmApiKey: config.glmApiKey,
-        dashscopeApiKey: config.dashscopeApiKey,
-        baiduApiKey: config.baiduApiKey,
-        deepseekApiKey: config.deepseekApiKey,
-        ollamaBaseUrl: config.ollamaBaseUrl
-      }
-      const modelManager = getModelManager(modelConfig)
-      const defaultModelId = modelManager.getDefaultModelId()
-
-      // 读取模型配置
-      const configPath = join(process.cwd(), 'config', 'ai-models.yaml')
-      const configContent = readFileSync(configPath, 'utf-8')
-      const parsed = YAML.load(configContent) as { ai_models: { models: Record<string, any> } }
-      const modelConfigData = parsed.ai_models.models[defaultModelId]
-
-      if (!modelConfigData) {
-        throw createError({
-          statusCode: 500,
-          message: `Model ${defaultModelId} configuration not found`
-        })
-      }
-
-      // 根据默认模型创建对应的 Embedding 适配器
-      const embeddingAdapter = await EmbeddingServiceFactory.createFromModelConfig(
-        modelConfigData,
-        { glmApiKey, openaiApiKey }
-      )
+      const embeddingAdapter = await createEmbeddingAdapter({ glmApiKey })
 
       if (!embeddingAdapter) {
         throw createError({
           statusCode: 500,
-          message: `Model ${defaultModelId} does not support embedding`
+          message: t('errors.noEmbeddingApiKey')
         })
       }
 

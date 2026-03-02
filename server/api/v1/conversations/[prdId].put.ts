@@ -3,6 +3,7 @@ import { prdDocuments, conversations, conversationMessages } from '~/lib/db/sche
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { eq } from 'drizzle-orm'
 import type { ConversationMessage } from '~/types/conversation'
+import { PRDSnapshotDAO } from '~/lib/db/dao/prd-snapshot-dao'
 
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
@@ -118,6 +119,26 @@ export default defineEventHandler(async (event) => {
           createdAt: new Date(message.timestamp)
         })
       }
+    }
+
+    // 更新后，异步创建自动快照（fire-and-forget）
+    if (body.finalPrdContent) {
+      const capturedPrdId = prdId
+      const capturedUserId = userId
+      const capturedContent = body.finalPrdContent
+      setImmediate(async () => {
+        try {
+          await PRDSnapshotDAO.create({
+            prdId: capturedPrdId,
+            createdBy: capturedUserId,
+            snapshotType: 'auto',
+            content: capturedContent
+          })
+          await PRDSnapshotDAO.pruneAutoSnapshots(capturedPrdId)
+        } catch (e) {
+          console.warn('[PRDSnapshot] auto snapshot failed on update:', e)
+        }
+      })
     }
 
     return {

@@ -22,7 +22,6 @@ dist
 *.pem
 
 # IDE and tool configs
-.vscode/
 .idea/
 .claude/
 .iflycode/

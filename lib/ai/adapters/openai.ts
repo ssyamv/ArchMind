@@ -19,13 +19,40 @@ export class OpenAIAdapter implements AIModelAdapter {
     this.client = new OpenAI(options)
   }
 
-  private buildMessages (prompt: string, options?: GenerateOptions) {
+  private buildMessages (prompt: string, options?: GenerateOptions): OpenAI.ChatCompletionMessageParam[] {
     if (options?.messages) {
-      return options.messages.map(m => ({ role: m.role as 'system' | 'user' | 'assistant', content: m.content }))
+      return options.messages.map((m): OpenAI.ChatCompletionMessageParam => {
+        // 处理多模态内容
+        if (Array.isArray(m.content)) {
+          const content: OpenAI.ChatCompletionContentPart[] = m.content.map((block) => {
+            if (block.type === 'image') {
+              // OpenAI 支持 base64 和 URL
+              if (block.imageBase64) {
+                return {
+                  type: 'image_url' as const,
+                  image_url: {
+                    url: `data:${block.mimeType || 'image/jpeg'};base64,${block.imageBase64}`
+                  }
+                }
+              } else if (block.imageUrl) {
+                return {
+                  type: 'image_url' as const,
+                  image_url: { url: block.imageUrl }
+                }
+              }
+            }
+            return { type: 'text' as const, text: block.text || '' }
+          })
+          return { role: 'user', content }
+        }
+        if (m.role === 'system') return { role: 'system', content: m.content as string }
+        if (m.role === 'assistant') return { role: 'assistant', content: m.content as string }
+        return { role: 'user', content: m.content as string }
+      })
     }
     return [
-      { role: 'system' as const, content: options?.systemPrompt || '' },
-      { role: 'user' as const, content: prompt }
+      { role: 'system', content: options?.systemPrompt || '' },
+      { role: 'user', content: prompt }
     ]
   }
 
@@ -69,10 +96,13 @@ export class OpenAIAdapter implements AIModelAdapter {
   }
 
   getCapabilities (): ModelCapabilities {
+    // gpt-4o、gpt-4.1、gpt-4-vision 系列支持视觉；o3-mini、gpt-4.1-mini 等不支持
+    const visionModels = ['gpt-4o', 'gpt-4.1', 'gpt-4-vision', 'gpt-4-turbo', 'o4-mini']
+    const supportsVision = visionModels.some(m => this.modelId.startsWith(m) || this.modelId.includes(m))
     return {
       supportsStreaming: true,
       supportsStructuredOutput: true,
-      supportsVision: true,
+      supportsVision,
       maxContextLength: 128000,
       supportedLanguages: ['en', 'zh', 'ja', 'ko', 'fr', 'de', 'es']
     }
