@@ -89,7 +89,11 @@ export class WenxinAdapter implements AIModelAdapter {
 
     if (options?.messages) {
       for (const msg of options.messages) {
-        messages.push({ role: msg.role, content: msg.content })
+        // 文心一言不支持多模态，将 ContentBlock[] 降级为纯文本
+        const textContent = Array.isArray(msg.content)
+          ? msg.content.filter(b => b.type === 'text').map(b => b.text || '').join('\n')
+          : msg.content
+        messages.push({ role: msg.role, content: textContent })
       }
     } else {
       messages.push({ role: 'user', content: prompt })

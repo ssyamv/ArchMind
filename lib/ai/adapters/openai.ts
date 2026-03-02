@@ -19,40 +19,40 @@ export class OpenAIAdapter implements AIModelAdapter {
     this.client = new OpenAI(options)
   }
 
-  private buildMessages (prompt: string, options?: GenerateOptions) {
+  private buildMessages (prompt: string, options?: GenerateOptions): OpenAI.ChatCompletionMessageParam[] {
     if (options?.messages) {
-      return options.messages.map(m => {
+      return options.messages.map((m): OpenAI.ChatCompletionMessageParam => {
         // 处理多模态内容
         if (Array.isArray(m.content)) {
-          const content = m.content.map(block => {
-            if (block.type === 'text') {
-              return { type: 'text', text: block.text || '' }
-            } else if (block.type === 'image') {
+          const content: OpenAI.ChatCompletionContentPart[] = m.content.map((block) => {
+            if (block.type === 'image') {
               // OpenAI 支持 base64 和 URL
               if (block.imageBase64) {
                 return {
-                  type: 'image_url',
+                  type: 'image_url' as const,
                   image_url: {
                     url: `data:${block.mimeType || 'image/jpeg'};base64,${block.imageBase64}`
                   }
                 }
               } else if (block.imageUrl) {
                 return {
-                  type: 'image_url',
+                  type: 'image_url' as const,
                   image_url: { url: block.imageUrl }
                 }
               }
             }
-            return { type: 'text', text: '' }
+            return { type: 'text' as const, text: block.text || '' }
           })
-          return { role: m.role as 'system' | 'user' | 'assistant', content }
+          return { role: 'user', content }
         }
-        return { role: m.role as 'system' | 'user' | 'assistant', content: m.content as string }
+        if (m.role === 'system') return { role: 'system', content: m.content as string }
+        if (m.role === 'assistant') return { role: 'assistant', content: m.content as string }
+        return { role: 'user', content: m.content as string }
       })
     }
     return [
-      { role: 'system' as const, content: options?.systemPrompt || '' },
-      { role: 'user' as const, content: prompt }
+      { role: 'system', content: options?.systemPrompt || '' },
+      { role: 'user', content: prompt }
     ]
   }
 
