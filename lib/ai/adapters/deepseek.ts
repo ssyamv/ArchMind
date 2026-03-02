@@ -82,6 +82,7 @@ export class DeepSeekAdapter implements AIModelAdapter {
       supportsStreaming: true,
       supportsStructuredOutput: true,
       supportsVision: false,
+      supportsThinking: false,
       maxContextLength: 64000,
       supportedLanguages: ['zh', 'en']
     }

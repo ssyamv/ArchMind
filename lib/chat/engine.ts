@@ -16,6 +16,7 @@ export interface ChatStreamOptions {
   temperature?: number
   maxTokens?: number
   useRAG?: boolean
+  enableThinking?: boolean
   topK?: number
   documentIds?: string[]
   prdIds?: string[]
@@ -271,7 +272,8 @@ ${this.targetContext.prototypeHtml}
     const streamIterator = modelAdapter.generateStream('', {
       temperature,
       maxTokens,
-      messages
+      messages,
+      enableThinking: options?.enableThinking
     }) as unknown as AsyncIterable<string>
 
     for await (const chunk of streamIterator) {

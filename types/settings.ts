@@ -43,6 +43,7 @@ export interface AvailableModelInfo {
     supportsStreaming: boolean;
     supportsStructuredOutput: boolean;
     supportsVision: boolean;
+    supportsThinking: boolean;
     supportedLanguages: string[];
   };
   costEstimate: {

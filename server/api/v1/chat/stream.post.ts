@@ -7,6 +7,7 @@ interface ChatStreamRequest {
   history?: ConversationMessage[]
   modelId?: string
   useRAG?: boolean
+  enableThinking?: boolean
   temperature?: number
   maxTokens?: number
   target?: ConversationTargetType
@@ -128,6 +129,7 @@ export default defineEventHandler(async (event) => {
       temperature: body.temperature,
       maxTokens: body.maxTokens,
       useRAG: body.useRAG === true && embeddingAdapter !== null,
+      enableThinking: body.enableThinking,
       documentIds: body.documentIds,
       prdIds: body.prdIds,
       workspaceId: body.workspaceId,
@@ -147,10 +149,19 @@ export default defineEventHandler(async (event) => {
       /^##\s*1\s+产品概述/m
     ]
 
+    const THINK_PREFIX = '\x00THINK\x00'
     let fullContent = ''
     let prdStartIndex = -1 // -1 表示尚未检测到 PRD 起始位置
 
-    for await (const chunk of stream) {
+    for await (const rawChunk of stream) {
+      // 识别思考内容（推理模型如 GLM-4.7 的 reasoning_content）
+      if (rawChunk.startsWith(THINK_PREFIX)) {
+        const thinkingChunk = rawChunk.slice(THINK_PREFIX.length)
+        event.node.res.write(`data: ${JSON.stringify({ thinkingChunk, done: false })}\n\n`)
+        continue
+      }
+
+      const chunk = rawChunk
       fullContent += chunk
       if (fullContent.length > MAX_CONTENT_LENGTH) {
         event.node.res.write(`data: ${JSON.stringify({ error: '响应内容超过最大长度限制', done: true })}\n\n`)

@@ -90,18 +90,30 @@ export class ClaudeAdapter implements AIModelAdapter {
 
   async *generateStream (prompt: string, options?: GenerateOptions): AsyncGenerator<string> {
     const { systemPrompt, messages } = this.buildClaudeParams(prompt, options)
+
+    // extended_thinking 支持（claude-3-7-sonnet 及以上）
+    // 文档：https://docs.anthropic.com/en/docs/build-with-claude/extended-thinking
+    const thinkingParam = options?.enableThinking
+      ? { type: 'enabled' as const, budget_tokens: 8000 }
+      : undefined
+
     const stream = await this.client.messages.stream({
       model: this.modelId,
       max_tokens: options?.maxTokens || 8192,
       system: systemPrompt,
       messages,
-      temperature: options?.temperature,
-      top_p: options?.topP
-    })
+      temperature: thinkingParam ? 1 : options?.temperature, // thinking 模式要求 temperature=1
+      top_p: thinkingParam ? undefined : options?.topP,      // thinking 模式不支持 top_p
+      ...(thinkingParam ? { thinking: thinkingParam } : {})
+    } as any)
 
     for await (const chunk of stream) {
-      if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-        yield chunk.delta.text
+      if (chunk.type === 'content_block_delta') {
+        if (chunk.delta.type === 'text_delta') {
+          yield chunk.delta.text
+        } else if (chunk.delta.type === 'thinking_delta') {
+          yield `\x00THINK\x00${(chunk.delta as any).thinking}`
+        }
       }
     }
   }
@@ -111,6 +123,7 @@ export class ClaudeAdapter implements AIModelAdapter {
       supportsStreaming: true,
       supportsStructuredOutput: true,
       supportsVision: true,
+      supportsThinking: true,
       maxContextLength: 200000,
       supportedLanguages: ['en', 'zh', 'ja', 'ko', 'fr', 'de', 'es']
     }

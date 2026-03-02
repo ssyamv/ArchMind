@@ -86,6 +86,7 @@ export class OllamaAdapter implements AIModelAdapter {
       supportsStreaming: true,
       supportsStructuredOutput: false,
       supportsVision: this.modelId.includes('vision') || this.modelId.includes('llava'),
+      supportsThinking: false,
       maxContextLength: isLargeModel ? 128000 : 8192,
       supportedLanguages: this.modelId.includes('qwen') || this.modelId.includes('chinese') ? ['zh', 'en'] : ['en']
     }

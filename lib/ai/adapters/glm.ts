@@ -25,39 +25,51 @@ export class GLMAdapter implements AIModelAdapter {
 
   private buildMessages (prompt: string, options?: GenerateOptions): OpenAI.ChatCompletionMessageParam[] {
     if (options?.messages) {
-      return options.messages.map((m): OpenAI.ChatCompletionMessageParam => {
-        // 处理多模态内容（GLM-4.6V 支持）
-        if (Array.isArray(m.content)) {
-          const content: OpenAI.ChatCompletionContentPart[] = m.content.map((block) => {
-            if (block.type === 'image') {
-              // GLM 使用 OpenAI 兼容格式
-              if (block.imageBase64) {
-                return {
-                  type: 'image_url' as const,
-                  image_url: {
-                    url: `data:${block.mimeType || 'image/jpeg'};base64,${block.imageBase64}`
+      // 过滤掉空 content 的 system message（GLM API 不接受空 system content）
+      return options.messages
+        .filter((m) => {
+          // 如果是 system 消息且 content 为空字符串，则过滤掉
+          if (m.role === 'system' && typeof m.content === 'string' && m.content.trim() === '') {
+            return false
+          }
+          return true
+        })
+        .map((m): OpenAI.ChatCompletionMessageParam => {
+          // 处理多模态内容（GLM-4.6V 支持）
+          if (Array.isArray(m.content)) {
+            const content: OpenAI.ChatCompletionContentPart[] = m.content.map((block) => {
+              if (block.type === 'image') {
+                // GLM 使用 OpenAI 兼容格式
+                if (block.imageBase64) {
+                  return {
+                    type: 'image_url' as const,
+                    image_url: {
+                      url: `data:${block.mimeType || 'image/jpeg'};base64,${block.imageBase64}`
+                    }
+                  }
+                } else if (block.imageUrl) {
+                  return {
+                    type: 'image_url' as const,
+                    image_url: { url: block.imageUrl }
                   }
                 }
-              } else if (block.imageUrl) {
-                return {
-                  type: 'image_url' as const,
-                  image_url: { url: block.imageUrl }
-                }
               }
-            }
-            return { type: 'text' as const, text: block.text || '' }
-          })
-          return { role: 'user', content }
-        }
-        if (m.role === 'system') return { role: 'system', content: m.content as string }
-        if (m.role === 'assistant') return { role: 'assistant', content: m.content as string }
-        return { role: 'user', content: m.content as string }
-      })
+              return { type: 'text' as const, text: block.text || '' }
+            })
+            return { role: 'user', content }
+          }
+          if (m.role === 'system') return { role: 'system', content: m.content as string }
+          if (m.role === 'assistant') return { role: 'assistant', content: m.content as string }
+          return { role: 'user', content: m.content as string }
+        })
     }
-    return [
-      { role: 'system', content: options?.systemPrompt || '' },
-      { role: 'user', content: prompt }
-    ]
+    // 如果没有 messages，且 systemPrompt 为空，则不添加 system message
+    const messages: OpenAI.ChatCompletionMessageParam[] = []
+    if (options?.systemPrompt && options.systemPrompt.trim() !== '') {
+      messages.push({ role: 'system', content: options.systemPrompt })
+    }
+    messages.push({ role: 'user', content: prompt })
+    return messages
   }
 
   async generateText (prompt: string, options?: GenerateOptions): Promise<string> {
@@ -81,19 +93,31 @@ export class GLMAdapter implements AIModelAdapter {
   }
 
   async *generateStream (prompt: string, options?: GenerateOptions): AsyncGenerator<string> {
-    const stream = await this.client.chat.completions.create({
+    // thinking 参数：默认关闭，需用户主动开启
+    // 文档：https://docs.bigmodel.cn/cn/guide/capabilities/thinking-mode
+    const thinkingParam = options?.enableThinking !== undefined
+      ? { type: options.enableThinking ? 'enabled' : 'disabled' } as const
+      : { type: 'disabled' } as const
+
+    const stream = await (this.client.chat.completions.create as (params: unknown) => Promise<AsyncIterable<unknown>>)({
       model: this.modelId,
       max_tokens: options?.maxTokens || 8192,
       messages: this.buildMessages(prompt, options),
       temperature: options?.temperature,
       top_p: options?.topP,
-      stream: true
+      stream: true,
+      thinking: thinkingParam
     })
 
-    for await (const chunk of stream) {
+    for await (const chunk of stream as AsyncIterable<any>) {
       if (!chunk.choices || chunk.choices.length === 0) continue
       const delta = chunk.choices[0].delta
-      if (delta && delta.content) {
+
+      // GLM-4.7 等推理模型返回 reasoning_content（思考过程）和 content（最终答案）
+      // 用特殊前缀 \x00THINK\x00 标记思考内容，让上层可区分处理
+      if (delta.reasoning_content) {
+        yield `\x00THINK\x00${delta.reasoning_content}`
+      } else if (delta.content) {
         yield delta.content
       }
     }
@@ -106,6 +130,7 @@ export class GLMAdapter implements AIModelAdapter {
       supportsStreaming: true,
       supportsStructuredOutput: true,
       supportsVision,
+      supportsThinking: true,
       maxContextLength: 128000,
       supportedLanguages: ['en', 'zh', 'ja', 'ko', 'fr', 'de', 'es']
     }

@@ -116,6 +116,7 @@ export class GeminiAdapter implements AIModelAdapter {
       supportsStreaming: true,
       supportsStructuredOutput: true,
       supportsVision: true,
+      supportsThinking: false,
       maxContextLength: 1_000_000, // Gemini 1.5 Pro 支持 1M tokens
       supportedLanguages: ['en', 'zh', 'ja', 'ko', 'fr', 'de', 'es']
     }

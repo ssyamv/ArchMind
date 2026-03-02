@@ -61,6 +61,7 @@ export interface ConversationMessage {
   documentTitles?: string[]
   timestamp: number
   isStreaming?: boolean
+  thinkingContent?: string
   prdContent?: string
   // 目标特定内容
   targetContent?: string
