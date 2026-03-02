@@ -21,7 +21,34 @@ export class OpenAIAdapter implements AIModelAdapter {
 
   private buildMessages (prompt: string, options?: GenerateOptions) {
     if (options?.messages) {
-      return options.messages.map(m => ({ role: m.role as 'system' | 'user' | 'assistant', content: m.content }))
+      return options.messages.map(m => {
+        // 处理多模态内容
+        if (Array.isArray(m.content)) {
+          const content = m.content.map(block => {
+            if (block.type === 'text') {
+              return { type: 'text', text: block.text || '' }
+            } else if (block.type === 'image') {
+              // OpenAI 支持 base64 和 URL
+              if (block.imageBase64) {
+                return {
+                  type: 'image_url',
+                  image_url: {
+                    url: `data:${block.mimeType || 'image/jpeg'};base64,${block.imageBase64}`
+                  }
+                }
+              } else if (block.imageUrl) {
+                return {
+                  type: 'image_url',
+                  image_url: { url: block.imageUrl }
+                }
+              }
+            }
+            return { type: 'text', text: '' }
+          })
+          return { role: m.role as 'system' | 'user' | 'assistant', content }
+        }
+        return { role: m.role as 'system' | 'user' | 'assistant', content: m.content as string }
+      })
     }
     return [
       { role: 'system' as const, content: options?.systemPrompt || '' },
@@ -69,10 +96,13 @@ export class OpenAIAdapter implements AIModelAdapter {
   }
 
   getCapabilities (): ModelCapabilities {
+    // gpt-4o、gpt-4.1、gpt-4-vision 系列支持视觉；o3-mini、gpt-4.1-mini 等不支持
+    const visionModels = ['gpt-4o', 'gpt-4.1', 'gpt-4-vision', 'gpt-4-turbo', 'o4-mini']
+    const supportsVision = visionModels.some(m => this.modelId.startsWith(m) || this.modelId.includes(m))
     return {
       supportsStreaming: true,
       supportsStructuredOutput: true,
-      supportsVision: true,
+      supportsVision,
       maxContextLength: 128000,
       supportedLanguages: ['en', 'zh', 'ja', 'ko', 'fr', 'de', 'es']
     }

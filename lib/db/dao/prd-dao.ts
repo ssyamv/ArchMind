@@ -303,6 +303,20 @@ export class PRDDAO {
     return result.rowCount! > 0
   }
 
+  // 更新 PRD 标题
+  static async updateTitle (id: string, title: string): Promise<PRDDocument | null> {
+    const now = new Date().toISOString()
+    const sql = `
+      UPDATE prd_documents
+      SET title = $1, updated_at = $2
+      WHERE id = $3
+      RETURNING *
+    `
+    const result = await dbClient.query<any>(sql, [title, now, id])
+    if (result.rows.length === 0) { return null }
+    return this.mapRowToPRD(result.rows[0])
+  }
+
   // 查询某 PRD 的所有版本（自身 + 所有以其为 parent_id 的子版本），按 createdAt DESC 排序
   static async findVersions (rootId: string): Promise<PRDDocument[]> {
     const sql = `

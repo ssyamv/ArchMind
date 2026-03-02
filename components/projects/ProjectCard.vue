@@ -43,11 +43,7 @@
               <Pencil class="w-4 h-4 mr-2" />
               {{ $t('common.edit') }}
             </DropdownMenuItem>
-            <DropdownMenuItem @click.stop="handleRegenerateAsVersion">
-              <GitBranch class="w-4 h-4 mr-2" />
-              基于此版本重新生成
-            </DropdownMenuItem>
-            <DropdownMenuItem @click.stop="handleDuplicate">
+<DropdownMenuItem @click.stop="handleDuplicate">
               <Copy class="w-4 h-4 mr-2" />
               {{ $t('common.duplicate') }}
             </DropdownMenuItem>
@@ -93,7 +89,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { FileText, MoreVertical, Pencil, Copy, Trash2, Clock, GitBranch } from 'lucide-vue-next'
+import { FileText, MoreVertical, Pencil, Copy, Trash2, Clock } from 'lucide-vue-next'
 import {
   Card,
   CardContent,
@@ -173,7 +169,4 @@ async function handleDuplicate() {
   }
 }
 
-function handleRegenerateAsVersion () {
-  router.push(`/generate?new=1&parentId=${props.project.id}`)
-}
 </script>

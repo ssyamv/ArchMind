@@ -144,6 +144,7 @@ import { Badge } from '~/components/ui/badge'
 const props = defineProps<{
   prdIdA: string
   prdIdB: string
+  mode?: 'prd' | 'snapshot'
 }>()
 
 interface PRDData {
@@ -331,9 +332,14 @@ async function loadAndCompare () {
   diffSections.value = []
 
   try {
+    const fetchUrl = (id: string) =>
+      props.mode === 'snapshot'
+        ? `/api/v1/prd/snapshot/${id}`
+        : `/api/v1/prd/${id}`
+
     const [resA, resB] = await Promise.all([
-      $fetch<{ success: boolean; data: PRDData }>(`/api/v1/prd/${props.prdIdA}`),
-      $fetch<{ success: boolean; data: PRDData }>(`/api/v1/prd/${props.prdIdB}`)
+      $fetch<{ success: boolean; data: PRDData }>(fetchUrl(props.prdIdA)),
+      $fetch<{ success: boolean; data: PRDData }>(fetchUrl(props.prdIdB))
     ])
 
     if (!resA.success || !resA.data) throw new Error('加载版本 A 失败')

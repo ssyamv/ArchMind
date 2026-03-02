@@ -583,7 +583,9 @@
     "mentionNoDocuments": "No documents found",
     "mentionNavigate": "Navigate",
     "mentionSelect": "Select",
-    "mentionClose": "Close"
+    "mentionClose": "Close",
+    "uploadImage": "Upload Image",
+    "dropImageHere": "Drop to upload image"
   },
   "knowledgeBase": {
     "title": "Knowledge Base",

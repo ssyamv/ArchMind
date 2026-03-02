@@ -76,6 +76,25 @@ export class WorkspaceMemberDAO {
   }
 
   /**
+   * 获取用户的 owner 工作区
+   */
+  static async getOwnerWorkspace (userId: string): Promise<{ id: string; name: string } | null> {
+    const sql = `
+      SELECT w.id, w.name
+      FROM workspaces w
+      JOIN workspace_members wm ON w.id = wm.workspace_id
+      WHERE wm.user_id = $1 AND wm.role = 'owner'
+      LIMIT 1
+    `
+    const result = await dbClient.query<any>(sql, [userId])
+    if (result.rows.length === 0) return null
+    return {
+      id: result.rows[0].id,
+      name: result.rows[0].name
+    }
+  }
+
+  /**
    * 添加成员
    */
   static async addMember (workspaceId: string, userId: string, role: 'owner' | 'admin' | 'member' = 'member'): Promise<WorkspaceMember> {

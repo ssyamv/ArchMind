@@ -1,6 +1,15 @@
+// 多模态内容块
+export interface ContentBlock {
+  type: 'text' | 'image'
+  text?: string
+  imageUrl?: string
+  imageBase64?: string
+  mimeType?: string
+}
+
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
-  content: string;
+  content: string | ContentBlock[]; // 支持多模态内容
 }
 
 export interface GenerateOptions {

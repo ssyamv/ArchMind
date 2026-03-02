@@ -41,6 +41,16 @@ export interface ConversationTargetContext {
   prototypeSlug?: string
 }
 
+// 图片附件类型
+export interface ImageAttachment {
+  id: string
+  type: 'base64' | 'url'
+  data: string // base64 编码或 URL
+  mimeType: string // image/png, image/jpeg, image/webp
+  name?: string
+  size?: number
+}
+
 export interface ConversationMessage {
   id: string
   role: 'user' | 'assistant'
@@ -55,6 +65,8 @@ export interface ConversationMessage {
   // 目标特定内容
   targetContent?: string
   targetContentType?: 'markdown' | 'html' | 'json'
+  // 图片附件（多模态支持）
+  images?: ImageAttachment[]
 }
 
 export interface Conversation {
@@ -80,6 +92,7 @@ export interface ConversationSaveRequest {
   messages: ConversationMessage[]
   finalPrdContent: string
   parentId?: string
+  workspaceId?: string // 工作区 ID（可选，默认使用用户的 owner 工作区）
 }
 
 export interface ConversationSaveResponse {

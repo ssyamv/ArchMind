@@ -501,3 +501,22 @@ export const ragRetrievalLogs = pgTable('rag_retrieval_logs', {
 }, (table) => ({
   workspaceCreatedIdx: index('idx_rag_logs_workspace_created').on(table.workspaceId, table.createdAt)
 }))
+
+// ============================================
+// PRD 快照表（v0.4.0 #61 Git 风格版本管理）
+// snapshot_type: 'auto' = 每次保存自动创建, 'manual' = 用户显式命名版本
+// ============================================
+export const prdSnapshots = pgTable('prd_snapshots', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  prdId: uuid('prd_id').references(() => prdDocuments.id, { onDelete: 'cascade' }).notNull(),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  snapshotType: varchar('snapshot_type', { length: 10 }).notNull().default('auto'),
+  tag: varchar('tag', { length: 200 }),
+  description: text('description'),
+  content: text('content').notNull(),
+  contentSize: integer('content_size'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+}, (table) => ({
+  prdCreatedIdx: index('idx_prd_snapshots_prd_created').on(table.prdId, table.createdAt),
+  typeIdx: index('idx_prd_snapshots_type').on(table.prdId, table.snapshotType)
+}))

@@ -9,6 +9,7 @@ export default defineEventHandler(async (event) => {
     const limit = Math.min(100, Math.max(1, parseInt((query.limit as string) || '50', 10)))
     const offset = (page - 1) * limit
     const workspaceId = query.workspace_id as string | undefined
+    const onlyWithContent = query.onlyWithContent === 'true'
 
     // 如果指定了工作区，校验当前用户是否是该工作区成员
     if (workspaceId) {
@@ -19,7 +20,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // 返回所有项目,包括未生成 PRD 的对话
+    // 返回所有项目,包括未生成 PRD 的对话（除非指定 onlyWithContent）
     const [prds, total] = await Promise.all([
       PRDDAO.findAll({
         limit,
@@ -27,9 +28,10 @@ export default defineEventHandler(async (event) => {
         order: 'DESC',
         orderBy: 'created_at',
         workspaceId,
-        userId
+        userId,
+        onlyWithContent
       }),
-      PRDDAO.count({ workspaceId, userId })
+      PRDDAO.count({ workspaceId, userId, onlyWithContent })
     ])
 
     return {

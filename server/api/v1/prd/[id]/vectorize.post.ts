@@ -1,12 +1,8 @@
-import { readFileSync } from 'fs'
-import { join } from 'path'
-import YAML from 'js-yaml'
 import { PRDDAO } from '~/lib/db/dao/prd-dao'
 import { PrdChunkDAO } from '~/lib/db/dao/prd-chunk-dao'
 import { VectorDAO } from '~/lib/db/dao/vector-dao'
-import { EmbeddingServiceFactory } from '~/lib/rag/embedding-adapter'
-import { getModelManager } from '~/lib/ai/manager'
 import { TextSplitter } from '~/lib/rag/text-splitter'
+import { createEmbeddingAdapter } from '~/server/utils/embedding'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -48,42 +44,11 @@ async function vectorizePrdAsync (prdId: string, content: string, existingMetada
   try {
     const runtimeConfig = useRuntimeConfig()
     const glmApiKey = runtimeConfig.glmApiKey as string | undefined
-    const openaiApiKey = runtimeConfig.openaiApiKey as string | undefined
 
-    const config = {
-      anthropicApiKey: runtimeConfig.anthropicApiKey,
-      openaiApiKey: runtimeConfig.openaiApiKey,
-      googleApiKey: runtimeConfig.googleApiKey,
-      glmApiKey: runtimeConfig.glmApiKey,
-      dashscopeApiKey: runtimeConfig.dashscopeApiKey,
-      baiduApiKey: runtimeConfig.baiduApiKey,
-      deepseekApiKey: runtimeConfig.deepseekApiKey,
-      ollamaBaseUrl: runtimeConfig.ollamaBaseUrl
-    }
-
-    const modelManager = getModelManager(config)
-    const defaultModelId = modelManager.getDefaultModelId()
-
-    const configPath = join(process.cwd(), 'config', 'ai-models.yaml')
-    const configContent = readFileSync(configPath, 'utf-8')
-    const parsed = YAML.load(configContent) as { ai_models: { models: Record<string, any> } }
-    const modelConfig = parsed.ai_models.models[defaultModelId]
-
-    if (!modelConfig) {
-      console.warn(`[PRD RAG] 未找到模型 ${defaultModelId} 的配置`)
-      await PRDDAO.update(prdId, {
-        metadata: { ...existingMetadata, ragEnabled: false, ragStatus: 'failed' }
-      })
-      return
-    }
-
-    const embeddingAdapter = await EmbeddingServiceFactory.createFromModelConfig(
-      modelConfig,
-      { glmApiKey, openaiApiKey }
-    )
+    const embeddingAdapter = await createEmbeddingAdapter({ glmApiKey })
 
     if (!embeddingAdapter) {
-      console.warn(`[PRD RAG] 模型 ${defaultModelId} 不支持 Embedding`)
+      console.warn('[PRD RAG] 未配置 Embedding API Key，无法向量化')
       await PRDDAO.update(prdId, {
         metadata: { ...existingMetadata, ragEnabled: false, ragStatus: 'failed' }
       })

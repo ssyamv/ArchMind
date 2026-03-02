@@ -2,6 +2,8 @@ import { dbClient } from '~/lib/db/client'
 import { prdDocuments, generationHistory, conversations, conversationMessages } from '~/lib/db/schema'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import type { ConversationSaveRequest } from '~/types/conversation'
+import { PRDSnapshotDAO } from '~/lib/db/dao/prd-snapshot-dao'
+import { WorkspaceMemberDAO } from '~/lib/db/dao/workspace-member-dao'
 
 export default defineEventHandler(async (event) => {
   const t = useServerT(event)
@@ -10,8 +12,8 @@ export default defineEventHandler(async (event) => {
     const userId = requireAuth(event)
     const body = await readBody<ConversationSaveRequest>(event)
 
-    // 验证必需字段 (finalPrdContent 允许为空字符串)
-    if (!body.conversationId || !body.title || body.finalPrdContent === undefined) {
+    // 验证必需字段 (title 和 finalPrdContent 均允许为空字符串)
+    if (!body.conversationId || body.title === undefined || body.finalPrdContent === undefined) {
       setResponseStatus(event, 400)
       return {
         success: false,
@@ -25,6 +27,13 @@ export default defineEventHandler(async (event) => {
     const prdId = crypto.randomUUID()
     const conversationDbId = crypto.randomUUID()
     const now = new Date()
+
+    // 获取工作区 ID：优先使用传入的，否则使用用户的 owner 工作区
+    let workspaceId = body.workspaceId
+    if (!workspaceId) {
+      const ownerWorkspace = await WorkspaceMemberDAO.getOwnerWorkspace(userId)
+      workspaceId = ownerWorkspace?.id
+    }
 
     // 提取用户输入消息
     const userInputs = body.messages
@@ -46,6 +55,7 @@ export default defineEventHandler(async (event) => {
     await db.insert(prdDocuments).values({
       id: prdId,
       userId,
+      workspaceId: workspaceId || null, // 设置工作区 ID
       title: body.title,
       content: body.finalPrdContent || '', // 空内容时使用空字符串
       userInput: userInputs,
@@ -108,6 +118,23 @@ export default defineEventHandler(async (event) => {
         userInput: '', // Would be associated with previous user message
         status: 'completed',
         createdAt: now
+      })
+    }
+
+    // 首次创建 PRD 后，异步创建自动快照（fire-and-forget）
+    if (body.finalPrdContent) {
+      setImmediate(async () => {
+        try {
+          await PRDSnapshotDAO.create({
+            prdId,
+            createdBy: userId,
+            snapshotType: 'auto',
+            content: body.finalPrdContent
+          })
+          await PRDSnapshotDAO.pruneAutoSnapshots(prdId)
+        } catch (e) {
+          console.warn('[PRDSnapshot] auto snapshot failed on create:', e)
+        }
       })
     }
 

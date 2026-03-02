@@ -1,10 +1,7 @@
 import { Readable } from 'stream'
-import { readFileSync } from 'fs'
-import { join } from 'path'
-import YAML from 'js-yaml'
 import { PRDGenerator } from '~/lib/prd/generator'
 import { getModelManager } from '~/lib/ai/manager'
-import { EmbeddingServiceFactory } from '~/lib/rag/embedding-adapter'
+import { createEmbeddingAdapter } from '~/server/utils/embedding'
 import { triggerWebhooks } from '~/server/utils/webhook-trigger'
 import type { PRDGenerateRequest } from '~/types/prd'
 
@@ -29,7 +26,6 @@ export default defineEventHandler(async (event) => {
 
     const runtimeConfig = useRuntimeConfig()
     const glmApiKey = runtimeConfig.glmApiKey as string | undefined
-    const openaiApiKey = runtimeConfig.openaiApiKey as string | undefined
     
     // 获取模型管理器来验证选择的模型是否可用
     const config = {
@@ -62,26 +58,13 @@ export default defineEventHandler(async (event) => {
     if (body.useRAG) {
       console.log(`[RAG] 用户已启用 RAG，正在初始化 Embedding 服务...`)
       try {
-        // 读取模型配置
-        const configPath = join(process.cwd(), 'config', 'ai-models.yaml')
-        const content = readFileSync(configPath, 'utf-8')
-        const parsed = YAML.load(content) as { ai_models: { models: Record<string, any> } }
-        const modelConfig = parsed.ai_models.models[modelId]
+        embeddingAdapter = await createEmbeddingAdapter({ glmApiKey })
 
-        if (modelConfig) {
-          embeddingAdapter = await EmbeddingServiceFactory.createFromModelConfig(
-            modelConfig,
-            { glmApiKey, openaiApiKey }
-          )
-
-          if (!embeddingAdapter) {
-            console.warn(`[RAG] 模型 ${modelId} 不支持 Embedding，RAG 功能将被禁用`)
-          } else {
-            const modelInfo = embeddingAdapter.getModelInfo()
-            console.log(`[RAG] ✓ 已启用 ${modelInfo.provider} Embedding 服务: ${modelInfo.modelId}`)
-          }
+        if (!embeddingAdapter) {
+          console.warn('[RAG] 未配置 Embedding API Key，RAG 功能将被禁用')
         } else {
-          console.warn(`[RAG] 未找到模型 ${modelId} 的配置`)
+          const modelInfo = embeddingAdapter.getModelInfo()
+          console.log(`[RAG] ✓ 已启用 ${modelInfo.provider} Embedding 服务: ${modelInfo.modelId}`)
         }
       } catch (error) {
         console.error('[RAG] 初始化 Embedding 服务失败:', error)

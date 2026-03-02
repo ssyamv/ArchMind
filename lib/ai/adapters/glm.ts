@@ -25,7 +25,34 @@ export class GLMAdapter implements AIModelAdapter {
 
   private buildMessages (prompt: string, options?: GenerateOptions) {
     if (options?.messages) {
-      return options.messages.map(m => ({ role: m.role as 'system' | 'user' | 'assistant', content: m.content }))
+      return options.messages.map(m => {
+        // 处理多模态内容（GLM-4.6V 支持）
+        if (Array.isArray(m.content)) {
+          const content = m.content.map(block => {
+            if (block.type === 'text') {
+              return { type: 'text', text: block.text || '' }
+            } else if (block.type === 'image') {
+              // GLM 使用 OpenAI 兼容格式
+              if (block.imageBase64) {
+                return {
+                  type: 'image_url',
+                  image_url: {
+                    url: `data:${block.mimeType || 'image/jpeg'};base64,${block.imageBase64}`
+                  }
+                }
+              } else if (block.imageUrl) {
+                return {
+                  type: 'image_url',
+                  image_url: { url: block.imageUrl }
+                }
+              }
+            }
+            return { type: 'text', text: '' }
+          })
+          return { role: m.role as 'system' | 'user' | 'assistant', content }
+        }
+        return { role: m.role as 'system' | 'user' | 'assistant', content: m.content as string }
+      })
     }
     return [
       { role: 'system' as const, content: options?.systemPrompt || '' },
@@ -73,10 +100,12 @@ export class GLMAdapter implements AIModelAdapter {
   }
 
   getCapabilities (): ModelCapabilities {
+    // 只有 glm-4.6v 系列支持视觉输入
+    const supportsVision = this.modelId.includes('4.6v') || this.modelId.includes('4v')
     return {
       supportsStreaming: true,
       supportsStructuredOutput: true,
-      supportsVision: true,
+      supportsVision,
       maxContextLength: 128000,
       supportedLanguages: ['en', 'zh', 'ja', 'ko', 'fr', 'de', 'es']
     }
