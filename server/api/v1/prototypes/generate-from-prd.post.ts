@@ -53,7 +53,8 @@ export default defineEventHandler(async (event) => {
       temperature: body.temperature,
       maxTokens: body.maxTokens || 16000,
       pageCount: body.pageCount,
-      deviceType: body.deviceType
+      deviceType: body.deviceType,
+      theme: body.theme
     })
 
     for await (const chunk of stream) {
