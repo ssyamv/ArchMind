@@ -628,7 +628,7 @@ watch(() => conversation.conversation.value.currentPrdContent, (newContent) => {
 })
 
 const availableModels = computed(() =>
-  aiModels.models.value?.map(m => ({ id: m.id, label: m.name, isUserModel: m.isUserModel, supportsVision: m.capabilities.supportsVision })) || []
+  aiModels.models.value?.map(m => ({ id: m.id, label: m.name, isUserModel: m.isUserModel, supportsVision: m.capabilities.supportsVision, supportsThinking: m.capabilities.supportsThinking })) || []
 )
 
 // Expose conversation ref for template
@@ -636,7 +636,7 @@ const conversationRef = conversation.conversation
 
 async function handleSendMessage (
   message: string,
-  options: { modelId: string; useRAG: boolean; target: ConversationTargetType; documentIds: string[]; prdIds: string[]; mentionedDocs?: import('~/types/conversation').MentionedDocument[]; images?: import('~/types/conversation').ImageAttachment[] }
+  options: { modelId: string; useRAG: boolean; enableThinking: boolean; target: ConversationTargetType; documentIds: string[]; prdIds: string[]; mentionedDocs?: import('~/types/conversation').MentionedDocument[]; images?: import('~/types/conversation').ImageAttachment[] }
 ) {
   // 切换对话目标（如果改变了）
   if (options.target !== conversation.currentTarget.value) {
@@ -684,6 +684,7 @@ async function handleSendMessage (
         })),
         modelId: options.modelId,
         useRAG: options.useRAG,
+        enableThinking: options.enableThinking,
         target: options.target,
         documentIds: options.documentIds?.length > 0 ? options.documentIds : undefined,
         prdIds: options.prdIds?.length > 0 ? options.prdIds : undefined,
@@ -723,6 +724,9 @@ async function handleSendMessage (
         if (line.startsWith('data: ')) {
           try {
             const data = JSON.parse(line.slice(6))
+            if (data.thinkingChunk) {
+              conversation.updateAIThinkingMessage(aiMessage.id, data.thinkingChunk)
+            }
             if (data.chunk) {
               conversation.updateAIMessage(aiMessage.id, data.chunk)
             }
@@ -1061,6 +1065,7 @@ async function handleRetry (message: ConversationMessage) {
   await handleSendMessage(message.content, {
     modelId,
     useRAG: message.useRAG ?? true,
+    enableThinking: false,
     target: conversation.currentTarget.value,
     documentIds: message.documentIds || [],
     prdIds: []

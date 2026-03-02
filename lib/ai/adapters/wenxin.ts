@@ -184,6 +184,7 @@ export class WenxinAdapter implements AIModelAdapter {
       supportsStreaming: true,
       supportsStructuredOutput: false,
       supportsVision: false,
+      supportsThinking: false,
       maxContextLength: is4 ? 8000 : 8000,
       supportedLanguages: ['zh', 'en']
     }

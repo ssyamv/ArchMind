@@ -46,6 +46,7 @@ ai_models:
         supportsStreaming: true
         supportsStructuredOutput: true
         supportsVision: false
+        supportsThinking: true
         supportedLanguages: ["zh", "en"]
       costEstimate:
         input: "¥0.1 / 1M tokens"
@@ -68,6 +69,7 @@ ai_models:
         supportsStreaming: true
         supportsStructuredOutput: true
         supportsVision: false
+        supportsThinking: true
         supportedLanguages: ["zh", "en"]
       costEstimate:
         input: "¥0.05 / 1M tokens"
@@ -113,6 +115,7 @@ ai_models:
         supportsStreaming: true
         supportsStructuredOutput: true
         supportsVision: true
+        supportsThinking: true
         supportedLanguages: ["zh", "en", "ja", "es", "fr", "de"]
       costEstimate:
         input: "$15 / 1M tokens"
@@ -132,6 +135,7 @@ ai_models:
         supportsStreaming: true
         supportsStructuredOutput: true
         supportsVision: true
+        supportsThinking: true
         supportedLanguages: ["zh", "en", "ja", "es", "fr", "de"]
       costEstimate:
         input: "$3 / 1M tokens"
@@ -151,6 +155,7 @@ ai_models:
         supportsStreaming: true
         supportsStructuredOutput: true
         supportsVision: true
+        supportsThinking: true
         supportedLanguages: ["zh", "en", "ja", "es", "fr", "de"]
       costEstimate:
         input: "$3 / 1M tokens"

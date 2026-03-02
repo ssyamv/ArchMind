@@ -112,13 +112,13 @@
             </SelectContent>
           </Select>
 
-          <!-- RAG Toggle (hidden on narrow width) -->
+          <!-- RAG Toggle：宽屏显示文字，窄屏只显示图标 -->
           <Button
-            v-show="!isNarrow"
             variant="ghost"
             size="sm"
             :disabled="isLoading"
             class="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-background/60 shrink-0"
+            :class="useRAG ? 'text-foreground' : ''"
             @click="useRAG = !useRAG"
           >
             <span
@@ -126,7 +126,25 @@
               :class="useRAG ? 'bg-green-400 animate-pulse' : 'bg-muted-foreground/30'"
             />
             <BookOpen class="w-3.5 h-3.5" />
-            <span>RAG</span>
+            <span v-show="!isNarrow">RAG</span>
+          </Button>
+
+          <!-- Thinking Toggle：仅支持 thinking 的模型显示，宽屏显示文字，窄屏只显示图标 -->
+          <Button
+            v-show="currentModelSupportsThinking"
+            variant="ghost"
+            size="sm"
+            :disabled="isLoading"
+            class="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-background/60 shrink-0"
+            :class="useThinking ? 'text-foreground' : ''"
+            @click="useThinking = !useThinking"
+          >
+            <span
+              class="w-2 h-2 rounded-full shrink-0"
+              :class="useThinking ? 'bg-purple-400 animate-pulse' : 'bg-muted-foreground/30'"
+            />
+            <Brain class="w-3.5 h-3.5" />
+            <span v-show="!isNarrow">深度思考</span>
           </Button>
 
           <!-- Image Upload -->
@@ -170,7 +188,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { BookOpen, Send, Loader2, X, FileText, ScrollText, ImageIcon } from 'lucide-vue-next'
+import { BookOpen, Brain, Send, Loader2, X, FileText, ScrollText, ImageIcon } from 'lucide-vue-next'
 import TargetSelector from './TargetSelector.vue'
 import DocumentMentionDropdown from './DocumentMentionDropdown.vue'
 import ImageUpload from './ImageUpload.vue'
@@ -181,12 +199,12 @@ const { locale } = useI18n()
 const { toast } = useToast()
 
 const emit = defineEmits<{
-  send: [message: string, options: { modelId: string; useRAG: boolean; target: ConversationTargetType; documentIds: string[]; prdIds: string[]; mentionedDocs: MentionedDocument[]; images?: ImageAttachment[] }]
+  send: [message: string, options: { modelId: string; useRAG: boolean; enableThinking: boolean; target: ConversationTargetType; documentIds: string[]; prdIds: string[]; mentionedDocs: MentionedDocument[]; images?: ImageAttachment[] }]
 }>()
 
 const props = defineProps<{
   isLoading?: boolean
-  availableModels: Array<{ id: string; label: string; isUserModel?: boolean; supportsVision?: boolean }>
+  availableModels: Array<{ id: string; label: string; isUserModel?: boolean; supportsVision?: boolean; supportsThinking?: boolean }>
   workspaceId?: string
 }>()
 
@@ -201,10 +219,15 @@ const input = ref('')
 const selectedModel = ref(props.availableModels[0]?.id || '')
 const selectedTarget = ref<ConversationTargetType>('prd')
 const useRAG = ref(false)
+const useThinking = ref(false)
 const isComposing = ref(false)
 const containerRef = ref<HTMLDivElement>()
 const textareaRef = ref()
 const bottomBarRef = ref<HTMLDivElement>()
+
+const currentModelSupportsThinking = computed(() =>
+  props.availableModels.find(m => m.id === selectedModel.value)?.supportsThinking ?? false
+)
 const leftControlsRef = ref<HTMLDivElement>()
 const hintRef = ref<HTMLSpanElement>()
 const containerHeight = ref(DEFAULT_HEIGHT)
@@ -495,6 +518,7 @@ function handleSubmit () {
   emit('send', input.value, {
     modelId: selectedModel.value,
     useRAG: useRAG.value,
+    enableThinking: useThinking.value && currentModelSupportsThinking.value,
     target: selectedTarget.value,
     documentIds,
     prdIds,

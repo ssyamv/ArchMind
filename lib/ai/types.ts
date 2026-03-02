@@ -19,12 +19,14 @@ export interface GenerateOptions {
   stopSequences?: string[];
   systemPrompt?: string;
   messages?: ChatMessage[];
+  enableThinking?: boolean;
 }
 
 export interface ModelCapabilities {
   supportsStreaming: boolean;
   supportsStructuredOutput: boolean;
   supportsVision: boolean;
+  supportsThinking: boolean;
   maxContextLength: number;
   supportedLanguages: string[];
 }
