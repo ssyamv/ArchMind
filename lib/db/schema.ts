@@ -433,6 +433,7 @@ export const webhooks = pgTable('webhooks', {
   userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   name: varchar('name', { length: 255 }).notNull(),
   url: text('url').notNull(),
+  type: varchar('type', { length: 20 }).default('standard').notNull(), // 'standard' | 'feishu' | 'dingtalk' | 'wecom' | 'slack' | 'discord'
   events: jsonb('events').default(sql`'[]'::jsonb`).notNull(), // ['document.uploaded', 'prd.generated', ...]
   active: boolean('active').default(true).notNull(),
   secret: varchar('secret', { length: 255 }).notNull(), // HMAC-SHA256 签名密钥
