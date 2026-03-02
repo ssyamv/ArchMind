@@ -7,7 +7,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-4169E1?logo=postgresql)](https://www.postgresql.org/)
 [![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js)](https://vuejs.org/)
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-0.3.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-0.4.0-blue)](CHANGELOG.md)
 
 ---
 
@@ -89,13 +89,32 @@
 - **逻辑图生成**：自动生成 PRD 功能点的逻辑关系图
 - **覆盖率分析**：量化 PRD 对需求的覆盖程度
 
-### 实时协作（v0.3.0 新增）
+### 实时协作（v0.3.0）
 
 - **WebSocket 实时通信**：Nitro 原生 WebSocket，鉴权通过 HttpOnly Cookie 在服务端完成
 - **评论系统**：支持 @提及、评论解决、权限分级（作者/管理员）
 - **活动日志**：工作区内所有操作的完整历史记录
 - **成员在线状态**：实时显示谁在查看同一文档
 - **Webhook 集成**：订阅文档/PRD 事件，向外部系统推送 HMAC-SHA256 签名通知
+
+### PRD 生成增强（v0.4.0）
+
+- **Few-shot 示例库**：10 个高质量示例，3D 匹配算法（领域 + 功能类型 + 复杂度）
+- **语义感知压缩**：智能保留关键信息，压缩率 40-60%，支持大文档上下文
+- **质量维度扩展**：6 维评分（完整性、可行性、清晰度、创新性、用户体验、技术深度）
+- **用户反馈打分**：1-5 星评分 + 文本反馈，持续优化生成质量
+- **多版本对比**：Git 风格快照管理，逐字符 diff 高亮，支持版本回退
+
+### 原型生成增强（v0.4.0）
+
+- **多页面容错**：4 层 Fallback 机制，确保 AI 输出格式不稳定时也能正常解析
+- **主题定制**：5 个预设主题（Modern、Classic、Vibrant、Minimal、Dark）+ 自定义配置
+- **JS 交互模板**：10 个验证通过的模板（手风琴、标签页、模态框、轮播图等）
+
+### RAG 检索优化（v0.4.0）
+
+- **动态相似度阈值**：基于查询复杂度自动调整（0.65-0.85），空结果率从 15% 降至 5%
+- **检索质量面板**：可视化统计数据（平均结果数、命中率、平均耗时）
 
 ### 企业级功能
 
