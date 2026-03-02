@@ -24,6 +24,7 @@ export interface PRDGenerationOptions {
   maxRefinementIterations?: number; // 最大迭代次数
   userId?: string;
   workspaceId?: string;
+  parentId?: string;
 }
 
 export interface PRDGenerationResult {
@@ -318,6 +319,7 @@ export class PRDGenerator {
     const prd: Omit<PRDDocument, 'id' | 'createdAt' | 'updatedAt'> = {
       userId: options?.userId,
       workspaceId: options?.workspaceId,
+      parentId: options?.parentId,
       title: `PRD - ${new Date().toISOString().split('T')[0]}`,
       content,
       userInput,
@@ -435,6 +437,7 @@ export class PRDGenerator {
     const prd: Omit<PRDDocument, 'id' | 'createdAt' | 'updatedAt'> = {
       userId: options?.userId,
       workspaceId: options?.workspaceId,
+      parentId: options?.parentId,
       title: `PRD - ${new Date().toISOString().split('T')[0]}`,
       content: cleanedContent,
       userInput,

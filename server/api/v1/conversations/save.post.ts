@@ -51,6 +51,7 @@ export default defineEventHandler(async (event) => {
       userInput: userInputs,
       modelUsed: modelsUsed || 'unknown',
       status: body.finalPrdContent ? 'published' : 'draft', // 无 PRD 内容时标记为草稿
+      parentId: body.parentId || null,
       metadata: {
         conversationId: body.conversationId,
         conversationDbId, // 新增:数据库中的对话ID

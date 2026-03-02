@@ -79,6 +79,7 @@ export interface ConversationSaveRequest {
   title: string
   messages: ConversationMessage[]
   finalPrdContent: string
+  parentId?: string
 }
 
 export interface ConversationSaveResponse {

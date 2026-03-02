@@ -74,7 +74,8 @@ export default defineEventHandler(async (event) => {
       useRAG: body.useRAG,
       documentIds: body.documentIds,
       userId,
-      workspaceId: body.workspaceId
+      workspaceId: body.workspaceId,
+      parentId: body.parentId
     })
 
     return {

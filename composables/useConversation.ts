@@ -127,7 +127,7 @@ export function useConversation () {
   }
 
   // Save conversation to database (first time)
-  async function saveConversation (title: string) {
+  async function saveConversation (title: string, parentId?: string) {
     try {
       const response = await $fetch<{ success: boolean; id: string }>('/api/v1/conversations/save', {
         method: 'POST',
@@ -135,7 +135,8 @@ export function useConversation () {
           conversationId: conversation.value.id,
           title,
           messages: conversation.value.messages,
-          finalPrdContent: conversation.value.currentPrdContent
+          finalPrdContent: conversation.value.currentPrdContent,
+          parentId: parentId || undefined
         }
       })
       conversation.value.savedToDb = true
@@ -181,7 +182,7 @@ export function useConversation () {
   }
 
   // Auto-save to database (create or update)
-  async function autoSaveToDatabase () {
+  async function autoSaveToDatabase (parentId?: string) {
     const conv = conversation.value
     // 没有消息时不保存
     if (conv.messages.length === 0) return
@@ -208,7 +209,7 @@ export function useConversation () {
           ? firstUserMessage.content.substring(0, 30) + (firstUserMessage.content.length > 30 ? '...' : '')
           : '未命名对话'
       }
-      await saveConversation(autoTitle)
+      await saveConversation(autoTitle, parentId)
     }
   }
 

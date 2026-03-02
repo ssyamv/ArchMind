@@ -302,6 +302,9 @@ const workspace = useWorkspace()
 const isImmersive = computed(() => route.query.immersive === '1')
 const layoutName = computed(() => isImmersive.value ? 'chat' : 'dashboard')
 
+// 从 URL 参数读取 parentId，用于将本次生成关联为某 PRD 的新版本
+const parentPrdId = computed(() => (route.query.parentId as string) || undefined)
+
 const colorMode = useColorMode()
 const isDark = computed(() => colorMode.value === 'dark')
 function toggleDark() {
@@ -547,7 +550,7 @@ async function handleSendMessage (
 
     // 自动保存到数据库
     try {
-      await conversation.autoSaveToDatabase()
+      await conversation.autoSaveToDatabase(parentPrdId.value)
     } catch (error) {
       console.error('Auto-save failed:', error)
       toast({
@@ -574,7 +577,7 @@ async function handleManualSave () {
   if (isSaving.value || conversationRef.value.messages.length === 0) return
   isSaving.value = true
   try {
-    await conversation.autoSaveToDatabase()
+    await conversation.autoSaveToDatabase(parentPrdId.value)
     toast({
       title: t('generate.saveSuccess.title'),
       description: t('generate.saveSuccess.description'),

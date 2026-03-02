@@ -107,7 +107,8 @@ export default defineEventHandler(async (event) => {
       useRAG: enableRAG,
       documentIds: body.documentIds,
       userId,
-      workspaceId: body.workspaceId
+      workspaceId: body.workspaceId,
+      parentId: body.parentId
     })
 
     const readable = Readable.from(asyncIterable as unknown as AsyncIterable<string>)

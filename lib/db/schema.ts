@@ -4,6 +4,7 @@
  */
 
 import { pgTable, uuid, varchar, text, integer, smallint, boolean, timestamp, jsonb, decimal, real, index, uniqueIndex } from 'drizzle-orm/pg-core'
+import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 // ============================================
@@ -105,6 +106,7 @@ export const prdDocuments = pgTable('prd_documents', {
   estimatedCost: decimal('estimated_cost', { precision: 10, scale: 4 }),
   status: varchar('status', { length: 20 }).default('draft'),
   metadata: jsonb('metadata').default(sql`'{}'::jsonb`),
+  parentId: uuid('parent_id').references((): AnyPgColumn => prdDocuments.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow()
 }, (table) => {
@@ -112,7 +114,8 @@ export const prdDocuments = pgTable('prd_documents', {
     userIdIdx: index('idx_prd_user_id').on(table.userId),
     workspaceIdIdx: index('idx_prd_workspace_id').on(table.workspaceId),
     createdAtIdx: index('idx_prd_created_at').on(table.createdAt),
-    modelUsedIdx: index('idx_prd_model_used').on(table.modelUsed)
+    modelUsedIdx: index('idx_prd_model_used').on(table.modelUsed),
+    parentIdIdx: index('idx_prd_parent_id').on(table.parentId)
   }
 })
 
