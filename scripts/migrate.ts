@@ -17,7 +17,7 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
-import { Pool, type PoolClient } from 'pg'
+import { Pool } from 'pg'
 
 const MIGRATIONS_DIR = join(process.cwd(), 'migrations')
 const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://localhost:5432/archmind'
