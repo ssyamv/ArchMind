@@ -234,10 +234,10 @@ export class RAGRetriever {
           dc.document_id,
           d.title as document_title,
           dc.content,
-          ts_rank(d.tsv, plainto_tsquery('${tsConfig}', $1)) as score
+          ts_rank(d.search_vector, plainto_tsquery('${tsConfig}', $1)) as score
         FROM document_chunks dc
         JOIN documents d ON dc.document_id = d.id
-        WHERE d.tsv @@ plainto_tsquery('${tsConfig}', $1)
+        WHERE d.search_vector @@ plainto_tsquery('${tsConfig}', $1)
       `
       const params: unknown[] = [query]
 
