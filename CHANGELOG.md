@@ -11,6 +11,33 @@
 
 ---
 
+## [0.5.0] - 2026-03-07
+
+本版本聚焦企业级能力建设与产品交付闭环，引入 RBAC 精细权限、批量操作、数据导入导出、逻辑图谱生成、PRD 模板系统、文档智能分类、AI 任务队列和搜索体验增强八大功能模块。
+
+### 新增 (Added)
+
+- **#62 RBAC 精细权限系统**：新增 `editor`/`viewer`/`guest` 角色，资源级权限覆盖表（`workspace_permission_overrides`），支持对文档/PRD/原型/逻辑图的细粒度访问控制
+- **#63 批量操作 API**：文档批量删除、标签、分类、重处理、自动标签；PRD 批量归档、删除、导出
+- **#64 数据导出**：工作区级别 ZIP 打包导出，包含文档、PRD、原型的完整数据与元信息
+- **#65 数据导入**：工作区迁移支持，预览/确认两阶段安全导入，避免数据冲突
+- **#66 逻辑图谱生成（Logic Map）**：基于 Mermaid 格式，支持 flowchart/sequence/state/class 四种图类型，可从 PRD 一键生成
+- **#67 PRD 模板系统**：内置 6 个标准模板（标准/API设计/Bug修复规范/功能简报/引导流程/数据模型），支持自定义模板创建与管理
+- **#68 文档智能分类与自动标签**：AI 自动推断文档分类、标签、摘要和文档类型，支持置信度评分与人工确认
+- **#69 AI 任务队列与进度中心**：统一 AI 生成任务管理，支持实时进度追踪、任务取消与失败重试
+- **#70 搜索体验增强**：全局搜索（文档/PRD/原型/逻辑图跨类型联合检索）+ 语义搜索联动，支持搜索建议
+
+### 数据库变更 (Database)
+
+- 新增 `workspace_permission_overrides` 表（RBAC 资源级权限覆盖）
+- 新增 `mermaid_logic_maps` 表（逻辑图谱存储）
+- 新增 `prd_templates` 表（PRD 模板）
+- 新增 `ai_tasks` 表（AI 任务队列）
+- `workspace_members` 扩展角色约束（新增 editor/viewer/guest）
+- `documents` 表新增自动标签相关字段（`suggested_category`/`suggested_tags`/`auto_summary`/`auto_doc_type`/`auto_tags_confidence`/`auto_tags_confirmed`）
+
+---
+
 ## [0.4.3] - 2026-03-03
 
 ### 修复 (Fixed)
