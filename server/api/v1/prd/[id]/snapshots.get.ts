@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
       return { success: false, message: t(ErrorKeys.PRD_NOT_FOUND) }
     }
 
-    requireResourceOwner(prd, userId)
+    await requirePrdAccess(prd, userId)
 
     const query = getQuery(event)
     const type = query.type as string | undefined

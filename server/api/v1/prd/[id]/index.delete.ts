@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    requireResourceOwner(prd, userId)
+    await requirePrdAccess(prd, userId, true)
 
     const deleted = await PRDDAO.delete(id)
 

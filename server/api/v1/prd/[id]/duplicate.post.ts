@@ -18,8 +18,8 @@ export default defineEventHandler(async (event) => {
   const original = await PRDDAO.findById(prdId)
   if (!original) throw createError({ statusCode: 404, message: 'PRD 不存在' })
 
-  // 权限检查
-  requireResourceOwner(original, userId)
+  // 权限检查（工作区成员可复制，非成员无权限）
+  await requirePrdAccess(original, userId)
 
   // 创建副本
   const duplicated = await PRDDAO.create({
