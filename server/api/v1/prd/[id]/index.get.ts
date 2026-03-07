@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    requireResourceOwner(prd, userId)
+    await requirePrdAccess(prd, userId)
 
     // 获取引用的文档
     const references = await PRDDAO.getReferences(id)
