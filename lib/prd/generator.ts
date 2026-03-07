@@ -25,6 +25,7 @@ export interface PRDGenerationOptions {
   userId?: string;
   workspaceId?: string;
   parentId?: string;
+  templateSystemPrompt?: string;  // #67 模板专用 System Prompt
 }
 
 export interface PRDGenerationResult {
@@ -410,7 +411,7 @@ export class PRDGenerator {
       references.push(...options.documentIds)
     }
 
-    // 构建最终提示词
+    // 构建最终提示词（#67 支持模板 System Prompt 覆盖）
     const fullPrompt = buildPRDPrompt(userInput, backgroundContext)
 
     // 流式生成内容
@@ -419,7 +420,8 @@ export class PRDGenerator {
 
     const streamIterator = modelAdapter.generateStream(fullPrompt, {
       temperature,
-      maxTokens
+      maxTokens,
+      systemPrompt: options?.templateSystemPrompt || undefined,
     }) as unknown as AsyncIterable<string>
 
     for await (const chunk of streamIterator) {

@@ -1,41 +1,23 @@
-import { LogicMapDAO } from '~/lib/db/dao/logic-map-dao'
-import { PRDDAO } from '~/lib/db/dao/prd-dao'
+/**
+ * GET /api/v1/logic-maps/:id (Mermaid 格式)
+ * 获取 Mermaid 逻辑图详情
+ *
+ * 注意：此文件覆盖同路径的旧版 VueFlow 格式逻辑图查询
+ * 旧格式端点已迁移至 generate-from-prd.post.ts
+ */
 
-import { ErrorMessages } from '~/server/utils/errors'
+import { MermaidLogicMapDAO } from '~/lib/db/dao/mermaid-logic-map-dao'
+
 export default defineEventHandler(async (event) => {
-  try {
-    const userId = requireAuth(event)
-    const prdId = getRouterParam(event, 'id')
+  const id = getRouterParam(event, 'id')
+  if (!id) throw createError({ statusCode: 400, message: 'id 参数必填' })
 
-    if (!prdId) {
-      setResponseStatus(event, 400)
-      return { success: false, error: 'prdId is required' }
-    }
+  requireAuth(event)
 
-    // 通过 PRD 归属间接校验
-    const prd = await PRDDAO.findById(prdId)
-    if (prd) {
-      requireResourceOwner({ userId: prd.userId }, userId)
-    }
+  const map = await MermaidLogicMapDAO.findById(id)
+  if (!map) throw createError({ statusCode: 404, message: '逻辑图不存在' })
 
-    const logicMapRecord = await LogicMapDAO.findByPrdId(prdId)
+  await requireWorkspaceRole(event, map.workspaceId, 'logic_map', 'read')
 
-    if (!logicMapRecord) {
-      return { success: true, data: null }
-    }
-
-    const logicMapData = LogicMapDAO.toLogicMapData(logicMapRecord)
-
-    return {
-      success: true,
-      data: logicMapData
-    }
-  } catch (error) {
-    console.error('Failed to load logic map:', error)
-    setResponseStatus(event, 500)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : ErrorMessages.UNKNOWN_ERROR
-    }
-  }
+  return { success: true, data: map }
 })

@@ -3,6 +3,8 @@ import { PRDGenerator } from '~/lib/prd/generator'
 import { getModelManager } from '~/lib/ai/manager'
 import { createEmbeddingAdapter } from '~/server/utils/embedding'
 import { triggerWebhooks } from '~/server/utils/webhook-trigger'
+import { PRDTemplateDAO } from '~/lib/db/dao/prd-template-dao'
+import { prdTemplateEngine } from '~/lib/prd/template-engine'
 import type { PRDGenerateRequest } from '~/types/prd'
 
 export default defineEventHandler(async (event) => {
@@ -82,6 +84,15 @@ export default defineEventHandler(async (event) => {
     // 确定是否使用 RAG：只有在有 embedding 适配器且用户明确请求时才启用
     const enableRAG = embeddingAdapter !== null && body.useRAG === true
 
+    // #67 加载 PRD 模板 System Prompt（可选）
+    let templateSystemPrompt: string | undefined
+    if (body.templateId && body.templateId !== 'standard') {
+      const template = await PRDTemplateDAO.findById(body.templateId)
+      if (template) {
+        templateSystemPrompt = prdTemplateEngine.buildSystemPrompt(template)
+      }
+    }
+
     // 创建可读流用于流式响应
     const asyncIterable = generator.generateStream(body.userInput, {
       model: modelId,
@@ -91,7 +102,8 @@ export default defineEventHandler(async (event) => {
       documentIds: body.documentIds,
       userId,
       workspaceId: body.workspaceId,
-      parentId: body.parentId
+      parentId: body.parentId,
+      templateSystemPrompt,
     })
 
     const readable = Readable.from(asyncIterable as unknown as AsyncIterable<string>)

@@ -30,6 +30,26 @@
 
           <!-- Actions -->
           <div class="flex items-center space-x-3">
+            <!-- #70 全局搜索按钮 -->
+            <ClientOnly>
+              <Button
+                v-if="authStore.isAuthenticated"
+                variant="outline"
+                size="sm"
+                class="hidden md:flex items-center gap-2 text-muted-foreground text-sm w-48"
+                @click="searchOpen = true"
+              >
+                <Search class="w-3.5 h-3.5" />
+                <span>搜索...</span>
+                <kbd class="ml-auto text-xs bg-muted px-1 rounded">⌘K</kbd>
+              </Button>
+            </ClientOnly>
+
+            <!-- #69 任务指示器 -->
+            <ClientOnly>
+              <TaskIndicator v-if="authStore.isAuthenticated" />
+            </ClientOnly>
+
             <LanguageSwitcher />
             <Button
               as-child
@@ -113,12 +133,17 @@
       <slot />
     </main>
 
+    <!-- #70 全局搜索弹窗 -->
+    <ClientOnly>
+      <GlobalSearch v-model:open="searchOpen" />
+    </ClientOnly>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { Sparkles, Moon, Sun, FolderOpen, Database, Layout, LogOut, LogIn, Settings } from 'lucide-vue-next'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { Sparkles, Moon, Sun, FolderOpen, Database, Layout, LogOut, LogIn, Settings, Search } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
 import {
   DropdownMenu,
@@ -131,6 +156,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '~/components/ui/avatar'
 import { Toaster } from '~/components/ui/toast'
 import LanguageSwitcher from '~/components/common/LanguageSwitcher.vue'
+import GlobalSearch from '~/components/search/GlobalSearch.vue'
+import TaskIndicator from '~/components/tasks/TaskIndicator.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const colorMode = useColorMode()
@@ -139,8 +166,25 @@ const { t } = useI18n()
 const router = useRouter()
 const authStore = useAuthStore()
 
+const searchOpen = ref(false)
+
+// ⌘K 快捷键唤起全局搜索
+function onKeyDown (e: KeyboardEvent) {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault()
+    if (authStore.isAuthenticated) {
+      searchOpen.value = true
+    }
+  }
+}
+
 onMounted(async () => {
   await authStore.checkAuth()
+  document.addEventListener('keydown', onKeyDown)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onKeyDown)
 })
 
 const toggleDark = () => {

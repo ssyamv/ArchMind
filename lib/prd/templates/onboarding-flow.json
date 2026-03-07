@@ -1,0 +1,32 @@
+{
+  "id": "onboarding-flow",
+  "name": "用户引导流程",
+  "description": "新用户注册/引导流程设计，包含用户旅程和 A/B 测试方案",
+  "type": "onboarding-flow",
+  "sections": [
+    {
+      "id": "user-journey",
+      "title": "用户旅程",
+      "required": true,
+      "instructions": "描述用户从首次接触到完成引导的完整旅程，可用流程图或分步描述"
+    },
+    {
+      "id": "steps",
+      "title": "步骤详情",
+      "required": true,
+      "instructions": "详细描述每个引导步骤：步骤名称、用户操作、系统反馈、跳出率容忍度"
+    },
+    {
+      "id": "copy",
+      "title": "文案规范",
+      "required": true,
+      "instructions": "提供每个步骤的标题、说明文字、按钮文案，说明语气和措辞风格"
+    },
+    {
+      "id": "ab-test",
+      "title": "A/B 测试方案",
+      "required": false,
+      "instructions": "如有，描述 A/B 测试变量、假设、成功指标和实验时长"
+    }
+  ]
+}
