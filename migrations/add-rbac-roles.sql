@@ -27,7 +27,7 @@ UPDATE workspace_members SET role = 'editor' WHERE role = 'member';
 -- 4. 新增资源级权限覆盖表（可选，用于特殊权限需求）
 CREATE TABLE IF NOT EXISTS workspace_permission_overrides (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id  TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id  UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   resource_type TEXT NOT NULL,  -- 'document' | 'prd' | 'prototype' | 'logic_map'
   resource_id   TEXT NOT NULL,
