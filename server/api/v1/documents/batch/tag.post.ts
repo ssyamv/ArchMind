@@ -19,7 +19,7 @@ const Schema = z.object({
 
 export default defineEventHandler(async (event) => {
   const body = await readValidatedBody(event, Schema.parse)
-  const { userId } = await requireWorkspaceRole(event, body.workspaceId, 'document', 'write')
+  await requireWorkspaceRole(event, body.workspaceId, 'document', 'write')
 
   const { addTags = [], removeTags = [] } = body.options
 
