@@ -2,7 +2,7 @@
 
 CREATE TABLE IF NOT EXISTS prd_templates (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id  TEXT REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id  UUID REFERENCES workspaces(id) ON DELETE CASCADE,
   user_id       UUID REFERENCES users(id),
   name          VARCHAR(200) NOT NULL,
   description   TEXT,

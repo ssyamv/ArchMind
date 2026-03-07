@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS mermaid_logic_maps (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id  TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id  UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   prd_id        UUID REFERENCES prd_documents(id) ON DELETE SET NULL,
   user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   title         TEXT NOT NULL,
