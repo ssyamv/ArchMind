@@ -6,6 +6,7 @@
 import { DocumentDAO } from '~/lib/db/dao/document-dao'
 import { DocumentProcessingPipeline } from '~/lib/rag/pipeline'
 import { createEmbeddingAdapter } from '~/server/utils/embedding'
+import { autoTagger, AutoTagger } from '~/lib/classification/auto-tagger'
 
 /**
  * 异步处理文档向量化（fire-and-forget）
@@ -38,6 +39,19 @@ export async function processDocumentAsync(documentId: string, content: string):
       })
 
       console.log(`[AsyncQueue] Completed: ${documentId} (chunks=${result.chunksCreated}, vectors=${result.vectorsAdded})`)
+
+      // #68 向量化完成后异步触发自动标签
+      setImmediate(async () => {
+        try {
+          const tagResult = await autoTagger.analyze(documentId)
+          if (tagResult) {
+            await AutoTagger.saveResult(documentId, tagResult)
+            console.log(`[AutoTag] ${documentId} → ${tagResult.suggestedCategory} (confidence=${tagResult.confidence})`)
+          }
+        } catch (e) {
+          console.warn(`[AutoTag] 自动标签失败，不影响文档使用`, e)
+        }
+      })
     } else {
       console.warn('[AsyncQueue] No embedding API key configured, skipping vectorization')
       await DocumentDAO.updateProcessingStatus(documentId, 'completed', {

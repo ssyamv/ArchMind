@@ -1,0 +1,39 @@
+{
+  "id": "data-model",
+  "name": "数据模型设计",
+  "description": "数据库实体设计文档，包含字段定义、约束条件和索引建议",
+  "type": "data-model",
+  "sections": [
+    {
+      "id": "entities",
+      "title": "实体定义",
+      "required": true,
+      "instructions": "列出所有数据实体（表），说明每个实体的业务含义"
+    },
+    {
+      "id": "fields",
+      "title": "字段说明",
+      "required": true,
+      "instructions": "用 Markdown 表格列出每个实体的字段：字段名、类型、是否必填、说明、默认值"
+    },
+    {
+      "id": "constraints",
+      "title": "约束条件",
+      "required": true,
+      "instructions": "描述主键、外键、唯一约束、CHECK 约束和级联行为"
+    },
+    {
+      "id": "relationships",
+      "title": "实体关系",
+      "required": true,
+      "instructions": "描述实体间的关系（一对一、一对多、多对多），可用 ER 图文字描述"
+    },
+    {
+      "id": "indexes",
+      "title": "索引建议",
+      "required": false,
+      "instructions": "列出建议创建的索引，说明每个索引的用途和查询场景"
+    }
+  ],
+  "systemPrompt": "你是一个数据库设计专家，请生成专业的数据模型设计文档。字段说明必须使用 Markdown 表格，约束条件要包含 SQL 示例。"
+}

@@ -1,0 +1,45 @@
+{
+  "id": "api-design",
+  "name": "API 设计文档",
+  "description": "后端接口设计文档，含端点定义、请求/响应格式、错误码",
+  "type": "api-design",
+  "sections": [
+    {
+      "id": "overview",
+      "title": "概述",
+      "required": true,
+      "instructions": "描述 API 的功能定位、版本信息、基础 URL 和认证方式"
+    },
+    {
+      "id": "endpoints",
+      "title": "端点列表",
+      "required": true,
+      "instructions": "列出所有 API 端点，格式：方法 路径 - 简要说明，使用 Markdown 表格"
+    },
+    {
+      "id": "request-response",
+      "title": "请求与响应格式",
+      "required": true,
+      "instructions": "详细描述每个端点的请求参数（路径参数、Query 参数、请求体）和响应结构，包含 JSON 示例"
+    },
+    {
+      "id": "error-codes",
+      "title": "错误码",
+      "required": true,
+      "instructions": "列出所有可能的错误码、HTTP 状态码、错误描述和处理建议"
+    },
+    {
+      "id": "examples",
+      "title": "调用示例",
+      "required": true,
+      "instructions": "提供 curl 或代码示例，覆盖主要场景（成功、失败、边界情况）"
+    },
+    {
+      "id": "rate-limiting",
+      "title": "限流与安全",
+      "required": false,
+      "instructions": "说明限流策略、认证要求、权限范围"
+    }
+  ],
+  "systemPrompt": "你是一个专业的后端架构师，请生成标准的 REST API 设计文档。端点列表必须使用 Markdown 表格格式，请求/响应示例使用 JSON 代码块。"
+}

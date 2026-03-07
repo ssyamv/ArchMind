@@ -1,0 +1,32 @@
+{
+  "id": "feature-brief",
+  "name": "功能简报（轻量）",
+  "description": "快速需求沟通用，聚焦核心信息，适合小功能或早期讨论",
+  "type": "feature-brief",
+  "sections": [
+    {
+      "id": "summary",
+      "title": "一句话描述",
+      "required": true,
+      "instructions": "用一句话概括功能：[动词][功能]，让[角色]可以[目标]"
+    },
+    {
+      "id": "affected-users",
+      "title": "受影响用户",
+      "required": true,
+      "instructions": "描述有哪些用户角色会受到影响，预估影响的用户数量"
+    },
+    {
+      "id": "core-features",
+      "title": "核心功能",
+      "required": true,
+      "instructions": "列出 3-5 个核心功能点，每点一行，言简意赅"
+    },
+    {
+      "id": "out-of-scope",
+      "title": "不在范围内",
+      "required": true,
+      "instructions": "明确列出本次不做的相关功能，防止范围蔓延"
+    }
+  ]
+}

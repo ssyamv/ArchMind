@@ -1,0 +1,46 @@
+{
+  "id": "standard",
+  "name": "标准 PRD",
+  "description": "通用功能性需求文档，适用于大多数功能开发场景",
+  "type": "standard",
+  "sections": [
+    {
+      "id": "background",
+      "title": "背景与目标",
+      "required": true,
+      "instructions": "描述为什么要做这个功能，当前痛点是什么，解决什么问题",
+      "minWords": 80
+    },
+    {
+      "id": "users",
+      "title": "目标用户",
+      "required": true,
+      "instructions": "描述受此功能影响的用户角色，用户规模，使用频率"
+    },
+    {
+      "id": "user-stories",
+      "title": "用户故事",
+      "required": true,
+      "format": "as-a-user",
+      "instructions": "用 As a [角色], I want [目标], So that [价值] 格式描述，至少 3 条"
+    },
+    {
+      "id": "functional-requirements",
+      "title": "功能详述",
+      "required": true,
+      "instructions": "详细描述各功能点，包含正常流程和异常流程"
+    },
+    {
+      "id": "non-functional",
+      "title": "非功能性需求",
+      "required": false,
+      "instructions": "性能要求、安全要求、可用性要求"
+    },
+    {
+      "id": "kpi",
+      "title": "验收标准与 KPI",
+      "required": true,
+      "instructions": "明确可量化的验收标准，如响应时间、转化率目标等"
+    }
+  ]
+}
