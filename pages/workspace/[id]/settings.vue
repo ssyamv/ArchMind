@@ -12,6 +12,7 @@
         <TabsList>
           <TabsTrigger value="general">{{ $t('workspace.settingsTabs.general') }}</TabsTrigger>
           <TabsTrigger value="members">{{ $t('workspace.settingsTabs.members') }}</TabsTrigger>
+          <TabsTrigger value="permissions">权限</TabsTrigger>
           <TabsTrigger value="webhooks">{{ $t('workspace.settingsTabs.webhooks') }}</TabsTrigger>
         </TabsList>
 
@@ -75,7 +76,9 @@
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="member">{{ $t('workspace.members.roleMember') }}</SelectItem>
+                    <SelectItem value="editor">编辑者</SelectItem>
+                    <SelectItem value="viewer">只读者</SelectItem>
+                    <SelectItem value="guest">访客</SelectItem>
                     <SelectItem value="admin">{{ $t('workspace.members.roleAdmin') }}</SelectItem>
                   </SelectContent>
                 </Select>
@@ -119,12 +122,24 @@
                   </div>
                   <div class="flex items-center gap-2">
                     <Badge variant="secondary" class="text-xs">
-                      {{ member.role === 'owner'
-                        ? $t('workspace.members.roleOwner')
-                        : member.role === 'admin'
-                          ? $t('workspace.members.roleAdmin')
-                          : $t('workspace.members.roleMember') }}
+                      {{ ROLE_LABEL_MAP[member.role] || member.role }}
                     </Badge>
+                    <!-- 修改角色（非 owner 成员） -->
+                    <Select
+                      v-if="member.role !== 'owner' && currentUserRole === 'owner' || currentUserRole === 'admin'"
+                      :model-value="member.role"
+                      @update:model-value="(r) => handleChangeRole(member, r as string)"
+                    >
+                      <SelectTrigger class="h-7 text-xs w-[90px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="editor">编辑者</SelectItem>
+                        <SelectItem value="viewer">只读者</SelectItem>
+                        <SelectItem value="guest">访客</SelectItem>
+                        <SelectItem value="admin">管理员</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <Button
                       v-if="member.role !== 'owner'"
                       variant="ghost"
@@ -165,6 +180,49 @@
                   </div>
                 </div>
               </template>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <!-- 权限 Tab -->
+        <TabsContent value="permissions" class="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>权限矩阵</CardTitle>
+              <CardDescription>各角色在工作区中的权限说明</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div v-if="permissionsLoading" class="flex justify-center py-6">
+                <Loader2 class="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+              <div v-else class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="border-b">
+                      <th class="text-left py-2 pr-4 font-medium">权限</th>
+                      <th v-for="role in displayRoles" :key="role.role" class="text-center py-2 px-3 font-medium">
+                        <div>{{ role.name }}</div>
+                        <div class="text-xs text-muted-foreground font-normal">{{ role.role }}</div>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="perm in permissionRows" :key="perm.key" class="border-b last:border-0">
+                      <td class="py-2 pr-4 text-muted-foreground">{{ perm.label }}</td>
+                      <td v-for="role in displayRoles" :key="role.role" class="text-center py-2 px-3">
+                        <span v-if="role.permissions.includes(perm.key)" class="text-green-500">✓</span>
+                        <span v-else class="text-muted-foreground/30">—</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <!-- 当前用户权限 -->
+              <div v-if="currentUserPermissions" class="mt-4 pt-4 border-t">
+                <p class="text-sm text-muted-foreground">
+                  你的角色：<Badge variant="secondary" class="ml-1">{{ ROLE_LABEL_MAP[currentUserPermissions.role] }}</Badge>
+                </p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -281,6 +339,16 @@ const workspaceId = computed(() => route.params.id as string)
 
 const activeTab = ref((route.query.tab as string) || 'general')
 
+// 角色标签映射
+const ROLE_LABEL_MAP: Record<string, string> = {
+  owner: '所有者',
+  admin: '管理员',
+  editor: '编辑者',
+  member: '编辑者', // 向后兼容
+  viewer: '只读者',
+  guest: '访客',
+}
+
 // ─── 工作区基本信息 ────────────────────────────────────────────────────────────
 const { workspaces, updateWorkspace, fetchMembers, inviteMember, removeMember, cancelInvitation } = useWorkspace()
 
@@ -324,14 +392,21 @@ const members = ref<WorkspaceMember[]>([])
 const pendingInvitations = ref<WorkspaceInvitation[]>([])
 const membersLoading = ref(false)
 const inviteEmail = ref('')
-const inviteRole = ref<'admin' | 'member'>('member')
+const inviteRole = ref<string>('editor')
 const inviting = ref(false)
 const memberToRemove = ref<WorkspaceMember | null>(null)
 const cancellingInvitationId = ref<string | null>(null)
 
+// 当前用户在工作区的角色
+const currentUserRole = ref<string>('')
+const currentUserPermissions = ref<{ role: string; permissions: string[] } | null>(null)
+
 watch(activeTab, async (tab) => {
   if (tab === 'members' && members.value.length === 0) {
     await loadMembers()
+  }
+  if (tab === 'permissions' && !currentUserPermissions.value) {
+    await loadPermissions()
   }
 })
 
@@ -341,6 +416,11 @@ async function loadMembers () {
     const data = await fetchMembers(workspaceId.value)
     members.value = data.members
     pendingInvitations.value = data.pendingInvitations
+    // 同时获取当前用户角色
+    const permData = await $fetch<{ success: boolean; data: { role: string; permissions: string[] } }>(`/api/v1/workspaces/${workspaceId.value}/permissions`)
+    if (permData.success) {
+      currentUserRole.value = permData.data.role
+    }
   } catch {
     toast({ title: t('workspace.loadError'), variant: 'destructive' })
   } finally {
@@ -352,7 +432,7 @@ async function handleInvite () {
   if (!inviteEmail.value.trim()) return
   inviting.value = true
   try {
-    await inviteMember(workspaceId.value, inviteEmail.value.trim(), inviteRole.value)
+    await inviteMember(workspaceId.value, inviteEmail.value.trim(), inviteRole.value as any)
     toast({ title: t('workspace.members.inviteSuccess'), description: inviteEmail.value })
     inviteEmail.value = ''
     const data = await fetchMembers(workspaceId.value)
@@ -361,6 +441,19 @@ async function handleInvite () {
     toast({ title: t('workspace.members.inviteError'), description: err?.data?.message || err?.message, variant: 'destructive' })
   } finally {
     inviting.value = false
+  }
+}
+
+async function handleChangeRole (member: WorkspaceMember, newRole: string) {
+  try {
+    await $fetch(`/api/v1/workspaces/${workspaceId.value}/members/${member.userId}/role`, {
+      method: 'PATCH',
+      body: { role: newRole },
+    })
+    member.role = newRole as any
+    toast({ title: '角色已更新', description: `${member.userFullName || member.userEmail} → ${ROLE_LABEL_MAP[newRole]}` })
+  } catch (err: any) {
+    toast({ title: '更新角色失败', description: err?.data?.message || err?.message, variant: 'destructive' })
   }
 }
 
@@ -387,6 +480,49 @@ async function handleCancelInvitation (inv: WorkspaceInvitation) {
     toast({ title: t('workspace.members.cancelInviteError'), description: err?.data?.message || err?.message, variant: 'destructive' })
   } finally {
     cancellingInvitationId.value = null
+  }
+}
+
+// ─── 权限矩阵 ──────────────────────────────────────────────────────────────────
+interface RoleInfo { role: string; name: string; permissions: string[] }
+const permissionsLoading = ref(false)
+const rolesData = ref<RoleInfo[]>([])
+
+const displayRoles = computed(() => rolesData.value.filter(r => r.role !== 'member'))
+const permissionRows = [
+  { key: 'workspace:read', label: '查看工作区' },
+  { key: 'workspace:manage', label: '管理工作区设置' },
+  { key: 'workspace:delete', label: '删除工作区' },
+  { key: 'document:read', label: '查看文档' },
+  { key: 'document:write', label: '上传/编辑文档' },
+  { key: 'document:delete', label: '删除文档' },
+  { key: 'prd:read', label: '查看 PRD' },
+  { key: 'prd:write', label: '创建/编辑 PRD' },
+  { key: 'prd:delete', label: '删除 PRD' },
+  { key: 'prototype:read', label: '查看原型' },
+  { key: 'prototype:write', label: '生成/编辑原型' },
+  { key: 'prototype:delete', label: '删除原型' },
+  { key: 'logic_map:read', label: '查看逻辑图' },
+  { key: 'logic_map:write', label: '创建/编辑逻辑图' },
+  { key: 'logic_map:delete', label: '删除逻辑图' },
+  { key: 'member:read', label: '查看成员列表' },
+  { key: 'member:manage', label: '管理成员' },
+  { key: 'webhook:manage', label: '管理 Webhook' },
+]
+
+async function loadPermissions () {
+  permissionsLoading.value = true
+  try {
+    const [rolesRes, permsRes] = await Promise.all([
+      $fetch<{ success: boolean; data: { roles: any[] } }>(`/api/v1/workspaces/${workspaceId.value}/roles`),
+      $fetch<{ success: boolean; data: { role: string; permissions: string[] } }>(`/api/v1/workspaces/${workspaceId.value}/permissions`),
+    ])
+    if (rolesRes.success) rolesData.value = rolesRes.data.roles
+    if (permsRes.success) currentUserPermissions.value = permsRes.data
+  } catch {
+    toast({ title: '加载权限信息失败', variant: 'destructive' })
+  } finally {
+    permissionsLoading.value = false
   }
 }
 

@@ -6,6 +6,7 @@
  */
 
 import { dbClient } from '~/lib/db/client'
+import { type WorkspaceRole, type ResourceType, type Action, hasPermission } from '~/lib/auth/permissions'
 
 /**
  * 从 event.context 获取已认证的 userId
@@ -43,10 +44,50 @@ export function requireResourceOwner (
 }
 
 /**
- * 验证当前用户是否为工作区成员，并返回其角色
+ * 验证当前用户是否有工作区指定资源的操作权限（RBAC 精细权限）
  * @param event H3 事件对象
  * @param workspaceId 工作区 ID
- * @param requiredRole 'admin'：要求 owner 或 admin；'owner'：仅 owner；不传则 member 即可
+ * @param resource 资源类型
+ * @param action 操作类型
+ * @returns { userId, role }
+ */
+export async function requireWorkspaceRole (
+  event: any,
+  workspaceId: string,
+  resource: ResourceType,
+  action: Action
+): Promise<{ userId: string; role: WorkspaceRole }> {
+  const userId = requireAuth(event)
+
+  const result = await dbClient.query<{ role: string }>(
+    'SELECT role FROM workspace_members WHERE workspace_id = $1 AND user_id = $2',
+    [workspaceId, userId]
+  )
+
+  if (result.rows.length === 0) {
+    throw createError({ statusCode: 403, message: '无权访问此工作区' })
+  }
+
+  const role = result.rows[0].role as WorkspaceRole
+
+  if (!hasPermission(role, resource, action)) {
+    throw createError({
+      statusCode: 403,
+      message: `权限不足：需要 ${resource}:${action} 权限`
+    })
+  }
+
+  return { userId, role }
+}
+
+/**
+ * 验证当前用户是否为工作区成员，并返回其角色
+ * @deprecated 建议使用 requireWorkspaceRole() 进行精细权限控制
+ *
+ * 向后兼容别名：等价于 requireWorkspaceRole(event, workspaceId, 'workspace', 'read')
+ * @param event H3 事件对象
+ * @param workspaceId 工作区 ID
+ * @param requiredRole 'admin'：要求 owner 或 admin；'owner'：仅 owner；不传则 viewer 即可
  */
 export async function requireWorkspaceMember (
   event: any,

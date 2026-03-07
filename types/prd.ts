@@ -37,6 +37,7 @@ export interface PRDGenerateRequest {
   documentIds?: string[];
   workspaceId?: string;
   parentId?: string;  // 指定该次生成为某 PRD 的新版本
+  templateId?: string;  // #67 PRD 模板 ID，默认 'standard'
 }
 
 export interface PRDGenerateResponse {

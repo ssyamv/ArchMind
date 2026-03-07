@@ -1,0 +1,39 @@
+{
+  "id": "bug-fix-spec",
+  "name": "Bug 修复说明",
+  "description": "缺陷修复规格文档，包含根因分析和验证标准",
+  "type": "bug-fix-spec",
+  "sections": [
+    {
+      "id": "problem",
+      "title": "问题描述",
+      "required": true,
+      "instructions": "详细描述 Bug 的现象、触发条件、影响范围和严重程度"
+    },
+    {
+      "id": "root-cause",
+      "title": "根因分析",
+      "required": true,
+      "instructions": "分析 Bug 的根本原因，说明为什么会出现这个问题"
+    },
+    {
+      "id": "fix-solution",
+      "title": "修复方案",
+      "required": true,
+      "instructions": "详细描述修复方案，包括代码改动思路、注意事项和潜在影响"
+    },
+    {
+      "id": "verification",
+      "title": "验证标准",
+      "required": true,
+      "instructions": "列出验证修复是否成功的测试用例和通过标准"
+    },
+    {
+      "id": "regression",
+      "title": "回归测试",
+      "required": true,
+      "instructions": "列出需要进行回归测试的相关功能模块"
+    }
+  ],
+  "systemPrompt": "你是一个经验丰富的工程师，请生成专业的 Bug 修复规格文档。根因分析要深入技术层面，修复方案要具体可操作。"
+}
