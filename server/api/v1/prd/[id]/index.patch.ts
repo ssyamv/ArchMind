@@ -10,13 +10,13 @@ export default defineEventHandler(async (event) => {
       return { success: false, error: 'prdId is required' }
     }
 
-    // 查找 PRD 并校验归属权
+    // 查找 PRD 并校验权限（工作区成员可写，非成员/跨用户无权限）
     const prd = await PRDDAO.findById(prdId)
     if (!prd) {
       setResponseStatus(event, 404)
       return { success: false, error: ErrorMessages.PRD_NOT_FOUND }
     }
-    requireResourceOwner(prd, userId)
+    await requirePrdAccess(prd, userId, true)
 
     // 解析请求体
     const body = await readBody(event)

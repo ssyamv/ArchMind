@@ -110,7 +110,6 @@ export default defineEventHandler(async (event) => {
 
     // 将每个块包装成 JSON 格式
     let buffer = ''
-    let isFirst = true
 
     for await (const chunk of readable) {
       buffer += chunk
@@ -122,17 +121,8 @@ export default defineEventHandler(async (event) => {
       for (let i = 0; i < lines.length - 1; i++) {
         const line = lines[i].trim()
         if (line.length > 0) {
-          const chunkEvent = {
-            chunk: line,
-            done: false
-          }
-
-          if (!isFirst) {
-            write(chunkEvent)
-          }
-
+          write({ chunk: line, done: false })
           write('\n')
-          isFirst = false
         }
       }
 

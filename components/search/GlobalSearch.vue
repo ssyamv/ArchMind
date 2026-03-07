@@ -3,18 +3,15 @@ import { ref, watch, computed, nextTick } from 'vue'
 import { FileText, FileCode, GitBranch, Search, Loader2 } from 'lucide-vue-next'
 import { Dialog, DialogContent } from '~/components/ui/dialog'
 import { Input } from '~/components/ui/input'
+import { useToast } from '~/components/ui/toast/use-toast'
 
 const open = defineModel<boolean>('open', { default: false })
 
 const router = useRouter()
-const route = useRoute()
+const { currentWorkspaceId } = useWorkspace()
+const { toast } = useToast()
 const query = ref('')
 const loading = ref(false)
-
-// 从路由参数中获取工作区 ID（支持 /workspace/[id]/* 路径）
-const currentWorkspaceId = computed(() => {
-  return (route.params.id as string) || (route.params.workspaceId as string) || null
-})
 
 interface SearchResultItem {
   id: string
@@ -74,8 +71,13 @@ async function doSearch (q: string) {
       `/api/v1/search?q=${encodeURIComponent(q)}&workspaceId=${workspaceId}`
     )
     results.value = res.data
-  } catch {
-    // 静默失败
+  } catch (error) {
+    console.error('[GlobalSearch] 搜索失败:', error)
+    toast({
+      title: '搜索失败',
+      description: '无法获取搜索结果，请稍后重试',
+      variant: 'destructive'
+    })
   } finally {
     loading.value = false
   }
@@ -151,22 +153,25 @@ const hasResults = computed(() => results.value.total > 0)
 
 <template>
   <Dialog v-model:open="open">
-    <DialogContent class="p-0 gap-0 max-w-lg overflow-hidden" @keydown="handleKeydown">
+    <DialogContent hide-close class="p-0 gap-0 max-w-2xl w-full overflow-hidden" @keydown="handleKeydown">
       <!-- 搜索输入框 -->
-      <div class="flex items-center gap-2 px-4 py-3 border-b">
+      <div class="flex items-center gap-3 px-4 py-3.5 border-b">
         <Search v-if="!loading" class="w-4 h-4 text-muted-foreground shrink-0" />
         <Loader2 v-else class="w-4 h-4 text-muted-foreground animate-spin shrink-0" />
         <Input
           v-model="query"
           placeholder="搜索文档、PRD、逻辑图..."
-          class="border-0 shadow-none focus-visible:ring-0 p-0 h-auto text-base"
+          class="border-0 shadow-none focus-visible:ring-0 p-0 h-auto text-base flex-1"
           autofocus
         />
-        <kbd class="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">Esc</kbd>
+        <button
+          class="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0 hover:bg-muted/80 transition-colors"
+          @click="open = false"
+        >Esc</button>
       </div>
 
       <!-- 搜索结果 -->
-      <div class="max-h-96 overflow-y-auto">
+      <div class="max-h-[28rem] overflow-y-auto">
         <!-- 空态 -->
         <div v-if="!query" class="p-6 text-center text-sm text-muted-foreground">
           输入关键词搜索文档、PRD 和逻辑图
