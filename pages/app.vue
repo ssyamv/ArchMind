@@ -1,5 +1,18 @@
 <template>
-  <div class="p-6">
+  <div class="p-6 relative">
+    <!-- Onboarding: WelcomeScreen 覆盖层 -->
+    <WelcomeScreen
+      v-if="onboarding.shouldShowWelcome.value"
+      :completed-steps="onboarding.completedSteps.value"
+      @start="showWizard = true"
+      @skip="onboarding.skipOnboarding()"
+    />
+
+    <!-- Onboarding: Setup Wizard Dialog -->
+    <SetupWizard
+      v-model:open="showWizard"
+      @complete="onboarding.markStep('hasConfiguredAI', true)"
+    />
     <!-- 数据迁移一次性通知弹窗 -->
     <AlertDialog :open="showMigrationNotice">
       <AlertDialogContent>
@@ -272,6 +285,8 @@ interface ConversationSearchResult {
 const searchQuery = ref('')
 const viewMode = ref<'grid' | 'list'>('grid')
 const loading = ref(true)
+const showWizard = ref(false)
+const onboarding = useOnboarding()
 const projects = ref<Project[]>([])
 const currentPage = ref(1)
 const pageSize = 9 // 每页显示 9 个项目（3x3 网格）
@@ -389,6 +404,9 @@ async function handlePageChange(page: number) {
 }
 
 onMounted(async () => {
+  // 加载 Onboarding 状态（并行，不阻塞主流程）
+  onboarding.fetchState()
+
   // 加载工作区列表（确保最新成员关系已同步）
   await loadWorkspaces()
 
