@@ -402,3 +402,13 @@
     transform: translateY(-10px);
   }
 }
+
+/* NProgress 顶部进度条 */
+#nprogress .bar {
+  @apply bg-primary;
+  height: 2px;
+}
+
+#nprogress .peg {
+  box-shadow: 0 0 10px theme('colors.primary.DEFAULT'), 0 0 5px theme('colors.primary.DEFAULT');
+}
