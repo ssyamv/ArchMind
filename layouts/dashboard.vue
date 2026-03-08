@@ -3,6 +3,18 @@
     <Toaster />
     <!-- Top Header - Full Width -->
     <header class="flex h-16 shrink-0 items-center gap-4 border-b px-4 bg-background">
+      <!-- 移动端：汉堡菜单按钮 -->
+      <Button
+        v-if="isMobile"
+        variant="ghost"
+        size="icon"
+        class="sm:hidden shrink-0"
+        data-testid="mobile-menu-toggle"
+        @click="mobileMenuOpen = true"
+      >
+        <Menu class="w-5 h-5" />
+      </Button>
+
       <!-- Logo -->
       <NuxtLink to="/" class="flex items-center gap-2 group">
         <img src="/logo.png" alt="ArchMind" class="size-8 rounded-lg object-contain" />
@@ -126,8 +138,9 @@
 
     <!-- Bottom Section: Sidebar + Content -->
     <div class="flex flex-1 overflow-hidden">
-      <!-- Left Sidebar -->
+      <!-- Left Sidebar（桌面端固定显示） -->
       <aside
+        v-if="!isMobile"
         :class="[
           'border-r bg-background transition-all duration-300 flex flex-col relative',
           isSidebarCollapsed ? 'w-16' : 'w-64'
@@ -195,6 +208,39 @@
         </div>
       </aside>
 
+      <!-- 移动端：Sheet 抽屉侧边栏 -->
+      <Sheet v-if="isMobile" v-model:open="mobileMenuOpen">
+        <SheetContent side="left" class="w-64 p-0 flex flex-col">
+          <!-- Sheet 内的导航菜单 -->
+          <nav class="flex-1 p-2 space-y-1 mt-4">
+            <NuxtLink
+              v-for="item in menuItems"
+              :key="item.to"
+              :to="item.to"
+              :class="[
+                'flex items-center rounded-lg px-4 h-10 text-sm transition-colors',
+                'hover:bg-accent hover:text-accent-foreground',
+                isActive(item.to) ? 'bg-accent text-accent-foreground' : 'text-muted-foreground',
+              ]"
+              @click="mobileMenuOpen = false"
+            >
+              <component :is="item.icon" class="w-4 h-4 shrink-0 mr-2" />
+              <span>{{ item.label }}</span>
+            </NuxtLink>
+          </nav>
+          <!-- Sheet 内的新建项目按钮 -->
+          <div class="p-2 border-t">
+            <Button
+              @click="handleNewProject(); mobileMenuOpen = false"
+              class="w-full h-10 justify-start px-4"
+            >
+              <Plus class="w-4 h-4 shrink-0 mr-2" />
+              <span>{{ t('nav.newProject') }}</span>
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
       <!-- Main Content -->
       <main class="flex-1 overflow-auto">
         <div class="px-4 pb-4">
@@ -212,8 +258,9 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
-import { Moon, Sun, Sparkles, FolderOpen, Database, Plus, ChevronLeft, ChevronRight, Layout, LogOut, LogIn, Settings, Loader2, Search } from 'lucide-vue-next'
+import { Moon, Sun, Sparkles, FolderOpen, Database, Plus, ChevronLeft, ChevronRight, Layout, LogOut, LogIn, Settings, Loader2, Search, Menu } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
+import { Sheet, SheetContent } from '~/components/ui/sheet'
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -247,6 +294,10 @@ const documentsStore = useDocumentsStore()
 const authStore = useAuthStore()
 
 const searchOpen = ref(false)
+
+// 移动端响应式断点检测
+const { isMobile } = useMobile()
+const mobileMenuOpen = ref(false)
 
 // ⌘K 快捷键唤起全局搜索
 function onKeyDown (e: KeyboardEvent) {
