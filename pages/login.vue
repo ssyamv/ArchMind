@@ -67,7 +67,7 @@
         <form @submit="handleSubmit" class="auth-form">
           <!-- Error Alert -->
           <Transition name="shake">
-            <div v-if="authStore.error" class="error-alert">
+            <div v-if="authStore.error" class="error-alert" data-testid="auth-error">
               <div class="error-icon-wrapper">
                 <AlertCircle class="w-5 h-5" />
               </div>

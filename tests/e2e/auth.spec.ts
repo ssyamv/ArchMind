@@ -55,7 +55,7 @@ test.describe('认证流程', () => {
     await page.click('[data-testid="login-submit"]')
 
     // 停留在登录页并显示错误
-    await expect(page.locator('[data-testid="auth-error"]').or(page.locator('.error-alert'))).toBeVisible({ timeout: 10_000 })
+    await expect(page.locator('[data-testid="auth-error"]')).toBeVisible({ timeout: 10_000 })
     await expect(page).toHaveURL(/\/login/)
   })
 
