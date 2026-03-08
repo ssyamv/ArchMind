@@ -5,6 +5,8 @@
 
 import { dbClient } from '../client'
 import type { User } from '~/types/auth'
+import type { OnboardingState } from '~/types/onboarding'
+import { DEFAULT_ONBOARDING_STATE } from '~/types/onboarding'
 
 export interface CreateUserInput {
   username: string
@@ -273,6 +275,32 @@ export class UserDAO {
     `
     const result = await dbClient.query(sql, [new Date().toISOString(), email])
     return result.rowCount! > 0
+  }
+
+  /**
+   * 获取用户的 Onboarding 状态
+   */
+  static async getOnboardingState(userId: string): Promise<OnboardingState> {
+    const sql = 'SELECT onboarding_state FROM users WHERE id = $1'
+    const result = await dbClient.query<{ onboarding_state: any }>(sql, [userId])
+    if (result.rows.length === 0) return { ...DEFAULT_ONBOARDING_STATE }
+    const raw = result.rows[0].onboarding_state ?? {}
+    return { ...DEFAULT_ONBOARDING_STATE, ...raw }
+  }
+
+  /**
+   * 更新用户的 Onboarding 状态（合并更新，非全量替换）
+   */
+  static async updateOnboardingState(userId: string, patch: Partial<OnboardingState>): Promise<OnboardingState> {
+    const current = await this.getOnboardingState(userId)
+    const updated = { ...current, ...patch }
+    const sql = `
+      UPDATE users
+      SET onboarding_state = $1, updated_at = $2
+      WHERE id = $3
+    `
+    await dbClient.query(sql, [JSON.stringify(updated), new Date().toISOString(), userId])
+    return updated
   }
 
   /**
