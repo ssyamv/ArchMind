@@ -234,7 +234,11 @@ jobs:
           --health-retries 5
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/archmind_test
-      JWT_SECRET: e2e-test-secret-32-chars-min-len
+      JWT_SECRET: e2e-test-secret-32-chars-min-len-xx
+      ENCRYPTION_KEY: e2e-test-encryption-key-32chars-
+      STORAGE_PROVIDER: local
+      LOCAL_STORAGE_PATH: /tmp/archmind-e2e-storage
+      NODE_ENV: test
       E2E_BASE_URL: http://localhost:3000
     steps:
       - name: Checkout
