@@ -58,8 +58,9 @@ psql $DATABASE_URL -c "SELECT COUNT(*) FROM prd_documents;"
 
 ### 2.1 CI/CD 状态
 
-- [ ] 所有 CI 检查通过（Lint, TypeCheck, Tests, Build, Schema Check）
-- [ ] 测试覆盖率 ≥ 85%
+- [ ] 所有 CI 检查通过（Lint, TypeCheck, Unit Tests, E2E Tests, Build, Schema Check）
+- [ ] 单元测试覆盖率 ≥ 85%
+- [ ] E2E 测试通过（`pnpm test:e2e`，至少无 fail，flaky 可接受）
 - [ ] 无高危安全漏洞（Security Audit）
 - [ ] Docker 镜像构建成功（如适用）
 
@@ -173,14 +174,15 @@ curl https://your-domain.com/api/v1/health
 ### 6.1 健康检查
 
 ```bash
-# 1. API 健康检查
-curl https://your-domain.com/api/v1/health
+# 1. API 健康检查（含 DB 连通性）
+npx vercel curl /api/v1/health --deployment <deployment-url>
+# 预期: {"status":"ok","message":"ArchMind API 正在运行","timestamp":"..."}
 
 # 2. 数据库连接
 psql $DATABASE_URL -c "SELECT version();"
 
-# 3. 存储服务
-pnpm storage:health
+# 3. pgvector 扩展
+psql $DATABASE_URL -c "SELECT extname, extversion FROM pg_extension WHERE extname='vector';"
 ```
 
 ### 6.2 数据完整性
@@ -189,11 +191,19 @@ pnpm storage:health
 # 运行审计脚本
 psql $DATABASE_URL < scripts/audit-production-schema.sql
 
-# 预期输出：
-# ✅ search_vector 列存在
-# ✅ parent_id 列存在
-# ✅ 所有关键表存在
-# ✅ 所有索引存在
+# 检查脏数据（workspace_id 为 NULL 的记录）
+psql $DATABASE_URL -c "SELECT COUNT(*) FROM prd_documents WHERE workspace_id IS NULL;"
+psql $DATABASE_URL -c "SELECT COUNT(*) FROM documents WHERE workspace_id IS NULL;"
+# 预期: 均为 0
+
+# 检查核心表行数一致性
+psql $DATABASE_URL -c "
+  SELECT 'users' t, COUNT(*) n FROM users
+  UNION ALL SELECT 'workspaces', COUNT(*) FROM workspaces
+  UNION ALL SELECT 'workspace_members', COUNT(*) FROM workspace_members
+  ORDER BY t;
+"
+# 预期: users 行数 = workspaces 行数 = workspace_members 行数（每用户一个 owner 工作区）
 ```
 
 ---
@@ -340,4 +350,4 @@ git push
 
 ---
 
-*最后更新: 2026-03-02*
+*最后更新: 2026-03-09*
