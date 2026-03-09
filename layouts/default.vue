@@ -4,7 +4,7 @@
 
     <!-- Navigation Header -->
     <header class="sticky top-0 z-50 glass border-b border-border/50 animate-slide-up">
-      <nav class="w-full px-10 py-4">
+      <nav class="w-full px-4 md:px-10 py-4">
         <div class="flex items-center justify-between">
           <!-- Logo -->
           <NuxtLink to="/" class="flex items-center space-x-3 group">
@@ -123,6 +123,37 @@
                 </NuxtLink>
               </Button>
             </ClientOnly>
+
+            <!-- 移动端：汉堡菜单 Sheet -->
+            <Sheet v-model:open="mobileNavOpen">
+              <SheetTrigger as-child>
+                <Button variant="ghost" size="icon" class="md:hidden">
+                  <Menu class="w-5 h-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" class="w-64 p-0">
+                <nav class="flex flex-col gap-1 p-4 mt-4">
+                  <NuxtLink
+                    v-for="link in navLinks"
+                    :key="link.to"
+                    :to="link.to"
+                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-accent transition-colors"
+                    @click="mobileNavOpen = false"
+                  >
+                    <component :is="link.icon" class="w-4 h-4" />
+                    {{ link.label }}
+                  </NuxtLink>
+                  <NuxtLink
+                    to="/generate"
+                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground mt-2"
+                    @click="mobileNavOpen = false"
+                  >
+                    <Sparkles class="w-4 h-4" />
+                    {{ $t('nav.generate') }}
+                  </NuxtLink>
+                </nav>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </nav>
@@ -143,8 +174,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
-import { Sparkles, Moon, Sun, FolderOpen, Database, Layout, LogOut, LogIn, Settings, Search } from 'lucide-vue-next'
+import { Sparkles, Moon, Sun, FolderOpen, Database, Layout, LogOut, LogIn, Settings, Search, Menu } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
+import { Sheet, SheetContent, SheetTrigger } from '~/components/ui/sheet'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -167,6 +199,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const searchOpen = ref(false)
+const mobileNavOpen = ref(false)
 
 // ⌘K 快捷键唤起全局搜索
 function onKeyDown (e: KeyboardEvent) {
