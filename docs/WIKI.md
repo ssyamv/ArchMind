@@ -77,6 +77,8 @@
 | | 头像上传 | ✅ 已实现 |
 | **工作区** | 多工作区隔离 | ✅ 已实现 |
 | | 工作区成员管理 | ✅ 已实现 |
+| | RBAC 权限系统（owner/admin/editor/viewer）| ✅ 已实现 |
+| | 批量导出/导入 | ✅ 已实现 |
 | **AI 配置** | 用户自定义 API Key | ✅ 已实现 |
 | | 多提供商配置 | ✅ 已实现 |
 | | 用户自选模型列表 | ✅ 已实现 |
@@ -91,6 +93,14 @@
 | | 投递日志 | ✅ 已实现 |
 | **国际化** | 中英文双语 | ✅ 已实现 |
 | | 浏览器语言自动切换 | ✅ 已实现 |
+| **新用户引导** | Onboarding 欢迎流程 | ✅ 已实现 |
+| | Setup Wizard（AI Key 配置）| ✅ 已实现 |
+| **体验优化** | 统一骨架屏/Loading 状态 | ✅ 已实现 |
+| | 完善错误页（404/500/403）| ✅ 已实现 |
+| | 移动端响应式适配 | ✅ 已实现 |
+| **质量保障** | E2E 测试（Playwright）| ✅ 已实现 |
+| | 数据库迁移回滚支持 | ✅ 已实现 |
+| | 深度健康检查 | ✅ 已实现 |
 
 ### 1.4 产品指标
 
@@ -99,9 +109,11 @@
 | 批量上传速度 | 10 文件 (5MB) / 8 秒 | < 5 秒 |
 | 混合搜索响应时间 | < 2 秒 (1000 文档) | < 1 秒 |
 | 搜索准确率提升 | +20% (vs 单一模式) | +30% |
-| 测试覆盖率 | ~89% | 95% |
+| 单元测试覆盖率 | ~89% | 95% |
+| E2E 测试 | ✅ Playwright 基础设施已建立 | 核心流程全覆盖 |
 | API 端点数 | 111 个 | - |
-| Vue 组件数 | 181+ | - |
+| Vue 组件数 | 209+ | - |
+| 当前版本 | v0.6.0 | - |
 
 ---
 
@@ -1758,13 +1770,16 @@ export const documentDAO = new DocumentDAO()
 
 ### 16.1 测试框架配置
 
-- **框架**：Vitest ^4.0.18
+- **单元测试框架**：Vitest ^4.0.18
+- **E2E 测试框架**：Playwright（@playwright/test）
 - **DOM 环境**：happy-dom
 - **组件测试**：@vue/test-utils
 - **Mock**：msw (Mock Service Worker)
 - **覆盖率**：@vitest/coverage-v8
 
 ### 16.2 当前测试覆盖
+
+#### 单元测试（~89% 覆盖率）
 
 | 测试文件 | 覆盖内容 |
 |----------|----------|
@@ -1776,15 +1791,28 @@ export const documentDAO = new DocumentDAO()
 | `tests/unit/lib/db/dao/document-dao.test.ts` | 文档 DAO 的 CRUD 操作 |
 | `tests/unit/composables/useAiModels.test.ts` | AI 模型 Composable |
 
-**当前覆盖率：~15%（目标：80%）**
+#### E2E 测试（Playwright）
+
+| 测试文件 | 覆盖内容 | CI 状态 |
+|----------|----------|---------|
+| `tests/e2e/auth.spec.ts` | 未登录重定向保护 | ✅ 运行 |
+| `tests/e2e/auth.spec.ts` | 注册/登录/登出完整流程 | ⏸ 跳过（需完整后端环境） |
+| `tests/e2e/documents.spec.ts` | 文档上传与管理 | ⏸ 跳过（需 DB seed） |
+| `tests/e2e/prd.spec.ts` | PRD 生成流程 | ⏸ 跳过（需 DB seed） |
+| `tests/e2e/workspace.spec.ts` | 工作区管理 | ⏸ 跳过（需 DB seed） |
+| `tests/e2e/onboarding.spec.ts` | 新用户引导流程 | ⏸ 跳过（需 DB seed） |
+
+> **注**：跳过的测试待 seed 机制完善后启用，当前 CI 只运行不依赖后端状态的测试。
 
 ### 16.3 测试命令
 
 ```bash
-pnpm test              # 运行所有测试
+pnpm test              # 运行所有单元测试
 pnpm test:watch        # 监听模式
 pnpm test:coverage     # 生成覆盖率报告
 pnpm test:ui           # Vitest UI 界面
+pnpm test:e2e          # 运行 E2E 测试（需先启动开发服务器）
+pnpm test:e2e:ui       # Playwright UI 模式
 ```
 
 ### 16.4 测试最佳实践
@@ -1876,9 +1904,8 @@ DATABASE_POOL_MAX=10  # 最大连接数（生产环境建议 20）
 
 ## 18. 项目路线图
 
-### v0.1.0 (当前 - 2026-02-16)
+### v0.1.0 (已发布 ✅ - 2026-02-16)
 
-**已完成的核心功能**：
 - 文档管理（上传、版本控制、批量操作、去重）
 - RAG 引擎（向量搜索、全文搜索、混合搜索）
 - PRD 生成（对话式、流式、多模型）
@@ -1893,7 +1920,6 @@ DATABASE_POOL_MAX=10  # 最大连接数（生产环境建议 20）
 
 ### v0.2.0 (已发布 ✅)
 
-**新增**：
 - Redis 缓存层（减少 AI API 重复调用）
 - Rate Limiting（防止 API 滥用）
 - CSRF 保护
@@ -1903,7 +1929,6 @@ DATABASE_POOL_MAX=10  # 最大连接数（生产环境建议 20）
 
 ### v0.3.0 (已发布 ✅)
 
-**新增**：
 - WebSocket 实时通信（Nitro 原生，HttpOnly Cookie 服务端鉴权）
 - 团队协作（评论系统、活动日志、成员在线状态）
 - Webhook 支持（HMAC-SHA256 签名，事件订阅，投递日志）
@@ -1911,22 +1936,56 @@ DATABASE_POOL_MAX=10  # 最大连接数（生产环境建议 20）
 - Docker 生产配置（资源限制、Nginx WebSocket 代理、AOF 持久化）
 - 国际化完善（中英文双语，浏览器语言自动切换）
 
-**安全修复（Review）**：
-- WebSocket Cookie 鉴权修复（Critical）
-- 迁移文件 UUID 类型修复（High）
-- 评论权限加固（High）
-- Webhook Header 顺序修复（High）
-- Docker 弱密码移除（Medium）
-- 注册事务原子性（Medium）
+### v0.4.0 (已发布 ✅)
+
+- Few-shot 示例库扩展
+- 语义感知上下文压缩
+- PRD 质量维度扩��
+- PRD 用户反馈打分
+- 原型多页面解析容错
+- 原型主题定制（ThemeConfig + THEME_PRESETS）
+- JS 模板库（按原型类型自动注入）
+- RAG 动态阈值
+- RAG 检索质量面板
+- Webhook 前端管理
+- PRD 多版本对比（prd_snapshots 表，Git 风格两层版本管理）
+
+### v0.5.0 (已发布 ✅)
+
+- RBAC 权限系统（owner/admin/editor/viewer/guest）
+- 批量导出/导入（Word、PDF）
+- 数据导出（工作区级别）
+- 工作区权限覆盖（workspace_permission_overrides）
+
+### v0.6.0 (已发布 ✅ - 2026-03-09)
+
+- 新用户引导（Onboarding 欢迎流程 + Setup Wizard）
+- 完善错误页（404/500/403）
+- 统一 Loading/骨架屏设计
+- E2E 测试基础设施（Playwright，CI 集成）
+- 深度健康检查（DB/pgvector/存储连通性）
+- 数据库迁移回滚支持（migration_history 表）
+- 移动端响应式基础适配
+
+### v0.7.0 (计划中)
+
+- 插件系统 MVP（第三方集成 API 规范）
+- Kubernetes 部署配置
+- E2E 测试 seed 机制（完善登录态测试）
+
+### v0.8.0 (计划中)
+
+- 性能测试基准（实测 P50/P99 数据）
+- 安全审计
+- 移动端深度适配
 
 ### v1.0.0 (计划中)
 
-**新增**：
-- RBAC 权限系统（管理员、成员、访客）
-- 批量导出/导入（Word、PDF）
-- 插件系统（第三方集成）
-- Kubernetes 部署配置
-- 多租户 SaaS 模式支持
+- 一键安装脚本（`install.sh`，自动检测环境）
+- Docker 官方镜像发布（DockerHub/GHCR）
+- 升级脚本（v0.x → v1.0 自动数据迁移）
+- 用户手册（面向非技术用户）
+- API 稳定性声明（1.0 后向后兼容范围）
 
 ---
 
@@ -1941,6 +2000,8 @@ DATABASE_POOL_MAX=10  # 最大连接数（生产环境建议 20）
 | 邮件配置硬编码 QQ SMTP | 不灵活 | 低优先级 |
 | 缺少 CSRF Token 前端注入 | 当前采用 Origin/Referer 校验，未实现 Token 模式 | 低优先级 |
 | Redis 缓存为可选 | 未配置 REDIS_URL 时降级为内存缓存，重启后失效 | 已知，生产环境建议配置 Redis |
+| workspaces.name 全局唯一约束 | 两个用户若工作区同名会注册失败 | 低风险，计划改为 (name, owner_id) 联合唯一 |
+| E2E 测试 flaky（重定向保护）| CI 中偶发超时（10s 不够），重试后通过 | 低优先级，可调大超时 |
 
 ### 19.2 数据安全注意事项
 
@@ -1975,6 +2036,6 @@ DATABASE_POOL_MAX=10  # 最大连接数（生产环境建议 20）
 
 ---
 
-*最后更新：2026-02-28 | 版本：0.3.0*
+*最后更新：2026-03-09 | 版本：0.6.0*
 
 *ArchMind AI - 让每一份历史文档都成为新功能的基础*
