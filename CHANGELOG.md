@@ -11,6 +11,33 @@
 
 ---
 
+## [0.6.0] - 2026-03-09
+
+本版本聚焦产品发布就绪度，完善新用户引导体验、统一错误与加载状态、补全 E2E 测试基础设施、加强数据库运维能力，并实现移动端基础响应式适配。
+
+### 新增 (Added)
+
+- **#72 新用户引导（Onboarding）**：首次登录欢迎页（`WelcomeScreen`）、Setup Wizard 步骤式 Dialog（AI Key 配置）、引导状态持��化（`onboarding_state` 数据库字段），支持随时跳过
+- **#73 错误页面**：完善 404/500/403 独立错误页（`error.vue`），含返回首页/刷新操作，统一错误展示风格
+- **#71 Loading/骨架屏统一**：封装 `SkeletonLoader` 组件，文档列表、PRD 列表、详情页统一骨架屏动效，消除布局跳动
+- **#74 E2E 测试基础设施（Playwright）**：引入 `@playwright/test`，配置 `playwright.config.ts`，编写核心流程 E2E 测试（认证重定向、文档/PRD/工作区结构骨架），CI 新增 E2E Job（含 PostgreSQL service）
+- **#75 健康检查完善**：`GET /api/v1/health` 深度检查（数据库连通性、pgvector 扩展、向量维度、存储可用性），结构化响应含各组件状态
+- **#76 数据库迁移回滚支持**：新增 8 个 `.down.sql` 回滚脚本，`scripts/migrate-down.ts`（按版本/名称精确回滚），`pnpm db:migrate-status` 查看迁移历史，`pnpm db:migrate-down` 执行回滚
+- **#77 移动端响应式基础适配**：`composables/useMobile.ts`（MediaQuery 断点检测），`dashboard.vue` 汉堡菜单 + Sheet 抽屉侧边栏，`default.vue` 移动端内边距优化
+
+### 数据库变更 (Database)
+
+- `users` 表新增 `onboarding_state` JSONB 字段（记录引导完成状态）
+- 新增 `migration_history` 表（记录迁移执行历史，支持回滚追踪）
+- 新增各版本迁移的 `.down.sql` 回滚脚本（`add-rbac-roles`、`add-webhooks-tables` 等 8 个）
+
+### CI/CD (CI)
+
+- CI 新增 `E2E Tests` Job，依赖 lint + test，含 PostgreSQL 14 service 和 pgvector
+- `vitest.config.ts` 排除 `tests/e2e/**`，防止 Vitest 误运行 Playwright 测试
+
+---
+
 ## [0.5.0] - 2026-03-07
 
 本版本聚焦企业级能力建设与产品交付闭环，引入 RBAC 精细权限、批量操作、数据导入导出、逻辑图谱生成、PRD 模板系统、文档智能分类、AI 任务队列和搜索体验增强八大功能模块。
