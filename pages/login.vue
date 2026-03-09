@@ -67,7 +67,7 @@
         <form @submit="handleSubmit" class="auth-form">
           <!-- Error Alert -->
           <Transition name="shake">
-            <div v-if="authStore.error" class="error-alert">
+            <div v-if="authStore.error" class="error-alert" data-testid="auth-error">
               <div class="error-icon-wrapper">
                 <AlertCircle class="w-5 h-5" />
               </div>
@@ -87,6 +87,7 @@
                 :placeholder="$t('auth.emailPlaceholder')"
                 :disabled="authStore.loading"
                 required
+                data-testid="email"
                 @focus="focusedField = 'email'"
                 @blur="focusedField = ''"
               />
@@ -106,6 +107,7 @@
                 :placeholder="$t('auth.passwordPlaceholder')"
                 :disabled="authStore.loading"
                 required
+                data-testid="password"
                 @focus="focusedField = 'password'"
                 @blur="focusedField = ''"
               />
@@ -132,6 +134,7 @@
             class="submit-btn"
             :class="{ loading: authStore.loading }"
             :disabled="authStore.loading"
+            data-testid="login-submit"
           >
             <span class="btn-content">
               <Loader2 v-if="authStore.loading" class="btn-icon animate-spin" />
