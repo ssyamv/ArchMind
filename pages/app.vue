@@ -120,9 +120,7 @@
     </div>
 
     <!-- Projects Grid/List -->
-    <div v-if="loading" class="flex items-center justify-center py-12">
-      <RefreshCw class="w-8 h-8 animate-spin text-muted-foreground" />
-    </div>
+    <SkeletonList v-if="loading" :count="9" />
 
     <div v-else-if="paginatedProjects.length === 0" class="text-center py-12">
       <FolderOpen class="w-16 h-16 text-muted-foreground mx-auto mb-4" />

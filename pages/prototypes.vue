@@ -13,9 +13,7 @@
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="flex items-center justify-center py-20">
-      <Loader2 class="w-6 h-6 animate-spin text-muted-foreground" />
-    </div>
+    <SkeletonList v-if="loading" :count="9" />
 
     <!-- Empty State -->
     <div v-if="paginatedPrototypes.length === 0 && !loading" class="flex flex-col items-center justify-center py-20 text-muted-foreground">
@@ -107,7 +105,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { Plus, Layout, Loader2, MoreHorizontal, Eye, Trash2 } from 'lucide-vue-next'
+import { Plus, Layout, MoreHorizontal, Eye, Trash2 } from 'lucide-vue-next'
 import { Button } from '~/components/ui/button'
 import { Badge } from '~/components/ui/badge'
 import {
