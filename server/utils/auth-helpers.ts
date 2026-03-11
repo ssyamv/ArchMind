@@ -30,7 +30,8 @@ export function requireAuth (event: any): string {
  */
 export function requireResourceOwner (
   resource: { userId?: string | null },
-  currentUserId: string
+  currentUserId: string,
+  event?: any
 ): void {
   // 历史数据兼容：user_id 为 null 的记录允许访问
   if (!resource.userId) return
@@ -38,7 +39,8 @@ export function requireResourceOwner (
   if (resource.userId !== currentUserId) {
     throw createError({
       statusCode: 403,
-      message: '无权访问此资源'
+      message: '无权访问此资源',
+      data: { reqId: event?.context?.reqId }
     })
   }
 }
